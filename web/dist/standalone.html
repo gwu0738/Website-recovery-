@@ -1,0 +1,870 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Vanta</title>
+    <meta name="description" content="Provably fair crypto casino — verify every bet yourself." />
+    <style>
+/* ============================================================================
+   Vanta — dark casino-noir theme. Brand accent is a single variable (--accent),
+   so re-skinning is a one-line change.
+   ========================================================================== */
+:root {
+  --bg: #0a0b10;
+  --bg-2: #11131c;
+  --panel: #151826;
+  --panel-2: #1b1f30;
+  --border: #272c40;
+  --text: #e8eaf2;
+  --muted: #8b90a6;
+  --accent: #7c5cff;
+  --accent-2: #00e0b8;
+  --win: #35d07f;
+  --lose: #ff5c7a;
+  --radius: 14px;
+  --font: "Inter", system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+body {
+  background: radial-gradient(1200px 600px at 70% -10%, #1a1340 0%, var(--bg) 55%);
+  color: var(--text);
+  font-family: var(--font);
+  min-height: 100vh;
+  line-height: 1.5;
+}
+code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+
+/* Top bar */
+.topbar {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 14px 24px; border-bottom: 1px solid var(--border);
+  position: sticky; top: 0; backdrop-filter: blur(10px);
+  background: rgba(10, 11, 16, 0.7); z-index: 10;
+}
+.brand { display: flex; align-items: center; gap: 10px; }
+.logo-dot {
+  width: 18px; height: 18px; border-radius: 6px;
+  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  box-shadow: 0 0 18px var(--accent);
+}
+.brand-name { font-weight: 800; letter-spacing: 0.3px; font-size: 20px; }
+.cluster-badge {
+  font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px;
+  background: var(--panel-2); color: var(--muted);
+  padding: 2px 8px; border-radius: 999px; border: 1px solid var(--border);
+}
+.cluster-badge.mainnet { color: #ffce54; border-color: #6b5a1f; }
+.top-actions { display: flex; align-items: center; gap: 14px; }
+.wallet-info { font-size: 12px; color: var(--muted); }
+
+/* Buttons */
+.btn {
+  border: 1px solid var(--border); background: var(--panel-2); color: var(--text);
+  padding: 9px 16px; border-radius: 10px; font-weight: 600; cursor: pointer;
+  font-size: 14px; transition: transform .05s ease, background .15s ease;
+}
+.btn:hover { background: #222740; }
+.btn:active { transform: translateY(1px); }
+.btn-primary {
+  background: linear-gradient(135deg, var(--accent), #5b3cff); border: none; color: #fff;
+}
+.btn-primary:hover { filter: brightness(1.08); }
+.btn-ghost { background: transparent; }
+.btn.big { font-size: 16px; padding: 12px 22px; }
+
+.social { color: var(--muted); text-decoration: none; font-size: 14px; font-weight: 600; }
+.social:hover { color: var(--text); }
+.hidden { display: none !important; }
+
+/* Hero */
+.hero { text-align: center; padding: 56px 24px 30px; }
+.hero h1 { font-size: 46px; line-height: 1.05; margin: 0 0 10px; font-weight: 800; }
+.accent { background: linear-gradient(135deg, var(--accent-2), var(--accent)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.hero-tag { color: var(--accent-2); font-weight: 600; margin: 0 0 6px; }
+.hero-sub { color: var(--muted); max-width: 560px; margin: 0 auto; }
+.hero-socials { display: flex; gap: 10px; justify-content: center; margin-top: 18px; }
+.chip {
+  text-decoration: none; color: var(--text); background: var(--panel);
+  border: 1px solid var(--border); padding: 8px 16px; border-radius: 999px; font-weight: 600; font-size: 14px;
+}
+.chip:hover { border-color: var(--accent); }
+
+/* Layout */
+.layout {
+  display: grid; grid-template-columns: 1fr 340px; gap: 20px;
+  max-width: 1180px; margin: 20px auto 60px; padding: 0 24px;
+}
+.section-title { font-size: 15px; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); margin: 0 0 12px; }
+
+/* Games grid */
+.games-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 22px; }
+.game-card {
+  position: relative; text-align: left; cursor: pointer;
+  background: linear-gradient(160deg, var(--panel), var(--bg-2));
+  border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 16px; color: var(--text); display: flex; flex-direction: column; gap: 6px;
+  min-height: 92px; transition: border-color .15s, transform .05s;
+}
+.game-card:hover { border-color: var(--accent); transform: translateY(-2px); }
+.game-card.soon { opacity: .6; cursor: default; }
+.game-card.soon:hover { transform: none; border-color: var(--border); }
+.game-card.active { border-color: var(--accent-2); box-shadow: 0 0 0 1px var(--accent-2) inset; }
+.game-ico-wrap { display: block; margin-bottom: 4px; }
+.game-ico { width: 34px; height: 34px; display: block; }
+.game-name { font-weight: 700; font-size: 16px; }
+.game-blurb { font-size: 12px; color: var(--muted); }
+.game-soon { position: absolute; top: 10px; right: 10px; font-size: 10px; text-transform: uppercase; color: var(--muted); border: 1px solid var(--border); border-radius: 6px; padding: 1px 6px; }
+
+/* Panels */
+.panel { background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius); padding: 18px; margin-bottom: 18px; }
+.panel-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+.panel-head h3 { margin: 0; font-size: 18px; }
+.pf-badge { font-size: 11px; color: var(--accent-2); border: 1px solid #1d4b44; background: #0c2420; padding: 2px 8px; border-radius: 999px; }
+
+.bet-controls { display: flex; gap: 10px; margin-bottom: 14px; }
+.seeds { display: grid; grid-template-columns: 1fr 1fr 80px; gap: 10px; margin-bottom: 14px; }
+.seeds .k { display: block; font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; }
+.seeds code { font-size: 11px; word-break: break-all; color: var(--text); }
+
+.result-log { display: flex; flex-direction: column; gap: 6px; max-height: 190px; overflow: auto; }
+.result-row { background: var(--bg-2); border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; font-size: 13px; }
+.disclaimer { font-size: 11px; color: var(--muted); margin: 12px 0 0; }
+
+.muted { color: var(--muted); font-size: 13px; }
+.verify-panel input {
+  width: 100%; margin: 6px 0; padding: 10px; background: var(--bg-2);
+  border: 1px solid var(--border); border-radius: 8px; color: var(--text); font-size: 13px;
+}
+.verify-out { margin-top: 10px; font-size: 13px; }
+.verify-out.ok { color: var(--win); }
+.verify-out.bad { color: var(--lose); }
+
+/* Chat */
+.col-chat { position: sticky; top: 76px; align-self: start; }
+.chat-panel { display: flex; flex-direction: column; height: calc(100vh - 120px); min-height: 420px; }
+.online-dot { width: 9px; height: 9px; border-radius: 50%; background: var(--win); box-shadow: 0 0 10px var(--win); }
+.chat-list { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; padding-right: 4px; }
+.chat-msg { font-size: 13px; background: var(--bg-2); border: 1px solid var(--border); border-radius: 8px; padding: 6px 9px; }
+.chat-msg.self { background: #1a1540; border-color: #3a2f7a; }
+.chat-user { color: var(--accent-2); font-weight: 700; margin-right: 6px; }
+.chat-text { color: var(--text); }
+.chat-time { float: right; color: var(--muted); font-size: 10px; }
+.chat-form { display: flex; gap: 8px; margin-top: 12px; }
+.chat-form input { flex: 1; padding: 10px; background: var(--bg-2); border: 1px solid var(--border); border-radius: 8px; color: var(--text); }
+
+/* Footer */
+.footer { border-top: 1px solid var(--border); padding: 24px; max-width: 1180px; margin: 0 auto; }
+.footer-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+.footer-socials { display: flex; gap: 14px; }
+.footer-legal { color: var(--muted); font-size: 12px; margin: 0; }
+
+/* Responsive */
+@media (max-width: 920px) {
+  .layout { grid-template-columns: 1fr; }
+  .games-grid { grid-template-columns: repeat(2, 1fr); }
+  .col-chat { position: static; }
+  .chat-panel { height: 460px; }
+  .hero h1 { font-size: 34px; }
+}
+
+</style>
+  </head>
+  <body>
+    <!-- Top bar -->
+    <header class="topbar">
+      <div class="brand">
+        <span class="logo-dot"></span>
+        <span id="brand-name" class="brand-name">Vanta</span>
+        <span id="cluster-badge" class="cluster-badge">devnet</span>
+      </div>
+      <nav class="top-actions">
+        <a class="social hidden" data-social="telegram" target="_blank" rel="noopener" title="Telegram">Telegram</a>
+        <a class="social hidden" data-social="discord" target="_blank" rel="noopener" title="Discord">Discord</a>
+        <a class="social hidden" data-social="twitter" target="_blank" rel="noopener" title="X">X</a>
+        <span id="wallet-info" class="wallet-info"></span>
+        <button id="wallet-btn" class="btn btn-primary">Connect Wallet</button>
+      </nav>
+    </header>
+
+    <!-- Hero -->
+    <section class="hero">
+      <h1 id="hero-title">Provably fair.<br /><span class="accent">Verifiably yours.</span></h1>
+      <p id="brand-tag" class="hero-tag">Provably fair. Verifiably yours.</p>
+      <p class="hero-sub">
+        Every bet is decided by code you can check. House edge is a flat
+        <strong id="edge-label">1.0%</strong>, disclosed up front — no hidden math.
+      </p>
+      <div class="hero-socials">
+        <a class="chip hidden" data-social="telegram" target="_blank" rel="noopener">Join Telegram</a>
+        <a class="chip hidden" data-social="discord" target="_blank" rel="noopener">Join Discord</a>
+        <a class="chip hidden" data-social="twitter" target="_blank" rel="noopener">Follow on X</a>
+      </div>
+    </section>
+
+    <main class="layout">
+      <!-- Left: games + bet panel -->
+      <div class="col-main">
+        <h2 class="section-title">Games</h2>
+        <div id="games-grid" class="games-grid"></div>
+
+        <div class="panel bet-panel">
+          <div class="panel-head">
+            <h3 id="panel-title">Dice</h3>
+            <span class="pf-badge">provably fair</span>
+          </div>
+
+          <div id="bet-controls" class="bet-controls" data-game="dice">
+            <button id="bet-btn" class="btn btn-primary big">Place demo bet</button>
+            <button id="new-seed" class="btn btn-ghost">Rotate seed</button>
+          </div>
+
+          <div class="seeds">
+            <div><span class="k">server seed hash</span><code id="seed-hash">—</code></div>
+            <div><span class="k">client seed</span><code id="seed-client">—</code></div>
+            <div><span class="k">nonce</span><code id="seed-nonce">1</code></div>
+          </div>
+
+          <div id="result-log" class="result-log"></div>
+          <p class="disclaimer">
+            Demo mode — no real funds move. Bets run on the in-browser fairness
+            engine so you can watch and verify outcomes.
+          </p>
+        </div>
+
+        <!-- Verify widget -->
+        <div class="panel verify-panel">
+          <h3>Verify a bet</h3>
+          <p class="muted">
+            Paste a revealed server seed and the hash that was committed before
+            play. If they match, the seed was never swapped.
+          </p>
+          <input id="verify-seed" placeholder="revealed server seed" />
+          <input id="verify-hash" placeholder="committed server seed hash" />
+          <button id="verify-btn" class="btn btn-ghost">Check</button>
+          <div id="verify-out" class="verify-out"></div>
+        </div>
+      </div>
+
+      <!-- Right: live chat -->
+      <aside class="col-chat">
+        <div class="panel chat-panel">
+          <div class="panel-head">
+            <h3>Live Chat</h3>
+            <span class="online-dot"></span>
+          </div>
+          <div id="chat-list" class="chat-list"></div>
+          <form id="chat-form" class="chat-form">
+            <input id="chat-input" autocomplete="off" placeholder="Say something…" maxlength="200" />
+            <button class="btn btn-primary" type="submit">Send</button>
+          </form>
+        </div>
+      </aside>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-top">
+        <span id="footer-brand" class="brand-name">Vanta</span>
+        <div class="footer-socials">
+          <a class="social hidden" data-social="telegram" target="_blank" rel="noopener">Telegram</a>
+          <a class="social hidden" data-social="discord" target="_blank" rel="noopener">Discord</a>
+          <a class="social hidden" data-social="twitter" target="_blank" rel="noopener">X</a>
+        </div>
+      </div>
+      <p class="footer-legal">
+        18+. Gambling involves risk — never wager more than you can afford to
+        lose. Online gambling is restricted or illegal in some jurisdictions;
+        it is your responsibility to know your local laws. &copy; <span id="year"></span>
+        <span id="footer-brand2"></span>
+      </p>
+    </footer>
+
+    <script type="module">
+
+// ===== js/config.js =====
+// =============================================================================
+// Vanta — front-end config. Everything you'd customize lives here.
+// Change brand, socials, and the Solana cluster in ONE place.
+// =============================================================================
+
+const BRAND = {
+  name: "Vanta",
+  tagline: "Provably fair. Verifiably yours.",
+};
+
+// Your social links. Put your real invite/handle URLs here.
+// Leave a value empty ("") to hide that icon.
+const SOCIALS = {
+  telegram: "https://t.me/your_channel",
+  discord: "https://discord.gg/your_invite",
+  twitter: "https://x.com/your_handle",
+};
+
+// House edge shown in the UI (must match the engine's edge, 0.01 = 1%).
+const HOUSE_EDGE = 0.01;
+
+// -----------------------------------------------------------------------------
+// Solana cluster config.
+//
+//   "localnet" -> http://localhost:8899   (solana-test-validator, free SOL)
+//   "devnet"   -> free devnet SOL
+//   "mainnet"  -> REAL SOL. Only switch here once everything is tested.
+//
+// To use your own RPC node or a provider (Helius/QuickNode), paste its URL
+// into the matching entry below instead of the public endpoint.
+// -----------------------------------------------------------------------------
+const CLUSTER = "devnet"; // "localnet" | "devnet" | "mainnet"
+
+const RPC_ENDPOINTS = {
+  localnet: "http://localhost:8899",
+  devnet: "https://api.devnet.solana.com",
+  // Public mainnet endpoint rate-limits hard (the 403 you hit). Replace with
+  // your own node or a provider key before using mainnet for real.
+  mainnet: "https://api.mainnet-beta.solana.com",
+};
+
+function rpcUrl() {
+  return RPC_ENDPOINTS[CLUSTER] ?? RPC_ENDPOINTS.devnet;
+}
+
+
+// ===== js/icons.js =====
+// =============================================================================
+// Game logos — inline SVG so they render everywhere (normal site AND the
+// sandboxed single-file preview, which can't fetch external .svg files).
+// Each uses the brand gradient (teal -> violet). Unique gradient ids avoid
+// collisions when several render on the same page.
+// Standalone copies live in web/assets/games/*.svg for marketing use.
+// =============================================================================
+
+const g = (id) =>
+  `<linearGradient id="${id}" x1="0" y1="0" x2="48" y2="48" gradientUnits="userSpaceOnUse"><stop stop-color="#00e0b8"/><stop offset="1" stop-color="#7c5cff"/></linearGradient>`;
+
+const S = (id, body) =>
+  `<svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg" class="game-ico"><defs>${g("ic-" + id)}</defs>${body.replaceAll("GRAD", `url(#ic-${id})`)}</svg>`;
+
+const ICONS = {
+  dice: S(
+    "dice",
+    `<rect x="9" y="9" width="30" height="30" rx="8" stroke="GRAD" stroke-width="2.5"/>
+     <circle cx="18" cy="18" r="2.4" fill="GRAD"/><circle cx="30" cy="18" r="2.4" fill="GRAD"/>
+     <circle cx="24" cy="24" r="2.4" fill="GRAD"/>
+     <circle cx="18" cy="30" r="2.4" fill="GRAD"/><circle cx="30" cy="30" r="2.4" fill="GRAD"/>`,
+  ),
+  limbo: S(
+    "limbo",
+    `<path d="M11 37 L37 11" stroke="GRAD" stroke-width="2.5" stroke-linecap="round"/>
+     <path d="M23 11 H37 V25" stroke="GRAD" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>`,
+  ),
+  crash: S(
+    "crash",
+    `<polyline points="9,35 18,28 24,30 33,15" stroke="GRAD" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+     <circle cx="33" cy="15" r="2.6" fill="GRAD"/>
+     <path d="M33 7 V11 M39 10 L36 13 M27 10 L30 13" stroke="GRAD" stroke-width="2" stroke-linecap="round"/>`,
+  ),
+  mines: S(
+    "mines",
+    `<circle cx="21" cy="29" r="11" stroke="GRAD" stroke-width="2.5"/>
+     <path d="M29 22 Q34 15 38 17" stroke="GRAD" stroke-width="2.5" stroke-linecap="round"/>
+     <path d="M38 10 V14 M34 13 L37 15 M42 13 L39 15" stroke="GRAD" stroke-width="2" stroke-linecap="round"/>`,
+  ),
+  plinko: S(
+    "plinko",
+    `<circle cx="24" cy="9" r="3" fill="GRAD"/>
+     <circle cx="24" cy="20" r="2" fill="GRAD"/>
+     <circle cx="17" cy="28" r="2" fill="GRAD"/><circle cx="31" cy="28" r="2" fill="GRAD"/>
+     <circle cx="12" cy="36" r="2" fill="GRAD"/><circle cx="24" cy="36" r="2" fill="GRAD"/><circle cx="36" cy="36" r="2" fill="GRAD"/>`,
+  ),
+  roulette: S(
+    "roulette",
+    `<circle cx="24" cy="24" r="15" stroke="GRAD" stroke-width="2.5"/>
+     <path d="M24 9 V39 M9 24 H39 M13.5 13.5 L34.5 34.5 M34.5 13.5 L13.5 34.5" stroke="GRAD" stroke-width="1.6"/>
+     <circle cx="24" cy="24" r="3" fill="GRAD"/>`,
+  ),
+  wheel: S(
+    "wheel",
+    `<path d="M24 6 L19.5 13 H28.5 Z" fill="GRAD"/>
+     <circle cx="24" cy="27" r="13" stroke="GRAD" stroke-width="2.5"/>
+     <path d="M24 14 V40 M11 27 H37 M15 18 L33 36 M33 18 L15 36" stroke="GRAD" stroke-width="1.4"/>`,
+  ),
+  coinflip: S(
+    "coinflip",
+    `<ellipse cx="25" cy="25" rx="10" ry="13" stroke="GRAD" stroke-width="2.5"/>
+     <path d="M25 19 V31 M22 22 H27 A2.5 2.5 0 0 1 27 27 H22 A2.5 2.5 0 0 0 22 32 H28" stroke="GRAD" stroke-width="1.8" stroke-linecap="round"/>
+     <path d="M11 16 A11 11 0 0 1 15 11" stroke="GRAD" stroke-width="2" stroke-linecap="round"/>`,
+  ),
+};
+
+
+// ===== js/fairness.js =====
+// =============================================================================
+// Browser fairness engine — the same provably-fair scheme as the Node engine,
+// implemented with the Web Crypto API so it runs client-side with no deps.
+//
+//   HMAC_SHA256(key = serverSeed, msg = `${clientSeed}:${nonce}:${cursor}`)
+//
+// Each HMAC gives 32 bytes -> eight floats in [0, 1). This mirrors
+// src/fairness/engine.ts exactly, so results match the server and tests.
+// =============================================================================
+
+const enc = new TextEncoder();
+
+async function hmacBytes(serverSeed, clientSeed, nonce, cursor) {
+  const key = await crypto.subtle.importKey(
+    "raw",
+    enc.encode(serverSeed),
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["sign"],
+  );
+  const sig = await crypto.subtle.sign(
+    "HMAC",
+    key,
+    enc.encode(`${clientSeed}:${nonce}:${cursor}`),
+  );
+  return new Uint8Array(sig);
+}
+
+/** sha256(serverSeed) as hex — the commitment shown before play. */
+async function hashServerSeed(serverSeed) {
+  const digest = await crypto.subtle.digest("SHA-256", enc.encode(serverSeed));
+  return [...new Uint8Array(digest)]
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
+}
+
+/** Draw `count` uniform floats in [0, 1) for a bet. */
+async function floats(serverSeed, clientSeed, nonce, count) {
+  const out = [];
+  let cursor = 0;
+  let buf = await hmacBytes(serverSeed, clientSeed, nonce, cursor);
+  let i = 0;
+  while (out.length < count) {
+    if (i + 4 > buf.length) {
+      cursor++;
+      buf = await hmacBytes(serverSeed, clientSeed, nonce, cursor);
+      i = 0;
+    }
+    let value = 0;
+    for (let k = 0; k < 4; k++) value += buf[i + k] / Math.pow(256, k + 1);
+    out.push(value);
+    i += 4;
+  }
+  return out;
+}
+
+/** Random hex string of `bytes` length — for generating seeds in-browser. */
+function randomHex(bytes = 8) {
+  const a = new Uint8Array(bytes);
+  crypto.getRandomValues(a);
+  return [...a].map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+async function verifyCommitment(serverSeed, serverSeedHash) {
+  return (await hashServerSeed(serverSeed)) === serverSeedHash;
+}
+
+
+// ===== js/games.js =====
+// =============================================================================
+// Browser game logic — mirrors src/games/* using the browser fairness engine.
+// Playable in-browser: Dice, Limbo, Coinflip, Wheel. (Crash/Mines/Plinko/
+// Roulette share the same math and are wired on the server engine too.)
+// =============================================================================
+
+
+
+const floor2 = (x) => Math.floor(x * 100) / 100;
+const payoutFor = (p, edge) => (p <= 0 ? 0 : floor2((1 / p) * (1 - edge)));
+
+async function playDice(ctx, { target, direction }, edge = HOUSE_EDGE) {
+  const [f] = await floats(ctx.serverSeed, ctx.clientSeed, ctx.nonce, 1);
+  const roll = Math.floor(f * 10001) / 100;
+  const win = direction === "under" ? roll < target : roll > target;
+  const chance = direction === "under" ? target / 100 : (100 - target) / 100;
+  return { game: "dice", roll, win, multiplier: win ? payoutFor(chance, edge) : 0 };
+}
+
+async function playLimbo(ctx, { target }, edge = HOUSE_EDGE) {
+  const [u] = await floats(ctx.serverSeed, ctx.clientSeed, ctx.nonce, 1);
+  const result = u >= 1 ? 1e6 : Math.max(1, floor2((1 - edge) / (1 - u)));
+  const win = result >= target;
+  return { game: "limbo", result, win, multiplier: win ? target : 0 };
+}
+
+async function playCoinflip(ctx, { call }, edge = HOUSE_EDGE) {
+  const [u] = await floats(ctx.serverSeed, ctx.clientSeed, ctx.nonce, 1);
+  const flip = u < 0.5 ? "heads" : "tails";
+  const win = flip === call;
+  return { game: "coinflip", flip, win, multiplier: win ? payoutFor(0.5, edge) : 0 };
+}
+
+const WHEEL = [0, 1.9, 0, 1.5, 0, 2, 0, 1.5, 0, 3, 0, 1.9];
+async function playWheel(ctx) {
+  const [u] = await floats(ctx.serverSeed, ctx.clientSeed, ctx.nonce, 1);
+  const segment = Math.floor(u * WHEEL.length);
+  const multiplier = WHEEL[segment];
+  return { game: "wheel", segment, multiplier, win: multiplier >= 1 };
+}
+
+// Catalogue used to render the games grid. Playable ones have a `play` fn.
+const GAME_CATALOG = [
+  { id: "dice", name: "Dice", blurb: "Roll under or over your target.", playable: true, icon: ICONS.dice },
+  { id: "limbo", name: "Limbo", blurb: "Beat the multiplier.", playable: true, icon: ICONS.limbo },
+  { id: "coinflip", name: "Coinflip", blurb: "Heads or tails, ~2x.", playable: true, icon: ICONS.coinflip },
+  { id: "wheel", name: "Wheel", blurb: "Spin for a multiplier.", playable: true, icon: ICONS.wheel },
+  { id: "crash", name: "Crash", blurb: "Cash out before the bust.", playable: false, icon: ICONS.crash },
+  { id: "mines", name: "Mines", blurb: "Dodge the hidden bombs.", playable: false, icon: ICONS.mines },
+  { id: "plinko", name: "Plinko", blurb: "Drop into a payout bucket.", playable: false, icon: ICONS.plinko },
+  { id: "roulette", name: "Roulette", blurb: "European single-zero wheel.", playable: false, icon: ICONS.roulette },
+];
+
+
+// ===== js/wallet.js =====
+// =============================================================================
+// Phantom wallet connect — reads YOUR OWN wallet + balance on the configured
+// cluster. Connecting a wallet and reading a balance is non-custodial and safe
+// on any cluster, including mainnet.
+//
+// @solana/web3.js is loaded from a CDN at runtime (in the visitor's browser),
+// so there's no build step. Swap the cluster/RPC in config.js.
+//
+// NOTE: sending real SOL (deposits/bets) is intentionally NOT wired here yet.
+// Build and test that flow on localnet/devnet first — see js/README notes.
+// =============================================================================
+
+let web3 = null;
+async function web3js() {
+  if (!web3) {
+    web3 = await import("https://esm.sh/@solana/web3.js@1.95.3");
+  }
+  return web3;
+}
+
+function getProvider() {
+  const p = window?.solana;
+  if (p?.isPhantom) return p;
+  return null;
+}
+
+async function connect() {
+  const provider = getProvider();
+  if (!provider) {
+    throw new Error("Phantom not found. Install it from phantom.app");
+  }
+  const resp = await provider.connect();
+  return resp.publicKey.toString();
+}
+
+async function disconnect() {
+  const provider = getProvider();
+  if (provider) await provider.disconnect();
+}
+
+async function getBalanceSol(address) {
+  const { Connection, PublicKey, LAMPORTS_PER_SOL } = await web3js();
+  const conn = new Connection(rpcUrl(), "confirmed");
+  const lamports = await conn.getBalance(new PublicKey(address));
+  return lamports / LAMPORTS_PER_SOL;
+}
+
+function clusterLabel() {
+  return CLUSTER;
+}
+
+
+// ===== js/chat.js =====
+// =============================================================================
+// Live chat UI — front-end only, exactly as you asked.
+//
+// It "auto-manages space and history" like the chat on sites of this kind:
+//   - keeps a rolling buffer (old messages drop off, memory stays bounded)
+//   - auto-scrolls to the newest message unless you've scrolled up to read
+//   - persists recent history in localStorage so it survives a refresh
+//   - simulates ambient activity so the room never looks dead in a demo
+//
+// There is NO backend here. To make it real later, replace `startAmbient()`
+// and `send()` with a WebSocket to your server; the rendering stays the same.
+// =============================================================================
+
+const MAX_MESSAGES = 150; // rolling buffer cap — this is the "auto space" part
+const STORAGE_KEY = "vanta_chat_history";
+
+const FAKE_USERS = [
+  "degen_sol", "moonboy", "0xViper", "luckyLuna", "crashKing",
+  "minesweeper", "wheelWatch", "satoshifan", "greenCandle", "apeInApe",
+];
+const FAKE_LINES = [
+  "gm", "lfg 🚀", "just hit 12x on limbo", "dice is cold today",
+  "wen payout", "verified my last bet, clean ✅", "mines got me again 😤",
+  "who's up?", "provably fair ftw", "big crash coming i can feel it",
+];
+
+class Chat {
+  constructor(listEl, inputEl, formEl) {
+    this.listEl = listEl;
+    this.inputEl = inputEl;
+    this.formEl = formEl;
+    this.messages = this.load();
+    this.pinnedToBottom = true;
+    this.timer = null;
+
+    this.listEl.addEventListener("scroll", () => {
+      const nearBottom =
+        this.listEl.scrollHeight - this.listEl.scrollTop - this.listEl.clientHeight < 40;
+      this.pinnedToBottom = nearBottom;
+    });
+
+    this.formEl.addEventListener("submit", (e) => {
+      e.preventDefault();
+      const text = this.inputEl.value.trim();
+      if (!text) return;
+      this.push({ user: "you", text, self: true });
+      this.inputEl.value = "";
+    });
+
+    this.render();
+  }
+
+  load() {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      return raw ? JSON.parse(raw) : [];
+    } catch {
+      return [];
+    }
+  }
+
+  save() {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(this.messages.slice(-MAX_MESSAGES)));
+    } catch {
+      /* storage can be unavailable (private mode) — ignore */
+    }
+  }
+
+  push(msg) {
+    this.messages.push({ ...msg, ts: Date.now() });
+    // Auto-manage space: keep only the last MAX_MESSAGES in memory + DOM.
+    if (this.messages.length > MAX_MESSAGES) {
+      this.messages = this.messages.slice(-MAX_MESSAGES);
+    }
+    this.save();
+    this.render();
+  }
+
+  render() {
+    this.listEl.innerHTML = "";
+    for (const m of this.messages) {
+      const row = document.createElement("div");
+      row.className = "chat-msg" + (m.self ? " self" : "");
+      const time = new Date(m.ts).toLocaleTimeString([], {
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+      row.innerHTML =
+        `<span class="chat-user">${escapeHtml(m.user)}</span>` +
+        `<span class="chat-text">${escapeHtml(m.text)}</span>` +
+        `<span class="chat-time">${time}</span>`;
+      this.listEl.appendChild(row);
+    }
+    if (this.pinnedToBottom) {
+      this.listEl.scrollTop = this.listEl.scrollHeight;
+    }
+  }
+
+  // Simulated room activity so the demo feels alive. Remove for production.
+  startAmbient() {
+    const tick = () => {
+      const user = FAKE_USERS[Math.floor(Math.random() * FAKE_USERS.length)];
+      const text = FAKE_LINES[Math.floor(Math.random() * FAKE_LINES.length)];
+      this.push({ user, text });
+      this.timer = setTimeout(tick, 3000 + Math.random() * 5000);
+    };
+    this.timer = setTimeout(tick, 1500);
+  }
+
+  stopAmbient() {
+    if (this.timer) clearTimeout(this.timer);
+  }
+}
+
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, (c) => ({
+    "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;",
+  }[c]));
+}
+
+
+// ===== js/app.js =====
+// =============================================================================
+// App bootstrap — wires branding, socials, games grid, the playable bet panel,
+// wallet connect, and the live chat together.
+// =============================================================================
+
+
+
+
+
+const $ = (sel) => document.querySelector(sel);
+
+// ---- Branding + socials -----------------------------------------------------
+document.title = BRAND.name;
+$("#brand-name").textContent = BRAND.name;
+$("#brand-tag").textContent = BRAND.tagline;
+$("#footer-brand").textContent = BRAND.name;
+const fb2 = $("#footer-brand2");
+if (fb2) fb2.textContent = BRAND.name;
+$("#year").textContent = new Date().getFullYear();
+$("#edge-label").textContent = (HOUSE_EDGE * 100).toFixed(1) + "%";
+
+for (const [key, url] of Object.entries(SOCIALS)) {
+  if (!url) continue;
+  document.querySelectorAll(`[data-social="${key}"]`).forEach((el) => {
+    el.href = url;
+    el.classList.remove("hidden");
+  });
+}
+
+// ---- Wallet -----------------------------------------------------------------
+const walletBtn = $("#wallet-btn");
+const walletInfo = $("#wallet-info");
+$("#cluster-badge").textContent = CLUSTER;
+if (CLUSTER === "mainnet") $("#cluster-badge").classList.add("mainnet");
+
+let connected = null;
+walletBtn.addEventListener("click", async () => {
+  try {
+    if (connected) {
+      await disconnect();
+      connected = null;
+      walletBtn.textContent = "Connect Wallet";
+      walletInfo.textContent = "";
+      return;
+    }
+    if (!getProvider()) {
+      walletInfo.textContent = "Phantom not detected — install phantom.app";
+      return;
+    }
+    const addr = await connect();
+    connected = addr;
+    walletBtn.textContent = addr.slice(0, 4) + "…" + addr.slice(-4);
+    walletInfo.textContent = "checking balance…";
+    try {
+      const bal = await getBalanceSol(addr);
+      walletInfo.textContent = `${bal.toFixed(4)} SOL (${CLUSTER})`;
+    } catch (e) {
+      walletInfo.textContent = `connected — balance read failed (${CLUSTER} RPC)`;
+    }
+  } catch (e) {
+    walletInfo.textContent = e.message || "connection failed";
+  }
+});
+
+// ---- Games grid -------------------------------------------------------------
+const grid = $("#games-grid");
+for (const g of GAME_CATALOG) {
+  const card = document.createElement("button");
+  card.className = "game-card" + (g.playable ? "" : " soon");
+  card.innerHTML =
+    `<span class="game-ico-wrap">${g.icon ?? ""}</span>` +
+    `<span class="game-name">${g.name}</span>` +
+    `<span class="game-blurb">${g.blurb}</span>` +
+    (g.playable ? "" : `<span class="game-soon">soon</span>`);
+  if (g.playable) card.addEventListener("click", () => selectGame(g.id));
+  grid.appendChild(card);
+}
+
+// ---- Bet panel (provably fair, in-browser) ----------------------------------
+// A fresh seed pair per session; nonce increments each bet.
+let serverSeed = randomHex(32);
+let clientSeed = randomHex(8);
+let nonce = 1;
+let currentGame = "dice";
+
+async function refreshSeeds() {
+  $("#seed-hash").textContent = await hashServerSeed(serverSeed);
+  $("#seed-client").textContent = clientSeed;
+  $("#seed-nonce").textContent = nonce;
+}
+
+function selectGame(id) {
+  currentGame = id;
+  $("#panel-title").textContent = GAME_CATALOG.find((g) => g.id === id).name;
+  document.querySelectorAll(".game-card").forEach((c) => c.classList.remove("active"));
+  $("#bet-controls").dataset.game = id;
+}
+
+$("#new-seed").addEventListener("click", async () => {
+  serverSeed = randomHex(32);
+  clientSeed = randomHex(8);
+  nonce = 1;
+  await refreshSeeds();
+  logResult("↻ New seed pair generated. Old server seed is now revealable.");
+});
+
+$("#bet-btn").addEventListener("click", async () => {
+  const ctx = { serverSeed, clientSeed, nonce };
+  let res;
+  try {
+    if (currentGame === "dice") {
+      res = await playDice(ctx, { target: 50, direction: "under" });
+      logResult(`🎲 Dice rolled ${res.roll} — ${verdict(res)}`);
+    } else if (currentGame === "limbo") {
+      res = await playLimbo(ctx, { target: 2 });
+      logResult(`🚀 Limbo hit ${res.result}x (target 2x) — ${verdict(res)}`);
+    } else if (currentGame === "coinflip") {
+      res = await playCoinflip(ctx, { call: "heads" });
+      logResult(`🪙 Flip: ${res.flip} (called heads) — ${verdict(res)}`);
+    } else if (currentGame === "wheel") {
+      res = await playWheel(ctx);
+      logResult(`🎡 Wheel segment ${res.segment} → ${res.multiplier}x — ${verdict(res)}`);
+    }
+    nonce++;
+    await refreshSeeds();
+  } catch (e) {
+    logResult("error: " + e.message);
+  }
+});
+
+function verdict(res) {
+  return res.win ? `WIN x${res.multiplier.toFixed(2)}` : "no win";
+}
+
+function logResult(line) {
+  const log = $("#result-log");
+  const row = document.createElement("div");
+  row.className = "result-row";
+  row.textContent = line;
+  log.prepend(row);
+  while (log.children.length > 12) log.removeChild(log.lastChild);
+}
+
+// ---- Verify widget ----------------------------------------------------------
+$("#verify-btn").addEventListener("click", async () => {
+  const seed = $("#verify-seed").value.trim();
+  const hash = $("#verify-hash").value.trim();
+  if (!seed || !hash) {
+    $("#verify-out").textContent = "Paste a server seed and its committed hash.";
+    return;
+  }
+  const ok = await verifyCommitment(seed, hash);
+  $("#verify-out").textContent = ok
+    ? "✓ Match — this server seed produced that commitment. Untampered."
+    : "✗ No match — the seed does not hash to that commitment.";
+  $("#verify-out").className = ok ? "ok" : "bad";
+});
+
+// ---- Chat -------------------------------------------------------------------
+const chat = new Chat($("#chat-list"), $("#chat-input"), $("#chat-form"));
+chat.startAmbient();
+
+// init
+selectGame("dice");
+refreshSeeds();
+
+</script>
+  </body>
+</html>
