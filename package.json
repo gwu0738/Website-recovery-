@@ -9,6 +9,8 @@
   },
   "scripts": {
     "demo": "node src/demo.ts",
+    "server": "node server/server.ts",
+    "build:web": "node web/build-standalone.mjs",
     "test": "node --test \"test/*.test.ts\""
   }
 }

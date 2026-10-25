@@ -9,3 +9,6 @@ dist/
 wallets/
 .anchor/
 test-ledger/
+
+# Backend runtime data (account balances, seeds) — not source
+server/data/
