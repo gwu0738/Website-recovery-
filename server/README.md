@@ -42,11 +42,20 @@ The account view never exposes the live server seed — only its hash
 (the commitment). Rotating the seed reveals the previous one so players can
 verify their past bets with the shared verifier (`src/fairness/verify.ts`).
 
-## Data
+## Data & persistence
 
-Account state lives in `server/data/accounts.json` (gitignored). It's a plain
-file store — fine for private testing. For production, swap `store.ts` for
-SQLite/Postgres; the interface stays the same.
+Accounts live in a **SQLite database** at `server/data/accounts.db` (gitignored),
+via Node's built-in `node:sqlite` — no dependency. Each account is keyed by wallet
+pubkey, so balances persist across logins and restarts: a user who signs out and
+returns weeks later gets the same balance back (the data lives here, not in the
+session). Writes are atomic ACID transactions in WAL mode, so a crash mid-bet
+can't corrupt the file or half-apply a wager.
+
+**Still back it up.** A database prevents corruption; backups prevent loss from a
+dead disk. For real money, run automated backups, e.g. a periodic
+`sqlite3 accounts.db ".backup backup.db"` (or `VACUUM INTO`) copied offsite
+(Cloudflare R2 / S3). For many concurrent users or multiple app servers, move to
+Postgres — the `store.ts` interface stays the same, only its internals change.
 
 ## Phase 2 — real SOL (planned)
 
