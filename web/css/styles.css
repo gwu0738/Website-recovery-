@@ -117,6 +117,13 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
 .pf-badge { font-size: 11px; color: var(--accent-2); border: 1px solid #1d4b44; background: #0c2420; padding: 2px 8px; border-radius: 999px; }
 
 .bet-controls { display: flex; gap: 10px; margin-bottom: 14px; }
+.account-row { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; margin-bottom: 14px; padding: 12px; background: var(--bg-2); border: 1px solid var(--border); border-radius: 10px; }
+.account-row .bal { display: flex; align-items: baseline; gap: 6px; }
+.account-row .bal strong { font-size: 20px; color: var(--accent-2); }
+.account-row .unit { font-size: 12px; color: var(--muted); }
+.account-row .stake { display: flex; align-items: center; gap: 6px; }
+.account-row .stake input { width: 100px; padding: 8px; background: var(--panel); border: 1px solid var(--border); border-radius: 8px; color: var(--text); }
+.account-row .k { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; }
 .seeds { display: grid; grid-template-columns: 1fr 1fr 80px; gap: 10px; margin-bottom: 14px; }
 .seeds .k { display: block; font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; }
 .seeds code { font-size: 11px; word-break: break-all; color: var(--text); }

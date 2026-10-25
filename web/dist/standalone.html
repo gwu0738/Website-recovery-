@@ -125,6 +125,13 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
 .pf-badge { font-size: 11px; color: var(--accent-2); border: 1px solid #1d4b44; background: #0c2420; padding: 2px 8px; border-radius: 999px; }
 
 .bet-controls { display: flex; gap: 10px; margin-bottom: 14px; }
+.account-row { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; margin-bottom: 14px; padding: 12px; background: var(--bg-2); border: 1px solid var(--border); border-radius: 10px; }
+.account-row .bal { display: flex; align-items: baseline; gap: 6px; }
+.account-row .bal strong { font-size: 20px; color: var(--accent-2); }
+.account-row .unit { font-size: 12px; color: var(--muted); }
+.account-row .stake { display: flex; align-items: center; gap: 6px; }
+.account-row .stake input { width: 100px; padding: 8px; background: var(--panel); border: 1px solid var(--border); border-radius: 8px; color: var(--text); }
+.account-row .k { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; }
 .seeds { display: grid; grid-template-columns: 1fr 1fr 80px; gap: 10px; margin-bottom: 14px; }
 .seeds .k { display: block; font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; }
 .seeds code { font-size: 11px; word-break: break-all; color: var(--text); }
@@ -216,6 +223,12 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
             <span class="pf-badge">provably fair</span>
           </div>
 
+          <div id="account-row" class="account-row hidden">
+            <div class="bal"><span class="k">balance</span><strong id="balance-val">—</strong><span class="unit">SOL</span></div>
+            <label class="stake"><span class="k">stake</span><input id="stake-input" type="number" step="0.001" min="0" value="0.001" /></label>
+            <button id="faucet-btn" class="btn btn-ghost">Claim free faucet</button>
+          </div>
+
           <div id="bet-controls" class="bet-controls" data-game="dice">
             <button id="bet-btn" class="btn btn-primary big">Place demo bet</button>
             <button id="new-seed" class="btn btn-ghost">Rotate seed</button>
@@ -304,6 +317,17 @@ const SOCIALS = {
 
 // House edge shown in the UI (must match the engine's edge, 0.01 = 1%).
 const HOUSE_EDGE = 0.01;
+
+// -----------------------------------------------------------------------------
+// Backend API base URL.
+//   ""                         -> DEMO mode: bets run in-browser, no accounts.
+//   "https://api.yoursite.com" -> BACKEND mode: real sign-in, balance, faucet.
+// Leave empty for the standalone preview; set it to your server when deployed.
+// -----------------------------------------------------------------------------
+const API_BASE = "";
+
+const LAMPORTS_PER_SOL = 1_000_000_000;
+const toSol = (l) => (l / LAMPORTS_PER_SOL).toFixed(4);
 
 // -----------------------------------------------------------------------------
 // Solana cluster config.
@@ -575,6 +599,106 @@ function clusterLabel() {
 }
 
 
+// ===== js/api.js =====
+// =============================================================================
+// Backend API client. Talks to the Vanta server (server/) for wallet sign-in,
+// faucet, balance, and real (server-tracked) bets.
+//
+// The site runs in one of two modes, decided by API_BASE in config.js:
+//   - "" (empty)  -> DEMO mode: bets run in-browser, no accounts (the preview).
+//   - a URL       -> BACKEND mode: real sign-in, balances, faucet, server bets.
+// =============================================================================
+
+const BACKEND_ENABLED = !!(API_BASE && API_BASE.length > 0);
+
+let token = null;
+try {
+  token = localStorage.getItem("vanta_token");
+} catch {
+  /* storage may be unavailable */
+}
+
+function setToken(t) {
+  token = t;
+  try {
+    if (t) localStorage.setItem("vanta_token", t);
+    else localStorage.removeItem("vanta_token");
+  } catch {
+    /* ignore */
+  }
+}
+
+async function req(path, { method = "GET", body, auth = false } = {}) {
+  const headers = {};
+  if (body) headers["content-type"] = "application/json";
+  if (auth && token) headers["authorization"] = `Bearer ${token}`;
+  const res = await fetch(API_BASE + path, {
+    method,
+    headers,
+    body: body ? JSON.stringify(body) : undefined,
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
+  return data;
+}
+
+// ---- base58 (for encoding the wallet signature) -----------------------------
+const B58 = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
+function base58Encode(bytes) {
+  if (!bytes.length) return "";
+  const digits = [0];
+  for (const byte of bytes) {
+    let carry = byte;
+    for (let j = 0; j < digits.length; j++) {
+      carry += digits[j] << 8;
+      digits[j] = carry % 58;
+      carry = (carry / 58) | 0;
+    }
+    while (carry > 0) {
+      digits.push(carry % 58);
+      carry = (carry / 58) | 0;
+    }
+  }
+  let out = "";
+  for (let k = 0; k < bytes.length && bytes[k] === 0; k++) out += "1";
+  for (let i = digits.length - 1; i >= 0; i--) out += B58[digits[i]];
+  return out;
+}
+
+// ---- API surface ------------------------------------------------------------
+const api = {
+  hasToken: () => !!token,
+  clearToken: () => setToken(null),
+  config: () => req("/api/config"),
+  me: () => req("/api/me", { auth: true }),
+  faucet: () => req("/api/faucet", { method: "POST", auth: true }),
+  rotateSeed: () => req("/api/rotate-seed", { method: "POST", auth: true }),
+  setClientSeed: (clientSeed) =>
+    req("/api/client-seed", { method: "POST", auth: true, body: { clientSeed } }),
+  bet: (game, bet, stake) =>
+    req("/api/bet", { method: "POST", auth: true, body: { game, bet, stake } }),
+
+  /** Full wallet sign-in using the provider's signMessage. Returns account. */
+  async signIn(provider, pubkey) {
+    const { message } = await req(
+      `/api/auth/challenge?pubkey=${encodeURIComponent(pubkey)}`,
+    );
+    const encoded = new TextEncoder().encode(message);
+    const signed = await provider.signMessage(encoded, "utf8");
+    const sigBytes = signed.signature ?? signed; // Phantom returns { signature }
+    const signature = base58Encode(
+      sigBytes instanceof Uint8Array ? sigBytes : new Uint8Array(sigBytes),
+    );
+    const out = await req("/api/auth/verify", {
+      method: "POST",
+      body: { pubkey, signature },
+    });
+    setToken(out.token);
+    return out.account;
+  },
+};
+
+
 // ===== js/chat.js =====
 // =============================================================================
 // Live chat UI — front-end only, exactly as you asked.
@@ -708,7 +832,19 @@ function escapeHtml(s) {
 
 
 
+
 const $ = (sel) => document.querySelector(sel);
+
+// In BACKEND mode, holds the signed-in account; null until sign-in.
+let account = null;
+const SOL = 1_000_000_000;
+const defaultBet = (game) =>
+  ({
+    dice: { target: 50, direction: "under" },
+    limbo: { target: 2 },
+    coinflip: { call: "heads" },
+    wheel: {},
+  })[game] ?? {};
 
 // ---- Branding + socials -----------------------------------------------------
 document.title = BRAND.name;
@@ -740,28 +876,51 @@ walletBtn.addEventListener("click", async () => {
     if (connected) {
       await disconnect();
       connected = null;
+      account = null;
+      api.clearToken();
       walletBtn.textContent = "Connect Wallet";
       walletInfo.textContent = "";
+      $("#account-row").classList.add("hidden");
+      $("#bet-btn").textContent = "Place demo bet";
+      await refreshSeeds();
       return;
     }
-    if (!getProvider()) {
+    const provider = getProvider();
+    if (!provider) {
       walletInfo.textContent = "Phantom not detected — install phantom.app";
       return;
     }
     const addr = await connect();
     connected = addr;
     walletBtn.textContent = addr.slice(0, 4) + "…" + addr.slice(-4);
-    walletInfo.textContent = "checking balance…";
-    try {
-      const bal = await getBalanceSol(addr);
-      walletInfo.textContent = `${bal.toFixed(4)} SOL (${CLUSTER})`;
-    } catch (e) {
-      walletInfo.textContent = `connected — balance read failed (${CLUSTER} RPC)`;
+
+    if (BACKEND_ENABLED) {
+      // Real sign-in: prove wallet ownership, then load the account.
+      walletInfo.textContent = "signing in…";
+      account = await api.signIn(provider, addr);
+      $("#account-row").classList.remove("hidden");
+      $("#bet-btn").textContent = "Place bet";
+      walletInfo.textContent = `signed in (${CLUSTER})`;
+      updateBalance(account.balanceLamports);
+      await refreshSeeds();
+    } else {
+      // Demo mode: just read the on-chain balance for display.
+      walletInfo.textContent = "checking balance…";
+      try {
+        const bal = await getBalanceSol(addr);
+        walletInfo.textContent = `${bal.toFixed(4)} SOL (${CLUSTER})`;
+      } catch {
+        walletInfo.textContent = `connected — balance read failed (${CLUSTER} RPC)`;
+      }
     }
   } catch (e) {
     walletInfo.textContent = e.message || "connection failed";
   }
 });
+
+function updateBalance(lamports) {
+  $("#balance-val").textContent = toSol(lamports);
+}
 
 // ---- Games grid -------------------------------------------------------------
 const grid = $("#games-grid");
@@ -785,6 +944,12 @@ let nonce = 1;
 let currentGame = "dice";
 
 async function refreshSeeds() {
+  if (BACKEND_ENABLED && account) {
+    $("#seed-hash").textContent = account.serverSeedHash;
+    $("#seed-client").textContent = account.clientSeed;
+    $("#seed-nonce").textContent = account.nonce;
+    return;
+  }
   $("#seed-hash").textContent = await hashServerSeed(serverSeed);
   $("#seed-client").textContent = clientSeed;
   $("#seed-nonce").textContent = nonce;
@@ -798,6 +963,17 @@ function selectGame(id) {
 }
 
 $("#new-seed").addEventListener("click", async () => {
+  if (BACKEND_ENABLED && account) {
+    try {
+      const r = await api.rotateSeed();
+      account = (await api.me()).account;
+      await refreshSeeds();
+      logResult(`↻ Seed rotated. Revealed: ${r.revealedServerSeed.slice(0, 16)}…`);
+    } catch (e) {
+      logResult("error: " + e.message);
+    }
+    return;
+  }
   serverSeed = randomHex(32);
   clientSeed = randomHex(8);
   nonce = 1;
@@ -805,7 +981,42 @@ $("#new-seed").addEventListener("click", async () => {
   logResult("↻ New seed pair generated. Old server seed is now revealable.");
 });
 
+$("#faucet-btn").addEventListener("click", async () => {
+  if (!account) return;
+  try {
+    const r = await api.faucet();
+    updateBalance(r.balanceLamports);
+    logResult(`🚰 Faucet credited +${toSol(r.creditedLamports)} SOL`);
+  } catch (e) {
+    logResult("faucet: " + e.message);
+  }
+});
+
 $("#bet-btn").addEventListener("click", async () => {
+  if (BACKEND_ENABLED) {
+    if (!account) {
+      logResult("Connect your wallet to sign in first.");
+      return;
+    }
+    const stakeSol = parseFloat($("#stake-input").value);
+    if (!(stakeSol > 0)) {
+      logResult("Enter a stake amount.");
+      return;
+    }
+    try {
+      const out = await api.bet(currentGame, defaultBet(currentGame), Math.round(stakeSol * SOL));
+      logResult(describeServer(out));
+      updateBalance(out.balanceLamports);
+      account.serverSeedHash = out.serverSeedHash;
+      account.clientSeed = out.clientSeed;
+      account.nonce = out.nonceUsed + 1;
+      await refreshSeeds();
+    } catch (e) {
+      logResult("error: " + e.message);
+    }
+    return;
+  }
+
   const ctx = { serverSeed, clientSeed, nonce };
   let res;
   try {
@@ -831,6 +1042,21 @@ $("#bet-btn").addEventListener("click", async () => {
 
 function verdict(res) {
   return res.win ? `WIN x${res.multiplier.toFixed(2)}` : "no win";
+}
+
+// Describe a server-side bet result (BACKEND mode).
+function describeServer(out) {
+  const r = out.result;
+  const o = r.outcome;
+  let detail = r.game;
+  if (r.game === "dice") detail = `🎲 Dice ${o.roll}`;
+  else if (r.game === "limbo") detail = `🚀 Limbo ${o.result}x`;
+  else if (r.game === "coinflip") detail = `🪙 ${o.flip}`;
+  else if (r.game === "wheel") detail = `🎡 seg ${o.segment} (${o.multiplier}x)`;
+  const money = r.win
+    ? `WIN +${toSol(out.payoutLamports)}`
+    : `-${toSol(out.stakeLamports)}`;
+  return `${detail} — ${money} SOL · bal ${toSol(out.balanceLamports)}`;
 }
 
 function logResult(line) {
@@ -863,7 +1089,23 @@ chat.startAmbient();
 
 // init
 selectGame("dice");
-refreshSeeds();
+
+// Restore a previous backend session if one exists.
+async function init() {
+  if (BACKEND_ENABLED && api.hasToken()) {
+    try {
+      account = (await api.me()).account;
+      $("#account-row").classList.remove("hidden");
+      $("#bet-btn").textContent = "Place bet";
+      $("#wallet-info").textContent = `signed in (${CLUSTER})`;
+      updateBalance(account.balanceLamports);
+    } catch {
+      api.clearToken(); // stale/expired token
+    }
+  }
+  await refreshSeeds();
+}
+init();
 
 </script>
   </body>

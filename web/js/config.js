@@ -20,6 +20,17 @@ export const SOCIALS = {
 export const HOUSE_EDGE = 0.01;
 
 // -----------------------------------------------------------------------------
+// Backend API base URL.
+//   ""                         -> DEMO mode: bets run in-browser, no accounts.
+//   "https://api.yoursite.com" -> BACKEND mode: real sign-in, balance, faucet.
+// Leave empty for the standalone preview; set it to your server when deployed.
+// -----------------------------------------------------------------------------
+export const API_BASE = "";
+
+export const LAMPORTS_PER_SOL = 1_000_000_000;
+export const toSol = (l) => (l / LAMPORTS_PER_SOL).toFixed(4);
+
+// -----------------------------------------------------------------------------
 // Solana cluster config.
 //
 //   "localnet" -> http://localhost:8899   (solana-test-validator, free SOL)

@@ -51,6 +51,12 @@
             <span class="pf-badge">provably fair</span>
           </div>
 
+          <div id="account-row" class="account-row hidden">
+            <div class="bal"><span class="k">balance</span><strong id="balance-val">—</strong><span class="unit">SOL</span></div>
+            <label class="stake"><span class="k">stake</span><input id="stake-input" type="number" step="0.001" min="0" value="0.001" /></label>
+            <button id="faucet-btn" class="btn btn-ghost">Claim free faucet</button>
+          </div>
+
           <div id="bet-controls" class="bet-controls" data-game="dice">
             <button id="bet-btn" class="btn btn-primary big">Place demo bet</button>
             <button id="new-seed" class="btn btn-ghost">Rotate seed</button>
