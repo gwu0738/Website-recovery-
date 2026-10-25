@@ -136,6 +136,30 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
 .seeds .k { display: block; font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; }
 .seeds code { font-size: 11px; word-break: break-all; color: var(--text); }
 
+/* Dice game */
+.dice { margin-bottom: 16px; }
+.dice-track { position: relative; height: 54px; background: var(--bg-2); border: 1px solid var(--border); border-radius: 12px; margin: 20px 0 10px; cursor: pointer; overflow: visible; }
+.dice-track::before { content: ""; position: absolute; inset: 0; border-radius: 12px; background: linear-gradient(90deg, var(--lose), #6a2030); opacity: .35; }
+.dice-zone-win { position: absolute; top: 0; bottom: 0; border-radius: 12px; background: linear-gradient(90deg, #1b6b4a, var(--win)); opacity: .55; transition: left .1s, width .1s; }
+.dice-ticks { position: absolute; inset: 0; display: flex; justify-content: space-between; align-items: center; padding: 0 8px; pointer-events: none; }
+.dice-ticks span { font-size: 11px; color: var(--text); opacity: .7; }
+.dice-thumb { position: absolute; top: -6px; bottom: -6px; width: 4px; background: #fff; border-radius: 3px; transform: translateX(-2px); box-shadow: 0 0 10px rgba(255,255,255,.6); transition: left .1s; }
+.dice-marker { position: absolute; top: -34px; transform: translateX(-50%); background: var(--panel-2); border: 1px solid var(--border); border-radius: 8px; padding: 2px 8px; font-size: 13px; font-weight: 700; transition: left .35s cubic-bezier(.2,.9,.2,1); }
+.dice-marker.win { color: var(--win); border-color: var(--win); box-shadow: 0 0 14px rgba(53,208,127,.5); }
+.dice-marker.lose { color: var(--lose); border-color: var(--lose); box-shadow: 0 0 14px rgba(255,92,122,.5); }
+.dice-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 14px 0; }
+.dice-stats > div { background: var(--bg-2); border: 1px solid var(--border); border-radius: 10px; padding: 10px; }
+.dice-stats .k { display: block; font-size: 10px; text-transform: uppercase; letter-spacing: .5px; color: var(--muted); margin-bottom: 2px; }
+.dice-stats strong { font-size: 18px; }
+.dice-controls { display: flex; gap: 12px; flex-wrap: wrap; align-items: flex-end; margin-bottom: 12px; }
+.dice-controls .field { display: flex; flex-direction: column; gap: 4px; }
+.dice-controls .field .k { font-size: 10px; text-transform: uppercase; letter-spacing: .5px; color: var(--muted); }
+.dice-controls input { width: 120px; padding: 9px; background: var(--bg-2); border: 1px solid var(--border); border-radius: 8px; color: var(--text); }
+.toggle { display: flex; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+.toggle-btn { background: var(--bg-2); color: var(--muted); border: none; padding: 9px 16px; cursor: pointer; font-weight: 600; }
+.toggle-btn.active { background: var(--accent); color: #fff; }
+.dice-roll { width: 100%; }
+
 .result-log { display: flex; flex-direction: column; gap: 6px; max-height: 190px; overflow: auto; }
 .result-row { background: var(--bg-2); border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; font-size: 13px; }
 .disclaimer { font-size: 11px; color: var(--muted); margin: 12px 0 0; }
@@ -225,9 +249,12 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
 
           <div id="account-row" class="account-row hidden">
             <div class="bal"><span class="k">balance</span><strong id="balance-val">—</strong><span class="unit">SOL</span></div>
-            <label class="stake"><span class="k">stake</span><input id="stake-input" type="number" step="0.001" min="0" value="0.001" /></label>
+            <label class="stake" id="stake-field"><span class="k">stake</span><input id="stake-input" type="number" step="0.001" min="0" value="0.001" /></label>
             <button id="faucet-btn" class="btn btn-ghost">Claim free faucet</button>
           </div>
+
+          <!-- Rich game UIs render here (Dice built; others coming in the same style). -->
+          <div id="game-view"></div>
 
           <div id="bet-controls" class="bet-controls" data-game="dice">
             <button id="bet-btn" class="btn btn-primary big">Place demo bet</button>
@@ -699,6 +726,155 @@ const api = {
 };
 
 
+// ===== js/dice-game.js =====
+// =============================================================================
+// Dice — a real interactive game UI (Stake-style), not a stub.
+//
+//   - a slider track split into lose/win zones by the target
+//   - drag or type to move the target; toggle roll-under / roll-over
+//   - live multiplier, win chance, and payout-on-win
+//   - an animated marker that lands on the rolled number, with a win/lose flash
+//
+// It is presentation only. The actual bet runs through `onRoll(params)`, which
+// the app wires to either the in-browser engine (demo) or the backend (real).
+// This same pattern will drive the other games' UIs.
+// =============================================================================
+
+const diceClamp = (x, lo, hi) => Math.max(lo, Math.min(hi, x));
+const diceFloor2 = (x) => Math.floor(x * 100) / 100;
+
+function createDiceGame(container, { onRoll, amountLabel = "Bet" }) {
+  let target = 50;
+  let direction = "under"; // "under" | "over"
+
+  container.innerHTML = `
+    <div class="dice">
+      <div class="dice-track" id="dice-track">
+        <div class="dice-zone-win" id="dice-zone"></div>
+        <div class="dice-ticks"><span>0</span><span>25</span><span>50</span><span>75</span><span>100</span></div>
+        <div class="dice-marker" id="dice-marker" hidden><span id="dice-marker-val">0</span></div>
+        <div class="dice-thumb" id="dice-thumb"></div>
+      </div>
+
+      <div class="dice-stats">
+        <div><span class="k">Multiplier</span><strong id="dice-mult">1.98×</strong></div>
+        <div><span class="k">Win chance</span><strong id="dice-chance">50%</strong></div>
+        <div><span class="k">Payout on win</span><strong id="dice-payout">—</strong></div>
+      </div>
+
+      <div class="dice-controls">
+        <label class="field"><span class="k">${amountLabel}</span>
+          <input id="dice-amount" type="number" step="0.001" min="0" value="0.001" /></label>
+        <label class="field"><span class="k">Target</span>
+          <input id="dice-target" type="number" step="0.01" min="0.01" max="99.99" value="50" /></label>
+        <div class="field"><span class="k">Direction</span>
+          <div class="toggle">
+            <button id="dice-under" class="toggle-btn active">Under</button>
+            <button id="dice-over" class="toggle-btn">Over</button>
+          </div>
+        </div>
+      </div>
+
+      <button id="dice-roll" class="btn btn-primary big dice-roll">Roll Dice</button>
+    </div>`;
+
+  const $ = (s) => container.querySelector(s);
+  const zone = $("#dice-zone");
+  const thumb = $("#dice-thumb");
+  const marker = $("#dice-marker");
+  const markerVal = $("#dice-marker-val");
+  const track = $("#dice-track");
+  const amountEl = $("#dice-amount");
+  const targetEl = $("#dice-target");
+  const rollBtn = $("#dice-roll");
+
+  function winChance() {
+    return direction === "under" ? target : 100 - target;
+  }
+  function multiplier() {
+    const p = winChance() / 100;
+    return p <= 0 ? 0 : diceFloor2((1 / p) * (1 - HOUSE_EDGE));
+  }
+
+  function render() {
+    const pct = diceClamp(target, 0, 100);
+    thumb.style.left = pct + "%";
+    if (direction === "under") {
+      zone.style.left = "0%";
+      zone.style.width = pct + "%";
+    } else {
+      zone.style.left = pct + "%";
+      zone.style.width = 100 - pct + "%";
+    }
+    $("#dice-mult").textContent = multiplier().toFixed(2) + "×";
+    $("#dice-chance").textContent = winChance().toFixed(2) + "%";
+    const amt = parseFloat(amountEl.value) || 0;
+    $("#dice-payout").textContent = amt > 0 ? (amt * multiplier()).toFixed(4) : "—";
+  }
+
+  function setTarget(v) {
+    target = diceClamp(Number(v) || 0, 0.01, 99.99);
+    targetEl.value = target;
+    render();
+  }
+
+  // drag on the track to set the target
+  let dragging = false;
+  const fromEvent = (e) => {
+    const rect = track.getBoundingClientRect();
+    const x = (e.touches ? e.touches[0].clientX : e.clientX) - rect.left;
+    setTarget((x / rect.width) * 100);
+  };
+  track.addEventListener("pointerdown", (e) => {
+    dragging = true;
+    fromEvent(e);
+  });
+  window.addEventListener("pointermove", (e) => dragging && fromEvent(e));
+  window.addEventListener("pointerup", () => (dragging = false));
+
+  targetEl.addEventListener("input", () => setTarget(targetEl.value));
+  amountEl.addEventListener("input", render);
+  $("#dice-under").addEventListener("click", () => {
+    direction = "under";
+    $("#dice-under").classList.add("active");
+    $("#dice-over").classList.remove("active");
+    render();
+  });
+  $("#dice-over").addEventListener("click", () => {
+    direction = "over";
+    $("#dice-over").classList.add("active");
+    $("#dice-under").classList.remove("active");
+    render();
+  });
+
+  function animateTo(roll, win) {
+    marker.hidden = false;
+    marker.style.left = diceClamp(roll, 0, 100) + "%";
+    markerVal.textContent = roll.toFixed(2);
+    marker.classList.remove("win", "lose");
+    // force reflow so the class re-triggers the flash
+    void marker.offsetWidth;
+    marker.classList.add(win ? "win" : "lose");
+  }
+
+  rollBtn.addEventListener("click", async () => {
+    rollBtn.disabled = true;
+    rollBtn.textContent = "Rolling…";
+    try {
+      const amount = parseFloat(amountEl.value) || 0;
+      const res = await onRoll({ target, direction, amount });
+      if (res) animateTo(res.roll, res.win);
+    } finally {
+      rollBtn.disabled = false;
+      rollBtn.textContent = "Roll Dice";
+    }
+  });
+
+  render();
+  return { render };
+}
+
+
 // ===== js/chat.js =====
 // =============================================================================
 // Live chat UI — front-end only, exactly as you asked.
@@ -833,6 +1009,7 @@ function escapeHtml(s) {
 
 
 
+
 const $ = (sel) => document.querySelector(sel);
 
 // In BACKEND mode, holds the signed-in account; null until sign-in.
@@ -955,11 +1132,17 @@ async function refreshSeeds() {
   $("#seed-nonce").textContent = nonce;
 }
 
+const RICH_GAMES = new Set(["dice"]); // games with a full interactive UI (more coming)
+
 function selectGame(id) {
   currentGame = id;
   $("#panel-title").textContent = GAME_CATALOG.find((g) => g.id === id).name;
-  document.querySelectorAll(".game-card").forEach((c) => c.classList.remove("active"));
   $("#bet-controls").dataset.game = id;
+  const rich = RICH_GAMES.has(id);
+  $("#game-view").classList.toggle("hidden", !rich);
+  $("#bet-btn").classList.toggle("hidden", rich); // rich games have their own roll button
+  const sf = $("#stake-field");
+  if (sf) sf.classList.toggle("hidden", rich); // rich games have their own amount field
 }
 
 $("#new-seed").addEventListener("click", async () => {
@@ -1081,6 +1264,50 @@ $("#verify-btn").addEventListener("click", async () => {
     ? "✓ Match — this server seed produced that commitment. Untampered."
     : "✗ No match — the seed does not hash to that commitment.";
   $("#verify-out").className = ok ? "ok" : "bad";
+});
+
+// ---- Dice (rich interactive game) ------------------------------------------
+async function diceOnRoll({ target, direction, amount }) {
+  if (BACKEND_ENABLED) {
+    if (!account) {
+      logResult("Connect your wallet to sign in first.");
+      return null;
+    }
+    if (!(amount > 0)) {
+      logResult("Enter a bet amount.");
+      return null;
+    }
+    try {
+      const out = await api.bet("dice", { target, direction }, Math.round(amount * SOL));
+      logResult(describeServer(out));
+      updateBalance(out.balanceLamports);
+      account.serverSeedHash = out.serverSeedHash;
+      account.clientSeed = out.clientSeed;
+      account.nonce = out.nonceUsed + 1;
+      await refreshSeeds();
+      return {
+        roll: out.result.outcome.roll,
+        win: out.result.win,
+        multiplier: out.result.multiplier,
+      };
+    } catch (e) {
+      logResult("error: " + e.message);
+      return null;
+    }
+  }
+  // demo mode
+  const res = await playDice({ serverSeed, clientSeed, nonce }, { target, direction });
+  logResult(
+    `🎲 Dice rolled ${res.roll} — ${res.win ? "WIN x" + res.multiplier.toFixed(2) : "no win"}`,
+  );
+  nonce++;
+  await refreshSeeds();
+  return { roll: res.roll, win: res.win, multiplier: res.multiplier };
+}
+
+createDiceGame($("#game-view"), {
+  onRoll: diceOnRoll,
+  amountLabel: BACKEND_ENABLED ? "Bet (SOL)" : "Bet",
 });
 
 // ---- Chat -------------------------------------------------------------------

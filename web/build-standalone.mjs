@@ -24,6 +24,7 @@ const JS_ORDER = [
   "js/games.js",
   "js/wallet.js",
   "js/api.js",
+  "js/dice-game.js",
   "js/chat.js",
   "js/app.js",
 ];

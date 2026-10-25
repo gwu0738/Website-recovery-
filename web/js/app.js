@@ -7,6 +7,7 @@ import { randomHex, hashServerSeed, verifyCommitment } from "./fairness.js";
 import { playDice, playLimbo, playCoinflip, playWheel, GAME_CATALOG } from "./games.js";
 import { connect, disconnect, getBalanceSol, getProvider } from "./wallet.js";
 import { api, BACKEND_ENABLED } from "./api.js";
+import { createDiceGame } from "./dice-game.js";
 import { Chat } from "./chat.js";
 
 const $ = (sel) => document.querySelector(sel);
@@ -131,11 +132,17 @@ async function refreshSeeds() {
   $("#seed-nonce").textContent = nonce;
 }
 
+const RICH_GAMES = new Set(["dice"]); // games with a full interactive UI (more coming)
+
 function selectGame(id) {
   currentGame = id;
   $("#panel-title").textContent = GAME_CATALOG.find((g) => g.id === id).name;
-  document.querySelectorAll(".game-card").forEach((c) => c.classList.remove("active"));
   $("#bet-controls").dataset.game = id;
+  const rich = RICH_GAMES.has(id);
+  $("#game-view").classList.toggle("hidden", !rich);
+  $("#bet-btn").classList.toggle("hidden", rich); // rich games have their own roll button
+  const sf = $("#stake-field");
+  if (sf) sf.classList.toggle("hidden", rich); // rich games have their own amount field
 }
 
 $("#new-seed").addEventListener("click", async () => {
@@ -257,6 +264,50 @@ $("#verify-btn").addEventListener("click", async () => {
     ? "✓ Match — this server seed produced that commitment. Untampered."
     : "✗ No match — the seed does not hash to that commitment.";
   $("#verify-out").className = ok ? "ok" : "bad";
+});
+
+// ---- Dice (rich interactive game) ------------------------------------------
+async function diceOnRoll({ target, direction, amount }) {
+  if (BACKEND_ENABLED) {
+    if (!account) {
+      logResult("Connect your wallet to sign in first.");
+      return null;
+    }
+    if (!(amount > 0)) {
+      logResult("Enter a bet amount.");
+      return null;
+    }
+    try {
+      const out = await api.bet("dice", { target, direction }, Math.round(amount * SOL));
+      logResult(describeServer(out));
+      updateBalance(out.balanceLamports);
+      account.serverSeedHash = out.serverSeedHash;
+      account.clientSeed = out.clientSeed;
+      account.nonce = out.nonceUsed + 1;
+      await refreshSeeds();
+      return {
+        roll: out.result.outcome.roll,
+        win: out.result.win,
+        multiplier: out.result.multiplier,
+      };
+    } catch (e) {
+      logResult("error: " + e.message);
+      return null;
+    }
+  }
+  // demo mode
+  const res = await playDice({ serverSeed, clientSeed, nonce }, { target, direction });
+  logResult(
+    `🎲 Dice rolled ${res.roll} — ${res.win ? "WIN x" + res.multiplier.toFixed(2) : "no win"}`,
+  );
+  nonce++;
+  await refreshSeeds();
+  return { roll: res.roll, win: res.win, multiplier: res.multiplier };
+}
+
+createDiceGame($("#game-view"), {
+  onRoll: diceOnRoll,
+  amountLabel: BACKEND_ENABLED ? "Bet (SOL)" : "Bet",
 });
 
 // ---- Chat -------------------------------------------------------------------
