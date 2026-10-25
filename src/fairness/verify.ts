@@ -21,6 +21,12 @@ import { playMines, type MinesBet } from "../games/mines.ts";
 import { playPlinko, type PlinkoBet } from "../games/plinko.ts";
 import { playRoulette, type RouletteBet } from "../games/roulette.ts";
 import { playWheel, type WheelBet } from "../games/wheel.ts";
+import { playTower, type TowerBet } from "../games/tower.ts";
+import { playHiLo, type HiLoBet } from "../games/hilo.ts";
+import { playChicken, type ChickenBet } from "../games/chicken.ts";
+import { playDarts, type DartsBet } from "../games/darts.ts";
+import { playSnakes } from "../games/snakes.ts";
+import { playKeno, type KenoBet } from "../games/keno.ts";
 import type { BetContext, GameResult } from "../games/types.ts";
 
 /** Check a revealed server seed against the commitment shown before play. */
@@ -39,7 +45,13 @@ export type AnyBet =
   | { game: "plinko"; bet: PlinkoBet }
   | { game: "roulette"; bet: RouletteBet }
   | { game: "wheel"; bet: WheelBet }
-  | { game: "coinflip"; bet: CoinflipBet };
+  | { game: "coinflip"; bet: CoinflipBet }
+  | { game: "tower"; bet: TowerBet }
+  | { game: "hilo"; bet: HiLoBet }
+  | { game: "chicken"; bet: ChickenBet }
+  | { game: "darts"; bet: DartsBet }
+  | { game: "snakes"; bet: Record<string, never> }
+  | { game: "keno"; bet: KenoBet };
 
 /** Replay a bet from its fairness inputs. Returns the recomputed result. */
 export function replay(ctx: BetContext, spec: AnyBet): GameResult {
@@ -60,6 +72,18 @@ export function replay(ctx: BetContext, spec: AnyBet): GameResult {
       return playWheel(ctx, spec.bet);
     case "coinflip":
       return playCoinflip(ctx, spec.bet);
+    case "tower":
+      return playTower(ctx, spec.bet);
+    case "hilo":
+      return playHiLo(ctx, spec.bet);
+    case "chicken":
+      return playChicken(ctx, spec.bet);
+    case "darts":
+      return playDarts(ctx, spec.bet);
+    case "snakes":
+      return playSnakes(ctx);
+    case "keno":
+      return playKeno(ctx, spec.bet);
   }
 }
 

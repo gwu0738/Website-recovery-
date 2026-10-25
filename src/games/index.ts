@@ -9,6 +9,12 @@ export * from "./plinko.ts";
 export * from "./roulette.ts";
 export * from "./wheel.ts";
 export * from "./coinflip.ts";
+export * from "./tower.ts";
+export * from "./hilo.ts";
+export * from "./chicken.ts";
+export * from "./darts.ts";
+export * from "./snakes.ts";
+export * from "./keno.ts";
 
 export const GAMES = [
   "dice",
@@ -19,6 +25,12 @@ export const GAMES = [
   "roulette",
   "wheel",
   "coinflip",
+  "tower",
+  "hilo",
+  "chicken",
+  "darts",
+  "snakes",
+  "keno",
 ] as const;
 
 export type GameName = (typeof GAMES)[number];

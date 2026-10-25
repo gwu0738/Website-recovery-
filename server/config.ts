@@ -12,7 +12,13 @@ export const FAUCET = {
   /** Free amount credited per claim, in lamports (1 SOL = 1_000_000_000). */
   amountLamports: 50_000_000, // 0.05 "SOL" of test credit
   /** How often a user can claim, in milliseconds. */
-  cooldownMs: 1000 * 60 * 60, // 1 hour
+  cooldownMs: 1000 * 60 * 3, // 3 minutes (matches nuts.gg cadence)
+  /**
+   * Require a verified email before the faucet can be claimed (nuts.gg's
+   * anti-bot gate). The email-verification layer is the next build; until it
+   * exists this flag is informational.
+   */
+  requireVerifiedEmail: true,
   /**
    * Wagering requirement multiple before faucet credit can be withdrawn
    * (Phase 2). 0 = none. Mirrors how real faucets lock free credit.
