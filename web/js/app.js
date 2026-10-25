@@ -69,6 +69,7 @@ for (const g of GAME_CATALOG) {
   const card = document.createElement("button");
   card.className = "game-card" + (g.playable ? "" : " soon");
   card.innerHTML =
+    `<span class="game-ico-wrap">${g.icon ?? ""}</span>` +
     `<span class="game-name">${g.name}</span>` +
     `<span class="game-blurb">${g.blurb}</span>` +
     (g.playable ? "" : `<span class="game-soon">soon</span>`);

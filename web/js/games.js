@@ -5,6 +5,7 @@
 // =============================================================================
 import { floats } from "./fairness.js";
 import { HOUSE_EDGE } from "./config.js";
+import { ICONS } from "./icons.js";
 
 const floor2 = (x) => Math.floor(x * 100) / 100;
 const payoutFor = (p, edge) => (p <= 0 ? 0 : floor2((1 / p) * (1 - edge)));
@@ -41,12 +42,12 @@ export async function playWheel(ctx) {
 
 // Catalogue used to render the games grid. Playable ones have a `play` fn.
 export const GAME_CATALOG = [
-  { id: "dice", name: "Dice", blurb: "Roll under or over your target.", playable: true },
-  { id: "limbo", name: "Limbo", blurb: "Beat the multiplier.", playable: true },
-  { id: "coinflip", name: "Coinflip", blurb: "Heads or tails, ~2x.", playable: true },
-  { id: "wheel", name: "Wheel", blurb: "Spin for a multiplier.", playable: true },
-  { id: "crash", name: "Crash", blurb: "Cash out before the bust.", playable: false },
-  { id: "mines", name: "Mines", blurb: "Dodge the hidden bombs.", playable: false },
-  { id: "plinko", name: "Plinko", blurb: "Drop into a payout bucket.", playable: false },
-  { id: "roulette", name: "Roulette", blurb: "European single-zero wheel.", playable: false },
+  { id: "dice", name: "Dice", blurb: "Roll under or over your target.", playable: true, icon: ICONS.dice },
+  { id: "limbo", name: "Limbo", blurb: "Beat the multiplier.", playable: true, icon: ICONS.limbo },
+  { id: "coinflip", name: "Coinflip", blurb: "Heads or tails, ~2x.", playable: true, icon: ICONS.coinflip },
+  { id: "wheel", name: "Wheel", blurb: "Spin for a multiplier.", playable: true, icon: ICONS.wheel },
+  { id: "crash", name: "Crash", blurb: "Cash out before the bust.", playable: false, icon: ICONS.crash },
+  { id: "mines", name: "Mines", blurb: "Dodge the hidden bombs.", playable: false, icon: ICONS.mines },
+  { id: "plinko", name: "Plinko", blurb: "Drop into a payout bucket.", playable: false, icon: ICONS.plinko },
+  { id: "roulette", name: "Roulette", blurb: "European single-zero wheel.", playable: false, icon: ICONS.roulette },
 ];
