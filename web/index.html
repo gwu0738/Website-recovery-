@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Vanta</title>
+    <meta name="description" content="Provably fair crypto casino — verify every bet yourself." />
+    <link rel="stylesheet" href="css/styles.css" />
+  </head>
+  <body>
+    <!-- Top bar -->
+    <header class="topbar">
+      <div class="brand">
+        <span class="logo-dot"></span>
+        <span id="brand-name" class="brand-name">Vanta</span>
+        <span id="cluster-badge" class="cluster-badge">devnet</span>
+      </div>
+      <nav class="top-actions">
+        <a class="social hidden" data-social="telegram" target="_blank" rel="noopener" title="Telegram">Telegram</a>
+        <a class="social hidden" data-social="discord" target="_blank" rel="noopener" title="Discord">Discord</a>
+        <a class="social hidden" data-social="twitter" target="_blank" rel="noopener" title="X">X</a>
+        <span id="wallet-info" class="wallet-info"></span>
+        <button id="wallet-btn" class="btn btn-primary">Connect Wallet</button>
+      </nav>
+    </header>
+
+    <!-- Hero -->
+    <section class="hero">
+      <h1 id="hero-title">Provably fair.<br /><span class="accent">Verifiably yours.</span></h1>
+      <p id="brand-tag" class="hero-tag">Provably fair. Verifiably yours.</p>
+      <p class="hero-sub">
+        Every bet is decided by code you can check. House edge is a flat
+        <strong id="edge-label">1.0%</strong>, disclosed up front — no hidden math.
+      </p>
+      <div class="hero-socials">
+        <a class="chip hidden" data-social="telegram" target="_blank" rel="noopener">Join Telegram</a>
+        <a class="chip hidden" data-social="discord" target="_blank" rel="noopener">Join Discord</a>
+        <a class="chip hidden" data-social="twitter" target="_blank" rel="noopener">Follow on X</a>
+      </div>
+    </section>
+
+    <main class="layout">
+      <!-- Left: games + bet panel -->
+      <div class="col-main">
+        <h2 class="section-title">Games</h2>
+        <div id="games-grid" class="games-grid"></div>
+
+        <div class="panel bet-panel">
+          <div class="panel-head">
+            <h3 id="panel-title">Dice</h3>
+            <span class="pf-badge">provably fair</span>
+          </div>
+
+          <div id="bet-controls" class="bet-controls" data-game="dice">
+            <button id="bet-btn" class="btn btn-primary big">Place demo bet</button>
+            <button id="new-seed" class="btn btn-ghost">Rotate seed</button>
+          </div>
+
+          <div class="seeds">
+            <div><span class="k">server seed hash</span><code id="seed-hash">—</code></div>
+            <div><span class="k">client seed</span><code id="seed-client">—</code></div>
+            <div><span class="k">nonce</span><code id="seed-nonce">1</code></div>
+          </div>
+
+          <div id="result-log" class="result-log"></div>
+          <p class="disclaimer">
+            Demo mode — no real funds move. Bets run on the in-browser fairness
+            engine so you can watch and verify outcomes.
+          </p>
+        </div>
+
+        <!-- Verify widget -->
+        <div class="panel verify-panel">
+          <h3>Verify a bet</h3>
+          <p class="muted">
+            Paste a revealed server seed and the hash that was committed before
+            play. If they match, the seed was never swapped.
+          </p>
+          <input id="verify-seed" placeholder="revealed server seed" />
+          <input id="verify-hash" placeholder="committed server seed hash" />
+          <button id="verify-btn" class="btn btn-ghost">Check</button>
+          <div id="verify-out" class="verify-out"></div>
+        </div>
+      </div>
+
+      <!-- Right: live chat -->
+      <aside class="col-chat">
+        <div class="panel chat-panel">
+          <div class="panel-head">
+            <h3>Live Chat</h3>
+            <span class="online-dot"></span>
+          </div>
+          <div id="chat-list" class="chat-list"></div>
+          <form id="chat-form" class="chat-form">
+            <input id="chat-input" autocomplete="off" placeholder="Say something…" maxlength="200" />
+            <button class="btn btn-primary" type="submit">Send</button>
+          </form>
+        </div>
+      </aside>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-top">
+        <span id="footer-brand" class="brand-name">Vanta</span>
+        <div class="footer-socials">
+          <a class="social hidden" data-social="telegram" target="_blank" rel="noopener">Telegram</a>
+          <a class="social hidden" data-social="discord" target="_blank" rel="noopener">Discord</a>
+          <a class="social hidden" data-social="twitter" target="_blank" rel="noopener">X</a>
+        </div>
+      </div>
+      <p class="footer-legal">
+        18+. Gambling involves risk — never wager more than you can afford to
+        lose. Online gambling is restricted or illegal in some jurisdictions;
+        it is your responsibility to know your local laws. &copy; <span id="year"></span>
+        <span id="footer-brand2"></span>
+      </p>
+    </footer>
+
+    <script type="module" src="js/app.js"></script>
+  </body>
+</html>

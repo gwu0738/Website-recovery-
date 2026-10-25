@@ -1,0 +1,161 @@
+/* ============================================================================
+   Vanta — dark casino-noir theme. Brand accent is a single variable (--accent),
+   so re-skinning is a one-line change.
+   ========================================================================== */
+:root {
+  --bg: #0a0b10;
+  --bg-2: #11131c;
+  --panel: #151826;
+  --panel-2: #1b1f30;
+  --border: #272c40;
+  --text: #e8eaf2;
+  --muted: #8b90a6;
+  --accent: #7c5cff;
+  --accent-2: #00e0b8;
+  --win: #35d07f;
+  --lose: #ff5c7a;
+  --radius: 14px;
+  --font: "Inter", system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+body {
+  background: radial-gradient(1200px 600px at 70% -10%, #1a1340 0%, var(--bg) 55%);
+  color: var(--text);
+  font-family: var(--font);
+  min-height: 100vh;
+  line-height: 1.5;
+}
+code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+
+/* Top bar */
+.topbar {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 14px 24px; border-bottom: 1px solid var(--border);
+  position: sticky; top: 0; backdrop-filter: blur(10px);
+  background: rgba(10, 11, 16, 0.7); z-index: 10;
+}
+.brand { display: flex; align-items: center; gap: 10px; }
+.logo-dot {
+  width: 18px; height: 18px; border-radius: 6px;
+  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  box-shadow: 0 0 18px var(--accent);
+}
+.brand-name { font-weight: 800; letter-spacing: 0.3px; font-size: 20px; }
+.cluster-badge {
+  font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px;
+  background: var(--panel-2); color: var(--muted);
+  padding: 2px 8px; border-radius: 999px; border: 1px solid var(--border);
+}
+.cluster-badge.mainnet { color: #ffce54; border-color: #6b5a1f; }
+.top-actions { display: flex; align-items: center; gap: 14px; }
+.wallet-info { font-size: 12px; color: var(--muted); }
+
+/* Buttons */
+.btn {
+  border: 1px solid var(--border); background: var(--panel-2); color: var(--text);
+  padding: 9px 16px; border-radius: 10px; font-weight: 600; cursor: pointer;
+  font-size: 14px; transition: transform .05s ease, background .15s ease;
+}
+.btn:hover { background: #222740; }
+.btn:active { transform: translateY(1px); }
+.btn-primary {
+  background: linear-gradient(135deg, var(--accent), #5b3cff); border: none; color: #fff;
+}
+.btn-primary:hover { filter: brightness(1.08); }
+.btn-ghost { background: transparent; }
+.btn.big { font-size: 16px; padding: 12px 22px; }
+
+.social { color: var(--muted); text-decoration: none; font-size: 14px; font-weight: 600; }
+.social:hover { color: var(--text); }
+.hidden { display: none !important; }
+
+/* Hero */
+.hero { text-align: center; padding: 56px 24px 30px; }
+.hero h1 { font-size: 46px; line-height: 1.05; margin: 0 0 10px; font-weight: 800; }
+.accent { background: linear-gradient(135deg, var(--accent-2), var(--accent)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.hero-tag { color: var(--accent-2); font-weight: 600; margin: 0 0 6px; }
+.hero-sub { color: var(--muted); max-width: 560px; margin: 0 auto; }
+.hero-socials { display: flex; gap: 10px; justify-content: center; margin-top: 18px; }
+.chip {
+  text-decoration: none; color: var(--text); background: var(--panel);
+  border: 1px solid var(--border); padding: 8px 16px; border-radius: 999px; font-weight: 600; font-size: 14px;
+}
+.chip:hover { border-color: var(--accent); }
+
+/* Layout */
+.layout {
+  display: grid; grid-template-columns: 1fr 340px; gap: 20px;
+  max-width: 1180px; margin: 20px auto 60px; padding: 0 24px;
+}
+.section-title { font-size: 15px; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); margin: 0 0 12px; }
+
+/* Games grid */
+.games-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 22px; }
+.game-card {
+  position: relative; text-align: left; cursor: pointer;
+  background: linear-gradient(160deg, var(--panel), var(--bg-2));
+  border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 16px; color: var(--text); display: flex; flex-direction: column; gap: 6px;
+  min-height: 92px; transition: border-color .15s, transform .05s;
+}
+.game-card:hover { border-color: var(--accent); transform: translateY(-2px); }
+.game-card.soon { opacity: .6; cursor: default; }
+.game-card.soon:hover { transform: none; border-color: var(--border); }
+.game-card.active { border-color: var(--accent-2); box-shadow: 0 0 0 1px var(--accent-2) inset; }
+.game-name { font-weight: 700; font-size: 16px; }
+.game-blurb { font-size: 12px; color: var(--muted); }
+.game-soon { position: absolute; top: 10px; right: 10px; font-size: 10px; text-transform: uppercase; color: var(--muted); border: 1px solid var(--border); border-radius: 6px; padding: 1px 6px; }
+
+/* Panels */
+.panel { background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius); padding: 18px; margin-bottom: 18px; }
+.panel-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+.panel-head h3 { margin: 0; font-size: 18px; }
+.pf-badge { font-size: 11px; color: var(--accent-2); border: 1px solid #1d4b44; background: #0c2420; padding: 2px 8px; border-radius: 999px; }
+
+.bet-controls { display: flex; gap: 10px; margin-bottom: 14px; }
+.seeds { display: grid; grid-template-columns: 1fr 1fr 80px; gap: 10px; margin-bottom: 14px; }
+.seeds .k { display: block; font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; }
+.seeds code { font-size: 11px; word-break: break-all; color: var(--text); }
+
+.result-log { display: flex; flex-direction: column; gap: 6px; max-height: 190px; overflow: auto; }
+.result-row { background: var(--bg-2); border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; font-size: 13px; }
+.disclaimer { font-size: 11px; color: var(--muted); margin: 12px 0 0; }
+
+.muted { color: var(--muted); font-size: 13px; }
+.verify-panel input {
+  width: 100%; margin: 6px 0; padding: 10px; background: var(--bg-2);
+  border: 1px solid var(--border); border-radius: 8px; color: var(--text); font-size: 13px;
+}
+.verify-out { margin-top: 10px; font-size: 13px; }
+.verify-out.ok { color: var(--win); }
+.verify-out.bad { color: var(--lose); }
+
+/* Chat */
+.col-chat { position: sticky; top: 76px; align-self: start; }
+.chat-panel { display: flex; flex-direction: column; height: calc(100vh - 120px); min-height: 420px; }
+.online-dot { width: 9px; height: 9px; border-radius: 50%; background: var(--win); box-shadow: 0 0 10px var(--win); }
+.chat-list { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; padding-right: 4px; }
+.chat-msg { font-size: 13px; background: var(--bg-2); border: 1px solid var(--border); border-radius: 8px; padding: 6px 9px; }
+.chat-msg.self { background: #1a1540; border-color: #3a2f7a; }
+.chat-user { color: var(--accent-2); font-weight: 700; margin-right: 6px; }
+.chat-text { color: var(--text); }
+.chat-time { float: right; color: var(--muted); font-size: 10px; }
+.chat-form { display: flex; gap: 8px; margin-top: 12px; }
+.chat-form input { flex: 1; padding: 10px; background: var(--bg-2); border: 1px solid var(--border); border-radius: 8px; color: var(--text); }
+
+/* Footer */
+.footer { border-top: 1px solid var(--border); padding: 24px; max-width: 1180px; margin: 0 auto; }
+.footer-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+.footer-socials { display: flex; gap: 14px; }
+.footer-legal { color: var(--muted); font-size: 12px; margin: 0; }
+
+/* Responsive */
+@media (max-width: 920px) {
+  .layout { grid-template-columns: 1fr; }
+  .games-grid { grid-template-columns: repeat(2, 1fr); }
+  .col-chat { position: static; }
+  .chat-panel { height: 460px; }
+  .hero h1 { font-size: 34px; }
+}

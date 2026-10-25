@@ -63,7 +63,7 @@ so expected return is exactly `1 − houseEdge`. Edge and branding live in
 ## Project layout
 
 ```
-src/
+src/                   server/engine (Node, TypeScript)
   config.ts            brand name + house edge (single source of truth)
   fairness/
     engine.ts          seeds, HMAC, float/byte derivation
@@ -71,7 +71,31 @@ src/
   games/               the eight games + shared math
   demo.ts              runnable demo
 test/                  determinism, correctness, and RTP tests
+
+web/                   front-end (static, no build step)
+  index.html           branded landing: games grid, bet panel, verifier, chat
+  css/styles.css       dark casino-noir theme (accent = one CSS var)
+  js/
+    config.js          brand, socials, Solana cluster/RPC (one place)
+    fairness.js        same fairness engine, in-browser (Web Crypto)
+    games.js           playable Dice/Limbo/Coinflip/Wheel
+    wallet.js          Phantom connect + balance (cluster-aware)
+    chat.js            live chat UI: rolling history, auto-scroll, persistence
+
+marketing/             Telegram post templates + visual-assets guide
 ```
+
+### Running the front-end
+
+It's static — serve the `web/` folder with anything:
+
+```bash
+npx serve web        # or: python3 -m http.server -d web 8080
+```
+
+Then open the printed URL. Wallet connect needs the Phantom extension; the games
+and verifier work without it. Set your socials and Solana cluster in
+`web/js/config.js`.
 
 ## Roadmap — adding Solana
 
