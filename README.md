@@ -2,28 +2,76 @@
 
 **Provably fair. Verifiably yours.**
 
-A from-scratch, provably-fair crypto casino game engine with eight classic games.
-No dependencies, no blockchain required to run — it works on plain Node.js so you
-can learn, test, and verify every outcome locally before anything touches real SOL.
+A provably-fair Solana casino built from scratch: 14 games, each with its own
+real visual, a custodial balance backend with on-chain SOL deposits and
+withdrawals, any Solana wallet, and a verifier so every result can be checked.
 
-> This is original code built on the public, industry-standard provably-fair
-> scheme. It is a learning/engineering project — not a copy of any site.
+> Original code built on the public, industry-standard provably-fair scheme.
+> Not a copy of any site.
 
-## Quick start
+## Launch it on your computer
 
-The finished site lives on the `main` branch (release `v1.0.0`).
-
-
-Requires **Node.js 22.6+** (runs TypeScript natively — no build step, no installs).
+Requires **Node.js 22.18 or newer** (it runs the TypeScript files directly, so
+there is no build step). Check with `node --version`.
 
 ```bash
-npm run demo    # play one bet of every game from a single committed seed, then verify
-npm test        # run the full test suite (includes a 200k-bet house-edge check)
+npm install          # one-time: installs the Solana library
+npm test             # 67 tests; all should pass
+npm run server       # terminal 1: the backend on http://localhost:8787
+npx serve web        # terminal 2: the site — open the URL it prints
 ```
 
-## How "provably fair" works here
+The page finds the backend on port 8787 by itself. Click **Connect Wallet**
+(Phantom, Solflare, Backpack or any Solana wallet), claim the free faucet, and
+play. Balances are per wallet and persist in `server/data/accounts.db`.
 
-Every bet is decided by three inputs and one rule:
+Without the backend running, the site still works: games run on the in-browser
+engine with a balance kept in your browser, and the page says so. The single
+file `web/dist/standalone.html` does the same when opened directly.
+
+To try real deposits and withdrawals, create a house wallet and start the
+server with it (devnet first — free test SOL):
+
+```bash
+node scripts/make-house-wallet.mjs house.keypair.json   # prints the address to fund
+HOUSE_KEYPAIR_FILE=house.keypair.json SOLANA_CLUSTER=devnet npm run server
+```
+
+(Windows PowerShell: `$env:HOUSE_KEYPAIR_FILE="house.keypair.json"; $env:SOLANA_CLUSTER="devnet"; npm run server`.)
+
+## Hosting it
+
+`deploy/DEPLOY.md` is the step-by-step VPS guide: systemd service for the
+backend, nginx serving `web/` and proxying `/api/` on one origin, HTTPS via
+certbot, house wallet, environment variables, backups, and a mainnet checklist.
+`deploy/vanta.service` and `deploy/nginx.conf` are ready to copy.
+
+## The games
+
+All on one fairness engine (`src/fairness/`). Engines in `src/games/`, visuals in
+`web/js/*-game.js`.
+
+| Game | Mechanic | Visual |
+|------|----------|--------|
+| Dice | roll 0–100, bet under/over a target | tumbling die lands showing the roll |
+| Limbo | random multiplier ≥ your target wins | rocket + climbing counter |
+| Crash | bust point on a timeline, auto cash-out | live curve with cash-out line |
+| Mines | 5×5 field, N mines, reveal tile by tile (session) | gems / bombs |
+| Plinko | 8–16 rows, low/medium/high risk, binomial buckets | ball bounces down the pegs |
+| Roulette | European single-zero; a whole table of chips on one spin | spinning wheel + table |
+| Wheel | segmented wheel per risk level | spinning wheel |
+| Coinflip | heads/tails, ~2× | 3D coin flip |
+| Tower | 4 columns, climb past traps (session) | tower grid |
+| Chicken | 20 lanes, hidden hazards (session) | road scene with traffic |
+| HiLo | streak over a fixed card stream (session) | felt table, dealt cards |
+| Darts | six scoring rings by difficulty | numbered dartboard |
+| Snakes | prize tiers, snakes bite | snakes-and-ladders board |
+| Keno | pick 1–10 of 40, ten drawn | lottery drum, ball draw |
+
+Payout rule for most games: `payout = (1 / winProbability) × (1 − houseEdge)`.
+House edge lives in `src/config.ts` and is shown on the site.
+
+## How "provably fair" works here
 
 | Input | Who sets it | Purpose |
 |-------|-------------|---------|
@@ -31,106 +79,45 @@ Every bet is decided by three inputs and one rule:
 | `clientSeed` | the player | stops the house pre-picking a seed rigged against this player |
 | `nonce` | per-bet counter | same seeds, fresh result each bet |
 
-Randomness for a bet is:
-
 ```
 HMAC_SHA256( key = serverSeed, msg = `${clientSeed}:${nonce}:${cursor}` )
 ```
 
-Each HMAC yields 32 bytes → eight floats in `[0, 1)`. Games consume these floats.
-When the server seed is later revealed, the player re-hashes it, confirms it matches
-the commitment, and replays the bet to reproduce the exact result.
-
-**What this proves:** no individual bet was tampered with after the wager.
-**What it does *not* hide:** the house edge, which lives openly in the payout math.
-
-## The games
-
-All eight sit on the one fairness engine in `src/fairness/`:
-
-| Game | File | Core idea |
-|------|------|-----------|
-| Dice | `src/games/dice.ts` | roll 0–100, bet under/over a target |
-| Limbo | `src/games/limbo.ts` | random multiplier ≥ your target wins |
-| Crash | `src/games/crash.ts` | Limbo on a timeline — cash out before the bust |
-| Mines | `src/games/mines.ts` | provably-fair shuffle hides N mines on a 5×5 grid |
-| Plinko | `src/games/plinko.ts` | 16-row binomial drop into a payout bucket |
-| Roulette | `src/games/roulette.ts` | European single-zero wheel; one spin settles a whole table of chips |
-| Wheel | `src/games/wheel.ts` | segmented wheel, multiplier per segment |
-| Coinflip | `src/games/coinflip.ts` | heads/tails, ~2× payout |
-
-Payout rule shared by most games: `payout = (1 / winProbability) × (1 − houseEdge)`,
-so expected return is exactly `1 − houseEdge`. Edge and branding live in
-`src/config.ts` (one place to change).
+Each HMAC yields 32 bytes → eight floats in `[0, 1)` that the games consume. When
+the server seed is revealed (Rotate seed), the player re-hashes it, confirms it
+matches the commitment, and replays the bet with `src/fairness/verify.ts` or the
+Verify widget on the site.
 
 ## Project layout
 
 ```
-src/                   server/engine (Node, TypeScript)
-  config.ts            brand name + house edge (single source of truth)
-  fairness/
-    engine.ts          seeds, HMAC, float/byte derivation
-    verify.ts          standalone verifier (commitment check + replay)
-  games/               the eight games + shared math
-  demo.ts              runnable demo
-test/                  determinism, correctness, and RTP tests
-
-web/                   front-end (static, no build step)
-  index.html           branded landing: games grid, bet panel, verifier, chat
-  css/styles.css       dark casino-noir theme (accent = one CSS var)
-  js/
-    config.js          brand, socials, Solana cluster/RPC (one place)
-    fairness.js        same fairness engine, in-browser (Web Crypto)
-    games.js           in-browser (demo) logic for every game + the catalogue
-    *-game.js          one visual per game: dice die, coin, limbo rocket, crash
-                       curve, wheel, plinko board, roulette wheel + table, hilo
-                       cards, darts board, snakes board, keno draw, mines field,
-                       tower, chicken
-    wallet.js          Phantom connect + balance (cluster-aware)
-    wallet-panel.js    deposits/withdrawals; remembers deposits until credited
-    chat.js            live chat UI: rolling history, auto-scroll, persistence
-
-marketing/             Telegram post templates + visual-assets guide
+src/        fairness engine + the 14 game rules (TypeScript, run directly by Node)
+server/     backend: wallet sign-in, SQLite balances, bets, game sessions,
+            SOL deposits/withdrawals (server/solana.ts), faucet gate, config
+web/        the site (static): index.html, css/, js/ (one *-game.js per game,
+            wallets.js, wallet-panel.js, api.js, feed.js, chat.js)
+web/dist/   standalone.html — the whole site in one file (npm run build:web)
+test/       67 tests: engine, games, backend, money rules, faucet gate
+scripts/    ui-smoke.mjs / ui-games-smoke.mjs (browser tests, no validator needed),
+            sol-e2e.mjs / ui-wallet-e2e.mjs (against a local Solana validator),
+            make-house-wallet.mjs
+deploy/     DEPLOY.md, vanta.service, nginx.conf
+marketing/  Telegram post templates + visual-assets guide
 ```
 
-### Running the front-end
+## Money, in one paragraph
 
-It's static — serve the `web/` folder with anything:
-
-```bash
-npx serve web        # or: python3 -m http.server -d web 8080
-```
-
-Then open the printed URL. If the backend (`npm run server`) is running on the
-same host, the page finds it by itself and you get accounts, balances and the
-faucet; otherwise the games run on the in-browser engine with a balance kept in
-your browser. Wallet connect works with any Solana wallet (Phantom, Solflare,
-Backpack, …). Socials live in `web/js/config.js`.
-
-## Roadmap — adding Solana
-
-The game logic is intentionally chain-agnostic. The plan to wire it to SOL:
-
-1. **Localnet first.** Run `solana-test-validator` — a full Solana chain on your own
-   machine. Airdrop yourself unlimited test SOL, move it between your own wallets.
-   RPC is `http://localhost:8899`, so there are no rate limits or `403`s.
-2. **Devnet.** Same code, RPC URL points at a devnet endpoint, still free test SOL.
-3. **Mainnet — last.** Real SOL only after everything is proven and reviewed.
-
-The RPC endpoint is meant to be a single env var, so moving between the three is a
-one-line change. (A `403 Forbidden` on mainnet almost always means the free public
-RPC is rate-limiting you — use a proper RPC provider or your own node, not the
-public endpoint.)
-
-## Hosting it
-
-`deploy/DEPLOY.md` walks through a VPS setup end to end: systemd service for the
-backend, nginx serving `web/` and proxying `/api/`, HTTPS via certbot, the house
-wallet, environment variables, and backups. Start on devnet, then mainnet.
+Balances are custodial: deposits are plain SOL transfers to the house wallet
+that the server verifies on-chain and credits once per transaction; withdrawals
+are signed by the house wallet after balance, wagering and solvency checks, and
+anything interrupted mid-send is reconciled on restart. Sign-in sessions and
+in-progress games live in the database, so restarts never sign anyone out or
+strand a stake. Limits, faucet size and the anti-bot gate are environment
+variables (see `server/config.ts`).
 
 ## A note on responsibility
 
-Code that handles real money is unforgiving — bugs are irreversible. Keep the house
-edge disclosed, publish your verifier, test exhaustively on localnet/devnet, and get
-the money-handling layer reviewed before mainnet. Online gambling is also regulated
-or illegal in many places; understand your obligations before going live.
+Code that handles real money is unforgiving. Keep the house edge disclosed,
+publish the verifier, test on devnet first, keep only what you can lose in the
+house wallet, and back up the database. Online gambling is regulated or illegal
+in many places; know your obligations before going live.

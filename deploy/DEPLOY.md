@@ -14,7 +14,7 @@ ssh root@YOUR_VPS_IP
 apt update && apt install -y git nginx certbot python3-certbot-nginx
 # Node 22+ (the code runs TypeScript natively; no build step)
 curl -fsSL https://deb.nodesource.com/setup_22.x | bash - && apt install -y nodejs
-node --version   # must be 22.6 or newer
+node --version   # must be 22.18 or newer
 
 adduser --system --group --home /opt/vanta vanta
 ```

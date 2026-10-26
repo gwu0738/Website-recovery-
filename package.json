@@ -5,7 +5,7 @@
   "type": "module",
   "description": "Provably-fair crypto casino games (fairness engine + 8 games). Runs on Node 22+ with no dependencies.",
   "engines": {
-    "node": ">=22.6.0"
+    "node": ">=22.18.0"
   },
   "scripts": {
     "demo": "node src/demo.ts",
