@@ -161,3 +161,178 @@ export function publicView(acct: Account) {
     wagered: acct.wagered,
   };
 }
+
+// ---------------------------------------------------------------------------
+// Transactions, game sessions, and bet history.
+//
+// Every balance change and its matching session/bet record are written in ONE
+// transaction, so they land together or not at all (no paid-but-not-closed or
+// debited-but-no-session states, even if the process dies mid-request).
+// ---------------------------------------------------------------------------
+
+db.exec(`
+  CREATE TABLE IF NOT EXISTS game_sessions (
+    id               TEXT PRIMARY KEY,
+    pubkey           TEXT NOT NULL,
+    game             TEXT NOT NULL,
+    stake_lamports   INTEGER NOT NULL,
+    state            TEXT NOT NULL,
+    nonce_used       INTEGER NOT NULL,
+    server_seed_hash TEXT NOT NULL,
+    client_seed      TEXT NOT NULL,
+    active           INTEGER NOT NULL DEFAULT 1,
+    created_at       INTEGER NOT NULL,
+    updated_at       INTEGER NOT NULL
+  );
+  CREATE INDEX IF NOT EXISTS idx_sessions_owner ON game_sessions (pubkey, active);
+
+  CREATE TABLE IF NOT EXISTS bets (
+    id               INTEGER PRIMARY KEY AUTOINCREMENT,
+    pubkey           TEXT NOT NULL,
+    game             TEXT NOT NULL,
+    stake_lamports   INTEGER NOT NULL,
+    payout_lamports  INTEGER NOT NULL,
+    multiplier       REAL NOT NULL,
+    nonce            INTEGER NOT NULL,
+    server_seed_hash TEXT NOT NULL,
+    client_seed      TEXT NOT NULL,
+    outcome          TEXT NOT NULL,
+    created_at       INTEGER NOT NULL
+  );
+  CREATE INDEX IF NOT EXISTS idx_bets_owner ON bets (pubkey, id);
+`);
+
+/** Run `fn` atomically. Any throw rolls back every write made inside it. */
+export function tx<T>(fn: () => T): T {
+  db.exec("BEGIN IMMEDIATE");
+  try {
+    const out = fn();
+    db.exec("COMMIT");
+    return out;
+  } catch (e) {
+    db.exec("ROLLBACK");
+    throw e;
+  }
+}
+
+export interface SessionRow {
+  id: string;
+  pubkey: string;
+  game: string;
+  stakeLamports: number;
+  state: unknown;
+  nonceUsed: number;
+  serverSeedHash: string;
+  clientSeed: string;
+  active: boolean;
+}
+
+const insertSessionStmt = db.prepare(`
+  INSERT INTO game_sessions
+    (id, pubkey, game, stake_lamports, state, nonce_used, server_seed_hash, client_seed, active, created_at, updated_at)
+  VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?)
+`);
+const selectSessionStmt = db.prepare("SELECT * FROM game_sessions WHERE id = ?");
+const updateSessionStmt = db.prepare(
+  "UPDATE game_sessions SET state = ?, active = ?, updated_at = ? WHERE id = ?",
+);
+const activeSessionsStmt = db.prepare(
+  "SELECT * FROM game_sessions WHERE pubkey = ? AND active = 1 ORDER BY created_at",
+);
+
+function rowToSession(r: any): SessionRow {
+  return {
+    id: r.id,
+    pubkey: r.pubkey,
+    game: r.game,
+    stakeLamports: r.stake_lamports,
+    state: JSON.parse(r.state),
+    nonceUsed: r.nonce_used,
+    serverSeedHash: r.server_seed_hash,
+    clientSeed: r.client_seed,
+    active: r.active === 1,
+  };
+}
+
+export function insertSession(s: Omit<SessionRow, "active">) {
+  const now = Date.now();
+  insertSessionStmt.run(
+    s.id, s.pubkey, s.game, s.stakeLamports, JSON.stringify(s.state),
+    s.nonceUsed, s.serverSeedHash, s.clientSeed, now, now,
+  );
+}
+
+export function getSession(id: string): SessionRow | undefined {
+  const r = selectSessionStmt.get(id);
+  return r ? rowToSession(r) : undefined;
+}
+
+export function updateSession(id: string, state: unknown, active: boolean) {
+  updateSessionStmt.run(JSON.stringify(state), active ? 1 : 0, Date.now(), id);
+}
+
+export function activeSessions(pubkey: string): SessionRow[] {
+  return (activeSessionsStmt.all(pubkey) as any[]).map(rowToSession);
+}
+
+export interface BetRecord {
+  pubkey: string;
+  game: string;
+  stakeLamports: number;
+  payoutLamports: number;
+  multiplier: number;
+  nonce: number;
+  serverSeedHash: string;
+  clientSeed: string;
+  outcome: unknown;
+}
+
+const insertBetStmt = db.prepare(`
+  INSERT INTO bets
+    (pubkey, game, stake_lamports, payout_lamports, multiplier, nonce, server_seed_hash, client_seed, outcome, created_at)
+  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+`);
+const myBetsStmt = db.prepare("SELECT * FROM bets WHERE pubkey = ? ORDER BY id DESC LIMIT ?");
+const recentBetsStmt = db.prepare("SELECT * FROM bets ORDER BY id DESC LIMIT ?");
+
+export function recordBet(b: BetRecord) {
+  insertBetStmt.run(
+    b.pubkey, b.game, b.stakeLamports, b.payoutLamports, b.multiplier,
+    b.nonce, b.serverSeedHash, b.clientSeed, JSON.stringify(b.outcome), Date.now(),
+  );
+}
+
+function rowToBet(r: any) {
+  return {
+    id: r.id,
+    pubkey: r.pubkey,
+    game: r.game,
+    stakeLamports: r.stake_lamports,
+    payoutLamports: r.payout_lamports,
+    multiplier: r.multiplier,
+    nonce: r.nonce,
+    serverSeedHash: r.server_seed_hash,
+    clientSeed: r.client_seed,
+    outcome: JSON.parse(r.outcome),
+    createdAt: r.created_at,
+  };
+}
+
+export function myBets(pubkey: string, limit = 50) {
+  return (myBetsStmt.all(pubkey, limit) as any[]).map(rowToBet);
+}
+
+export function recentBets(limit = 50) {
+  return (recentBetsStmt.all(limit) as any[]).map(rowToBet);
+}
+
+/**
+ * Re-read an account from the database into the given object. Call this inside
+ * `tx()` before moving money, so a stale copy loaded earlier in the request
+ * (before an await) can never be spent twice.
+ */
+export function reloadAccount(acct: Account): Account {
+  const fresh = getAccount(acct.pubkey);
+  if (!fresh) throw new Error("Account not found");
+  return Object.assign(acct, fresh);
+}

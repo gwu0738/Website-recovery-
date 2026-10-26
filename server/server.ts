@@ -11,7 +11,7 @@ import { createServer, type IncomingMessage, type ServerResponse } from "node:ht
 import { pathToFileURL } from "node:url";
 import { SERVER, BET, FAUCET, toSol } from "./config.ts";
 import { createChallenge, verifySignature, pubkeyForToken } from "./auth.ts";
-import { getOrCreateAccount, getAccount, publicView } from "./store.ts";
+import { getOrCreateAccount, getAccount, publicView, myBets, recentBets, activeSessions } from "./store.ts";
 import { placeBet, claimFaucet, rotateSeed, setClientSeed, BetError } from "./bets.ts";
 import { towerStart, towerReveal, towerCashout, TowerError } from "./tower-session.ts";
 import { chickenStart, chickenStep, chickenCashout, ChickenError } from "./chicken-session.ts";
@@ -77,6 +77,15 @@ const server = createServer(async (req, res) => {
       });
     }
 
+    // Live Games feed: recent settled bets, wallet addresses shortened.
+    if (path === "/api/bets/recent" && method === "GET") {
+      const bets = recentBets(30).map((b) => ({
+        ...b,
+        pubkey: b.pubkey.slice(0, 4) + "…" + b.pubkey.slice(-4),
+      }));
+      return send(res, 200, { bets });
+    }
+
     if (path === "/api/auth/challenge" && method === "GET") {
       const pubkey = url.searchParams.get("pubkey");
       if (!pubkey) return send(res, 400, { error: "pubkey required" });
@@ -99,6 +108,23 @@ const server = createServer(async (req, res) => {
 
     if (path === "/api/me" && method === "GET") {
       return send(res, 200, { account: publicView(acct) });
+    }
+
+    // My Games: this account's settled bets (newest first).
+    if (path === "/api/bets/mine" && method === "GET") {
+      return send(res, 200, { bets: myBets(acct.pubkey, 50) });
+    }
+
+    // Unfinished games to resume. Only public fields — never the hidden
+    // layout/death point, which stays server-side until the game ends.
+    if (path === "/api/sessions/active" && method === "GET") {
+      const sessions = activeSessions(acct.pubkey).map((s) => ({
+        sessionId: s.id,
+        game: s.game,
+        stakeLamports: s.stakeLamports,
+        nonceUsed: s.nonceUsed,
+      }));
+      return send(res, 200, { sessions });
     }
 
     if (path === "/api/faucet" && method === "POST") {

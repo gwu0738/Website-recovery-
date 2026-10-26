@@ -1,23 +1,9 @@
 /**
- * Tower game sessions — Tower (like Mines/Chicken) is played one reveal at a
- * time with the stake locked, so it needs server-side state, unlike the
- * single-shot bet API.
- *
- * Flow:
- *   start   -> debit stake, fix the trap layout from the account's committed
- *              seed (nonce consumed), open a session.
- *   reveal  -> check the picked tile against the current row's traps. Safe =
- *              climb + higher multiplier; trap = bust, session ends.
- *   cashout -> pay stake * current multiplier, session ends.
- *
- * Provably fair: the full layout is fixed at start by (serverSeed, clientSeed,
- * nonceUsed). After the game, the player replays `towerLayout` with the revealed
- * serverSeed to confirm the traps were never moved.
- *
- * NOTE: sessions are in-memory, so a server restart loses in-progress games (and
- * their locked stake). Fine for test credit; persist these before real money.
+ * Tower sessions on the persistent session framework (server/sessions.ts):
+ * start debits the stake and fixes the trap layout from the committed seed;
+ * reveal climbs or busts; cashout pays stake x multiplier. Stakes survive a
+ * server restart and every money movement is transactional.
  */
-import { randomBytes } from "node:crypto";
 import {
   towerLayout,
   towerMultiplier,
@@ -27,140 +13,101 @@ import {
   TOWER_TRAPS,
   type TowerDifficulty,
 } from "../src/games/tower.ts";
-import { BET } from "./config.ts";
-import { save, type Account } from "./store.ts";
+import {
+  SessionError,
+  sessionAct,
+  sessionCashout,
+  sessionStart,
+  type SessionGame,
+} from "./sessions.ts";
+import type { Account } from "./store.ts";
 
-interface TowerSession {
-  id: string;
-  pubkey: string;
+export { SessionError as TowerError };
+
+interface TowerState {
   difficulty: TowerDifficulty;
-  stakeLamports: number;
-  layout: number[][];
+  layout: number[][]; // trap tiles per row — hidden until the game ends
   rowsClimbed: number;
-  active: boolean;
-  nonceUsed: number;
-  serverSeedHash: string;
-  clientSeed: string;
+  picks: number[];
 }
 
-const sessions = new Map<string, TowerSession>();
-
-export class TowerError extends Error {}
+const TOWER: SessionGame<TowerState, TowerDifficulty, number> = {
+  name: "tower",
+  validate(difficulty) {
+    if (TOWER_TRAPS[difficulty] === undefined) throw new SessionError("Unknown difficulty");
+  },
+  init: (ctx, difficulty) => ({
+    difficulty,
+    layout: towerLayout(ctx, difficulty),
+    rowsClimbed: 0,
+    picks: [],
+  }),
+  act(s, pick) {
+    if (!Number.isInteger(pick) || pick < 0 || pick >= TOWER_COLS) {
+      throw new SessionError("Invalid tile");
+    }
+    const picks = [...s.picks, pick];
+    if (s.layout[s.rowsClimbed].includes(pick)) return { state: { ...s, picks }, bust: true };
+    return { state: { ...s, picks, rowsClimbed: s.rowsClimbed + 1 }, bust: false };
+  },
+  progress: (s) => s.rowsClimbed,
+  multiplier: (s) => towerMultiplier(s.difficulty, s.rowsClimbed),
+  isComplete: (s) => s.rowsClimbed >= TOWER_ROWS,
+};
 
 export function towerStart(acct: Account, difficulty: TowerDifficulty, stakeLamports: number) {
-  if (TOWER_TRAPS[difficulty] === undefined) throw new TowerError("Unknown difficulty");
-  if (!Number.isFinite(stakeLamports) || stakeLamports <= 0) throw new TowerError("Invalid stake");
-  if (stakeLamports < BET.minStakeLamports || stakeLamports > BET.maxStakeLamports) {
-    throw new TowerError("Stake out of allowed range");
-  }
-  if (stakeLamports > acct.balanceLamports) throw new TowerError("Insufficient balance");
-
-  const ctx = { serverSeed: acct.serverSeed, clientSeed: acct.clientSeed, nonce: acct.nonce };
-  const layout = towerLayout(ctx, difficulty);
-
-  // Debit stake, consume the commitment (advance nonce).
-  acct.balanceLamports -= stakeLamports;
-  acct.wagered += stakeLamports;
-  const nonceUsed = acct.nonce;
-  acct.nonce += 1;
-  save(acct);
-
-  const id = randomBytes(16).toString("hex");
-  sessions.set(id, {
-    id,
-    pubkey: acct.pubkey,
-    difficulty,
-    stakeLamports,
-    layout,
-    rowsClimbed: 0,
-    active: true,
-    nonceUsed,
-    serverSeedHash: acct.serverSeedHash,
-    clientSeed: acct.clientSeed,
-  });
-
+  const s = sessionStart(TOWER, acct, difficulty, stakeLamports);
   return {
-    sessionId: id,
+    sessionId: s.sessionId,
     difficulty,
     cols: TOWER_COLS,
     rows: TOWER_ROWS,
     traps: TOWER_TRAPS[difficulty],
     maxMultiplier: towerMaxMultiplier(difficulty),
     currentMultiplier: 1,
-    balanceLamports: acct.balanceLamports,
-    // commitment info for later verification
-    nonceUsed,
-    serverSeedHash: acct.serverSeedHash,
-    clientSeed: acct.clientSeed,
+    balanceLamports: s.balanceLamports,
+    nonceUsed: s.nonceUsed,
+    serverSeedHash: s.serverSeedHash,
+    clientSeed: s.clientSeed,
   };
 }
 
-function owned(acct: Account, sessionId: string): TowerSession {
-  const s = sessions.get(sessionId);
-  if (!s || s.pubkey !== acct.pubkey) throw new TowerError("Session not found");
-  if (!s.active) throw new TowerError("Session already finished");
-  return s;
-}
-
 export function towerReveal(acct: Account, sessionId: string, pick: number) {
-  const s = owned(acct, sessionId);
-  if (pick < 0 || pick >= TOWER_COLS) throw new TowerError("Invalid tile");
-
-  const rowTraps = s.layout[s.rowsClimbed];
-  const hitTrap = rowTraps.includes(pick);
-
-  if (hitTrap) {
-    s.active = false;
+  const r = sessionAct(TOWER, acct, sessionId, pick);
+  const row = r.prev.rowsClimbed;
+  const rowTraps = r.prev.layout[row]; // the row just played only — no future leak
+  if (r.bust) {
     return {
       safe: false,
       bust: true,
-      row: s.rowsClimbed,
+      row,
       pick,
       rowTraps,
       multiplier: 0,
-      rowsClimbed: s.rowsClimbed,
-      balanceLamports: acct.balanceLamports,
+      rowsClimbed: row,
+      balanceLamports: r.balanceLamports,
     };
   }
-
-  s.rowsClimbed += 1;
-  const multiplier = towerMultiplier(s.difficulty, s.rowsClimbed);
-  const completed = s.rowsClimbed >= TOWER_ROWS;
-
-  let payoutLamports = 0;
-  if (completed) {
-    payoutLamports = Math.floor(s.stakeLamports * multiplier);
-    acct.balanceLamports += payoutLamports;
-    s.active = false;
-    save(acct);
-  }
-
   return {
     safe: true,
     bust: false,
-    row: s.rowsClimbed - 1,
+    row,
     pick,
-    rowTraps, // traps for the row just cleared (past rows only — no leak)
-    multiplier,
-    rowsClimbed: s.rowsClimbed,
-    completed,
-    payoutLamports,
-    balanceLamports: acct.balanceLamports,
+    rowTraps,
+    multiplier: r.multiplier,
+    rowsClimbed: r.state.rowsClimbed,
+    completed: r.completed,
+    payoutLamports: r.payoutLamports,
+    balanceLamports: r.balanceLamports,
   };
 }
 
 export function towerCashout(acct: Account, sessionId: string) {
-  const s = owned(acct, sessionId);
-  if (s.rowsClimbed <= 0) throw new TowerError("Climb at least one row before cashing out");
-  const multiplier = towerMultiplier(s.difficulty, s.rowsClimbed);
-  const payoutLamports = Math.floor(s.stakeLamports * multiplier);
-  acct.balanceLamports += payoutLamports;
-  s.active = false;
-  save(acct);
+  const r = sessionCashout(TOWER, acct, sessionId, "Climb at least one row before cashing out");
   return {
-    multiplier,
-    rowsClimbed: s.rowsClimbed,
-    payoutLamports,
-    balanceLamports: acct.balanceLamports,
+    multiplier: r.multiplier,
+    rowsClimbed: r.state.rowsClimbed,
+    payoutLamports: r.payoutLamports,
+    balanceLamports: r.balanceLamports,
   };
 }

@@ -21,6 +21,15 @@ Legend: ✅ done · 🟡 partial · ⬜ not started
   - Balances + server-side betting on every game.
   - **SQLite store** (`node:sqlite`) — durable, crash-safe (WAL, ACID); balances
     persist across logins/restarts (verified across a process restart).
+- ✅ **Real-balance foundation** (`server/sessions.ts`, `server/store.ts`):
+  - Step-by-step games (Tower, Chicken, and every future one) run on one
+    persistent session framework: locked stakes live in SQLite, so a server
+    restart never loses a player's stake (tested across two processes).
+  - Every balance change + its session update + its bet-history record commit
+    in one transaction; the account is re-read inside it, which closes a
+    double-spend where two simultaneous requests could spend one balance.
+  - Bet history (`bets` table) + endpoints: `/api/bets/mine`,
+    `/api/bets/recent` (Live Games), `/api/sessions/active` (resume).
 - ✅ **Front-end** (`web/`) — branded dark site: games grid, live chat, bet
   verifier, Phantom wallet connect, social links, responsible-gambling footer.
   Two modes via `API_BASE`: in-browser demo, or real backend.
