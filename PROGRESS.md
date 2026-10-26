@@ -45,7 +45,7 @@ Legend: ✅ done · 🟡 partial · ⬜ not started
 | Coinflip | ✅ | 🟡 basic | not in nuts.gg set |
 | Tower | ✅ | ✅ | 4-col model; interactive climb (start/reveal/cashout), demo + backend |
 | HiLo | ✅ | ⬜ | card-flip UI; streak mode is a UI layer |
-| Chicken | ✅ | ⬜ | crash-ladder UI |
+| Chicken | ✅ | ✅ | crash-ladder UI (step/cashout), demo + backend |
 | Darts | ✅ | ⬜ | ⚠️ payout weights are our own — RTP-tune |
 | Snakes | ✅ | ⬜ | ⚠️ our interpretation — RTP-tune |
 | Keno | ✅ | ⬜ | ⚠️ paytable illustrative — RTP-tune |

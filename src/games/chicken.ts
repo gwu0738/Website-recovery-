@@ -48,6 +48,18 @@ export function chickenMultiplier(
   return floor2((1 / Math.pow(p, steps)) * (1 - houseEdge));
 }
 
+export function chickenMaxMultiplier(difficulty: ChickenDifficulty, houseEdge = HOUSE_EDGE): number {
+  return chickenMultiplier(difficulty, CHICKEN_MAX_STEPS, houseEdge);
+}
+
+/** Survive/die for every step, fixed by the seed (true = survive). */
+export function chickenLayout(ctx: BetContext, difficulty: ChickenDifficulty): boolean[] {
+  const p = CHICKEN_SURVIVAL[difficulty];
+  if (p === undefined) throw new Error("Unknown chicken difficulty");
+  const fs = floats(ctx.serverSeed, ctx.clientSeed, ctx.nonce, CHICKEN_MAX_STEPS);
+  return fs.map((f) => f < p);
+}
+
 export function playChicken(
   ctx: BetContext,
   bet: ChickenBet,
@@ -58,11 +70,11 @@ export function playChicken(
   if (bet.steps < 1 || bet.steps > CHICKEN_MAX_STEPS) {
     throw new Error(`Chicken steps must be 1..${CHICKEN_MAX_STEPS}`);
   }
-  const fs = floats(ctx.serverSeed, ctx.clientSeed, ctx.nonce, bet.steps);
+  const survive = chickenLayout(ctx, bet.difficulty);
   let survivedSteps = 0;
   let bust = false;
   for (let i = 0; i < bet.steps; i++) {
-    if (fs[i] < p) survivedSteps++;
+    if (survive[i]) survivedSteps++;
     else {
       bust = true;
       break;

@@ -14,6 +14,7 @@ import { createChallenge, verifySignature, pubkeyForToken } from "./auth.ts";
 import { getOrCreateAccount, getAccount, publicView } from "./store.ts";
 import { placeBet, claimFaucet, rotateSeed, setClientSeed, BetError } from "./bets.ts";
 import { towerStart, towerReveal, towerCashout, TowerError } from "./tower-session.ts";
+import { chickenStart, chickenStep, chickenCashout, ChickenError } from "./chicken-session.ts";
 import { GAMES } from "../src/games/index.ts";
 
 const GAME_SET = new Set<string>(GAMES);
@@ -159,6 +160,35 @@ const server = createServer(async (req, res) => {
         return send(res, 200, towerCashout(acct, sessionId));
       } catch (e) {
         if (e instanceof TowerError) return send(res, 400, { error: e.message });
+        throw e;
+      }
+    }
+
+    // ---- Chicken (stateful, step-by-step) ----
+    if (path === "/api/chicken/start" && method === "POST") {
+      const { difficulty, stake } = await readBody(req);
+      try {
+        return send(res, 200, chickenStart(acct, difficulty, Number(stake)));
+      } catch (e) {
+        if (e instanceof ChickenError) return send(res, 400, { error: e.message });
+        throw e;
+      }
+    }
+    if (path === "/api/chicken/step" && method === "POST") {
+      const { sessionId } = await readBody(req);
+      try {
+        return send(res, 200, chickenStep(acct, sessionId));
+      } catch (e) {
+        if (e instanceof ChickenError) return send(res, 400, { error: e.message });
+        throw e;
+      }
+    }
+    if (path === "/api/chicken/cashout" && method === "POST") {
+      const { sessionId } = await readBody(req);
+      try {
+        return send(res, 200, chickenCashout(acct, sessionId));
+      } catch (e) {
+        if (e instanceof ChickenError) return send(res, 400, { error: e.message });
         throw e;
       }
     }

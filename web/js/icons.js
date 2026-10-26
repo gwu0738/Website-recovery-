@@ -62,6 +62,13 @@ export const ICONS = {
      <path d="M25 19 V31 M22 22 H27 A2.5 2.5 0 0 1 27 27 H22 A2.5 2.5 0 0 0 22 32 H28" stroke="GRAD" stroke-width="1.8" stroke-linecap="round"/>
      <path d="M11 16 A11 11 0 0 1 15 11" stroke="GRAD" stroke-width="2" stroke-linecap="round"/>`,
   ),
+  chicken: S(
+    "chicken",
+    `<circle cx="22" cy="26" r="11" stroke="GRAD" stroke-width="2.5"/>
+     <circle cx="18" cy="23" r="1.8" fill="GRAD"/>
+     <path d="M33 25 L39 27 L33 29 Z" fill="GRAD"/>
+     <path d="M22 15 V10 M18 12 L22 15 L26 12" stroke="GRAD" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>`,
+  ),
   tower: S(
     "tower",
     `<rect x="13" y="10" width="9" height="9" rx="1.5" stroke="GRAD" stroke-width="2"/>

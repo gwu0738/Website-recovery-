@@ -10,6 +10,8 @@ import { api, BACKEND_ENABLED } from "./api.js";
 import { createDiceGame } from "./dice-game.js";
 import { createTowerGame } from "./tower-game.js";
 import { towerLayout, towerMultiplier, TOWER_ROWS } from "./tower-logic.js";
+import { createChickenGame } from "./chicken-game.js";
+import { chickenLayout, chickenMultiplier, CHICKEN_MAX_STEPS } from "./chicken-logic.js";
 import { Chat } from "./chat.js";
 
 const $ = (sel) => document.querySelector(sel);
@@ -134,7 +136,7 @@ async function refreshSeeds() {
   $("#seed-nonce").textContent = nonce;
 }
 
-const RICH_GAMES = new Set(["dice", "tower"]); // games with a full interactive UI (more coming)
+const RICH_GAMES = new Set(["dice", "tower", "chicken"]); // games with a full interactive UI
 
 function mountGame(id) {
   const view = $("#game-view");
@@ -146,6 +148,13 @@ function mountGame(id) {
       onStart: towerOnStart,
       onReveal: towerOnReveal,
       onCashout: towerOnCashout,
+      amountLabel,
+    });
+  } else if (id === "chicken") {
+    createChickenGame(view, {
+      onStart: chickenOnStart,
+      onStep: chickenOnStep,
+      onCashout: chickenOnCashout,
       amountLabel,
     });
   }
@@ -389,6 +398,67 @@ async function towerOnCashout(sessionId) {
   const m = towerMultiplier(demoTower.difficulty, demoTower.rowsClimbed);
   logResult(`💰 Tower cashed out x${m} (demo)`);
   return { multiplier: m, rowsClimbed: demoTower.rowsClimbed };
+}
+
+// ---- Chicken (rich interactive game: stateful steps) -----------------------
+let demoChicken = null;
+
+async function chickenOnStart({ difficulty, amount }) {
+  if (BACKEND_ENABLED) {
+    if (!account) { logResult("Connect your wallet to sign in first."); return null; }
+    if (!(amount > 0)) { logResult("Enter a bet amount."); return null; }
+    try {
+      const s = await api.chicken.start(difficulty, Math.round(amount * SOL));
+      updateBalance(s.balanceLamports);
+      account.nonce = s.nonceUsed + 1;
+      await refreshSeeds();
+      logResult(`🐔 Chicken (${difficulty}) started · stake ${amount}`);
+      return s;
+    } catch (e) { logResult("error: " + e.message); return null; }
+  }
+  const survive = await chickenLayout({ serverSeed, clientSeed, nonce }, difficulty);
+  demoChicken = { survive, difficulty, stepsTaken: 0 };
+  nonce++;
+  await refreshSeeds();
+  logResult(`🐔 Chicken (${difficulty}) started (demo)`);
+  return { sessionId: "demo" };
+}
+
+async function chickenOnStep(sessionId) {
+  if (BACKEND_ENABLED) {
+    try {
+      const r = await api.chicken.step(sessionId);
+      if (r.completed || r.bust) updateBalance(r.balanceLamports);
+      if (r.bust) logResult(`💥 Chicken caught — lost.`);
+      else if (r.completed) logResult(`🏆 Chicken made it! x${r.multiplier}`);
+      return r;
+    } catch (e) { logResult("error: " + e.message); return null; }
+  }
+  const t = demoChicken;
+  if (!t.survive[t.stepsTaken]) {
+    const step = t.stepsTaken;
+    logResult(`💥 Chicken caught on step ${step + 1} (demo)`);
+    return { survived: false, bust: true, step, multiplier: 0, stepsTaken: step };
+  }
+  t.stepsTaken++;
+  const multiplier = chickenMultiplier(t.difficulty, t.stepsTaken);
+  const completed = t.stepsTaken >= CHICKEN_MAX_STEPS;
+  if (completed) logResult(`🏆 Chicken made it! x${multiplier} (demo)`);
+  return { survived: true, bust: false, step: t.stepsTaken - 1, multiplier, stepsTaken: t.stepsTaken, completed };
+}
+
+async function chickenOnCashout(sessionId) {
+  if (BACKEND_ENABLED) {
+    try {
+      const r = await api.chicken.cashout(sessionId);
+      updateBalance(r.balanceLamports);
+      logResult(`💰 Chicken cashed out x${r.multiplier}`);
+      return r;
+    } catch (e) { logResult("error: " + e.message); return null; }
+  }
+  const m = chickenMultiplier(demoChicken.difficulty, demoChicken.stepsTaken);
+  logResult(`💰 Chicken cashed out x${m} (demo)`);
+  return { multiplier: m, stepsTaken: demoChicken.stepsTaken };
 }
 
 // ---- Chat -------------------------------------------------------------------

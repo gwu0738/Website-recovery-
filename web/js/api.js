@@ -84,6 +84,14 @@ export const api = {
     cashout: (sessionId) =>
       req("/api/tower/cashout", { method: "POST", auth: true, body: { sessionId } }),
   },
+  chicken: {
+    start: (difficulty, stake) =>
+      req("/api/chicken/start", { method: "POST", auth: true, body: { difficulty, stake } }),
+    step: (sessionId) =>
+      req("/api/chicken/step", { method: "POST", auth: true, body: { sessionId } }),
+    cashout: (sessionId) =>
+      req("/api/chicken/cashout", { method: "POST", auth: true, body: { sessionId } }),
+  },
 
   /** Full wallet sign-in using the provider's signMessage. Returns account. */
   async signIn(provider, pubkey) {
