@@ -9,15 +9,37 @@
  */
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 import { pathToFileURL } from "node:url";
-import { SERVER, BET, FAUCET, toSol } from "./config.ts";
+import { SERVER, BET, FAUCET, WITHDRAW, CLUSTER, toSol } from "./config.ts";
 import { createChallenge, verifySignature, pubkeyForToken } from "./auth.ts";
-import { getOrCreateAccount, getAccount, publicView, myBets, recentBets, activeSessions } from "./store.ts";
+import {
+  getOrCreateAccount,
+  getAccount,
+  publicView,
+  myBets,
+  recentBets,
+  activeSessions,
+  myDeposits,
+  myWithdrawals,
+  pendingWithdrawals,
+} from "./store.ts";
+import { createSolanaChain, isHouseConfigured, type Chain } from "./solana.ts";
+import { confirmDeposit, requestWithdrawal, WalletError } from "./wallet.ts";
 import { placeBet, claimFaucet, rotateSeed, setClientSeed, BetError } from "./bets.ts";
 import { towerStart, towerReveal, towerCashout, TowerError } from "./tower-session.ts";
 import { chickenStart, chickenStep, chickenCashout, ChickenError } from "./chicken-session.ts";
 import { GAMES } from "../src/games/index.ts";
 
 const GAME_SET = new Set<string>(GAMES);
+
+// The real-SOL side is created lazily; tests can inject a fake chain.
+let chain: Chain | null = null;
+export function setChain(c: Chain | null) {
+  chain = c;
+}
+function getChain(): Chain | null {
+  if (!chain && isHouseConfigured()) chain = createSolanaChain();
+  return chain;
+}
 
 function send(res: ServerResponse, status: number, body: unknown) {
   const json = JSON.stringify(body);
@@ -73,6 +95,10 @@ const server = createServer(async (req, res) => {
         maxStakeLamports: BET.maxStakeLamports,
         faucetAmountLamports: FAUCET.amountLamports,
         faucetCooldownMs: FAUCET.cooldownMs,
+        faucetWagerX: FAUCET.wagerRequirementX,
+        minWithdrawLamports: WITHDRAW.minLamports,
+        cluster: CLUSTER,
+        houseAddress: getChain()?.houseAddress() ?? null,
         games: [...GAME_SET],
       });
     }
@@ -125,6 +151,41 @@ const server = createServer(async (req, res) => {
         nonceUsed: s.nonceUsed,
       }));
       return send(res, 200, { sessions });
+    }
+
+    // ---- Real SOL: wallet overview, deposits, withdrawals ----
+    if (path === "/api/wallet" && method === "GET") {
+      const c = getChain();
+      return send(res, 200, {
+        cluster: CLUSTER,
+        houseAddress: c?.houseAddress() ?? null,
+        balanceLamports: acct.balanceLamports,
+        wagerRemaining: acct.wagerRemaining,
+        deposits: myDeposits(acct.pubkey),
+        withdrawals: myWithdrawals(acct.pubkey),
+      });
+    }
+    if (path === "/api/deposit/confirm" && method === "POST") {
+      const c = getChain();
+      if (!c) return send(res, 503, { error: "Wallet not configured on this server" });
+      const { signature } = await readBody(req);
+      try {
+        return send(res, 200, await confirmDeposit(acct, signature, c));
+      } catch (e) {
+        if (e instanceof WalletError) return send(res, 400, { error: e.message });
+        throw e;
+      }
+    }
+    if (path === "/api/withdraw" && method === "POST") {
+      const c = getChain();
+      if (!c) return send(res, 503, { error: "Wallet not configured on this server" });
+      const { lamports } = await readBody(req);
+      try {
+        return send(res, 200, await requestWithdrawal(acct, Number(lamports), c));
+      } catch (e) {
+        if (e instanceof WalletError) return send(res, 400, { error: e.message });
+        throw e;
+      }
     }
 
     if (path === "/api/faucet" && method === "POST") {
@@ -226,6 +287,11 @@ const server = createServer(async (req, res) => {
 });
 
 export function start(port = SERVER.port) {
+  const pending = pendingWithdrawals();
+  if (pending.length) {
+    console.warn(`⚠ ${pending.length} withdrawal(s) still pending — check their signatures on-chain:`,
+      pending.map((w) => `#${w.id} ${w.signature ?? "(unsigned)"}`).join(", "));
+  }
   return server.listen(port, () => {
     console.log(`Vanta backend on http://localhost:${port}`);
     console.log(`Faucet: ${toSol(FAUCET.amountLamports)} per claim, ${FAUCET.cooldownMs / 60000} min cooldown`);

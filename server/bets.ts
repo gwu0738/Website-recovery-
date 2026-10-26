@@ -38,6 +38,7 @@ export function placeBet(acct: Account, spec: AnyBet, stakeLamports: number) {
     const payout = Math.floor(stakeLamports * result.multiplier);
     acct.balanceLamports += payout - stakeLamports;
     acct.wagered += stakeLamports;
+    acct.wagerRemaining = Math.max(0, acct.wagerRemaining - stakeLamports);
     acct.nonce += 1;
     save(acct);
 
@@ -96,6 +97,7 @@ export function setClientSeed(acct: Account, clientSeed: string) {
 
 /** Claim free faucet credit, respecting the cooldown. */
 export function claimFaucet(acct: Account) {
+  if (FAUCET.amountLamports <= 0) throw new BetError("The faucet is disabled");
   return tx(() => {
     reloadAccount(acct);
     const now = Date.now();
@@ -104,11 +106,14 @@ export function claimFaucet(acct: Account) {
       throw new BetError(`Faucet on cooldown — try again in ${Math.ceil(waitMs / 60000)} min`);
     }
     acct.balanceLamports += FAUCET.amountLamports;
+    // Bonus credit: must be wagered through before any withdrawal.
+    acct.wagerRemaining += FAUCET.amountLamports * FAUCET.wagerRequirementX;
     acct.lastFaucetAt = now;
     save(acct);
     return {
       creditedLamports: FAUCET.amountLamports,
       balanceLamports: acct.balanceLamports,
+      wagerRemaining: acct.wagerRemaining,
       nextClaimAt: now + FAUCET.cooldownMs,
     };
   });

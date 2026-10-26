@@ -41,6 +41,13 @@ db.exec(`
     wagered          INTEGER NOT NULL DEFAULT 0
   )
 `);
+// Migration: wagering requirement (bonus credit must be wagered before withdraw).
+{
+  const cols = (db.prepare("PRAGMA table_info(accounts)").all() as { name: string }[]).map((c) => c.name);
+  if (!cols.includes("wager_remaining")) {
+    db.exec("ALTER TABLE accounts ADD COLUMN wager_remaining INTEGER NOT NULL DEFAULT 0");
+  }
+}
 
 export interface Account {
   pubkey: string;
@@ -52,7 +59,9 @@ export interface Account {
   clientSeed: string;
   nonce: number;
   lastFaucetAt: number | null;
-  wagered: number; // lifetime wagered, lamports (wagering-requirement tracking)
+  wagered: number; // lifetime wagered, lamports
+  /** Bonus wagering still required before any withdrawal (lamports). */
+  wagerRemaining: number;
 }
 
 type Row = {
@@ -66,6 +75,7 @@ type Row = {
   nonce: number;
   last_faucet_at: number | null;
   wagered: number;
+  wager_remaining: number;
 };
 
 function rowToAccount(r: Row): Account {
@@ -80,6 +90,7 @@ function rowToAccount(r: Row): Account {
     nonce: r.nonce,
     lastFaucetAt: r.last_faucet_at,
     wagered: r.wagered,
+    wagerRemaining: r.wager_remaining,
   };
 }
 
@@ -87,13 +98,14 @@ const selectStmt = db.prepare("SELECT * FROM accounts WHERE pubkey = ?");
 const insertStmt = db.prepare(`
   INSERT INTO accounts
     (pubkey, created_at, balance_lamports, server_seed, server_seed_hash,
-     prev_server_seed, client_seed, nonce, last_faucet_at, wagered)
-  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+     prev_server_seed, client_seed, nonce, last_faucet_at, wagered, wager_remaining)
+  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 `);
 const updateStmt = db.prepare(`
   UPDATE accounts SET
     balance_lamports = ?, server_seed = ?, server_seed_hash = ?,
-    prev_server_seed = ?, client_seed = ?, nonce = ?, last_faucet_at = ?, wagered = ?
+    prev_server_seed = ?, client_seed = ?, nonce = ?, last_faucet_at = ?, wagered = ?,
+    wager_remaining = ?
   WHERE pubkey = ?
 `);
 
@@ -117,6 +129,7 @@ export function getOrCreateAccount(pubkey: string): Account {
     nonce: 1,
     lastFaucetAt: null,
     wagered: 0,
+    wagerRemaining: 0,
   };
   insertStmt.run(
     acct.pubkey,
@@ -129,6 +142,7 @@ export function getOrCreateAccount(pubkey: string): Account {
     acct.nonce,
     acct.lastFaucetAt,
     acct.wagered,
+    acct.wagerRemaining,
   );
   return acct;
 }
@@ -144,6 +158,7 @@ export function save(acct: Account) {
     acct.nonce,
     acct.lastFaucetAt,
     acct.wagered,
+    acct.wagerRemaining,
     acct.pubkey,
   );
 }
@@ -159,6 +174,7 @@ export function publicView(acct: Account) {
     prevServerSeed: acct.prevServerSeed,
     lastFaucetAt: acct.lastFaucetAt,
     wagered: acct.wagered,
+    wagerRemaining: acct.wagerRemaining,
   };
 }
 
@@ -335,4 +351,90 @@ export function reloadAccount(acct: Account): Account {
   const fresh = getAccount(acct.pubkey);
   if (!fresh) throw new Error("Account not found");
   return Object.assign(acct, fresh);
+}
+
+// ---------------------------------------------------------------------------
+// Real SOL: deposits (keyed by transaction signature, so one transfer can only
+// ever be credited once) and withdrawals (with a status trail).
+// ---------------------------------------------------------------------------
+db.exec(`
+  CREATE TABLE IF NOT EXISTS deposits (
+    signature  TEXT PRIMARY KEY,
+    pubkey     TEXT NOT NULL,
+    lamports   INTEGER NOT NULL,
+    slot       INTEGER,
+    created_at INTEGER NOT NULL
+  );
+  CREATE TABLE IF NOT EXISTS withdrawals (
+    id         INTEGER PRIMARY KEY AUTOINCREMENT,
+    pubkey     TEXT NOT NULL,
+    lamports   INTEGER NOT NULL,
+    status     TEXT NOT NULL,      -- pending | sent | failed
+    signature  TEXT,
+    error      TEXT,
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL
+  );
+`);
+
+const depositExistsStmt = db.prepare("SELECT 1 FROM deposits WHERE signature = ?");
+const insertDepositStmt = db.prepare(
+  "INSERT INTO deposits (signature, pubkey, lamports, slot, created_at) VALUES (?, ?, ?, ?, ?)",
+);
+const myDepositsStmt = db.prepare("SELECT * FROM deposits WHERE pubkey = ? ORDER BY created_at DESC LIMIT ?");
+
+export function depositExists(signature: string): boolean {
+  return !!depositExistsStmt.get(signature);
+}
+
+export function insertDeposit(signature: string, pubkey: string, lamports: number, slot: number | null) {
+  insertDepositStmt.run(signature, pubkey, lamports, slot, Date.now());
+}
+
+export function myDeposits(pubkey: string, limit = 20) {
+  return (myDepositsStmt.all(pubkey, limit) as any[]).map((r) => ({
+    signature: r.signature, lamports: r.lamports, slot: r.slot, createdAt: r.created_at,
+  }));
+}
+
+const insertWithdrawalStmt = db.prepare(
+  "INSERT INTO withdrawals (pubkey, lamports, status, created_at, updated_at) VALUES (?, ?, 'pending', ?, ?)",
+);
+const updateWithdrawalStmt = db.prepare(
+  "UPDATE withdrawals SET status = ?, signature = ?, error = ?, updated_at = ? WHERE id = ?",
+);
+const myWithdrawalsStmt = db.prepare("SELECT * FROM withdrawals WHERE pubkey = ? ORDER BY id DESC LIMIT ?");
+const pendingWithdrawalsStmt = db.prepare("SELECT * FROM withdrawals WHERE status = 'pending'");
+
+export function insertWithdrawal(pubkey: string, lamports: number): number {
+  const now = Date.now();
+  const r = insertWithdrawalStmt.run(pubkey, lamports, now, now);
+  return Number(r.lastInsertRowid);
+}
+
+const setWithdrawalSigStmt = db.prepare("UPDATE withdrawals SET signature = ?, updated_at = ? WHERE id = ?");
+
+/** Persist a withdrawal's signature the moment it's signed (before broadcast). */
+export function recordWithdrawalSignature(id: number, signature: string) {
+  setWithdrawalSigStmt.run(signature, Date.now(), id);
+}
+
+export function updateWithdrawal(id: number, status: "sent" | "failed", signature: string | null, error: string | null) {
+  updateWithdrawalStmt.run(status, signature, error, Date.now(), id);
+}
+
+function rowToWithdrawal(r: any) {
+  return {
+    id: r.id, pubkey: r.pubkey, lamports: r.lamports, status: r.status,
+    signature: r.signature, error: r.error, createdAt: r.created_at, updatedAt: r.updated_at,
+  };
+}
+
+export function myWithdrawals(pubkey: string, limit = 20) {
+  return (myWithdrawalsStmt.all(pubkey, limit) as any[]).map(rowToWithdrawal);
+}
+
+/** Withdrawals that were debited but never confirmed sent/failed (e.g. a crash mid-send). */
+export function pendingWithdrawals() {
+  return (pendingWithdrawalsStmt.all() as any[]).map(rowToWithdrawal);
 }

@@ -93,6 +93,7 @@ export function sessionStart<S, O, I>(
 
     acct.balanceLamports -= stakeLamports;
     acct.wagered += stakeLamports;
+    acct.wagerRemaining = Math.max(0, acct.wagerRemaining - stakeLamports);
     acct.nonce += 1; // the commitment is consumed by this game
     save(acct);
 

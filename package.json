@@ -12,5 +12,8 @@
     "server": "node server/server.ts",
     "build:web": "node web/build-standalone.mjs",
     "test": "node --test \"test/*.test.ts\""
+  },
+  "dependencies": {
+    "@solana/web3.js": "1.95.3"
   }
 }
