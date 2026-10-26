@@ -30,6 +30,8 @@ const JS_ORDER = [
   "js/tower-game.js",
   "js/chicken-logic.js",
   "js/chicken-game.js",
+  "js/roulette-logic.js",
+  "js/roulette-game.js",
   "js/chat.js",
   "js/app.js",
 ];
@@ -37,7 +39,8 @@ const JS_ORDER = [
 // Strip ES-module syntax so the files share one module scope.
 function stripModuleSyntax(src) {
   return src
-    .replace(/^\s*import\s[^\n]*;?\s*$/gm, "") // drop `import ... ;` lines
+    .replace(/^\s*import\s*\{[^}]*\}\s*from\s*["'][^"']+["'];?[ \t]*$/gm, "") // multi-line `import { … } from "…";`
+    .replace(/^\s*import\s[^\n]*;?\s*$/gm, "") // single-line `import … ;`
     .replace(/^(\s*)export\s+/gm, "$1"); // drop leading `export `
 }
 

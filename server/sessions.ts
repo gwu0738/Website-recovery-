@@ -16,6 +16,7 @@
  */
 import { randomBytes } from "node:crypto";
 import type { BetContext } from "../src/games/types.ts";
+import { payoutLamports as lamportsPaid } from "../src/games/shared.ts";
 import { BET } from "./config.ts";
 import {
   getSession,
@@ -53,7 +54,7 @@ function settle(
   state: unknown,
   multiplier: number,
 ): number {
-  const payout = Math.floor(row.stakeLamports * multiplier);
+  const payout = lamportsPaid(row.stakeLamports, multiplier);
   acct.balanceLamports += payout;
   save(acct);
   updateSession(row.id, state, false);

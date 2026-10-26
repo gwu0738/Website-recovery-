@@ -241,7 +241,27 @@ export function createChickenGame(container, { onStart, onStep, onCashout, amoun
     }
   });
 
+  /** Resume an unfinished game: chicken stands on the lane it last reached. */
+  function restore({ sessionId, difficulty: d, stepsTaken: steps, multiplier }) {
+    difficulty = d;
+    container.querySelectorAll(".chicken-diff .toggle-btn").forEach((x) =>
+      x.classList.toggle("active", x.dataset.d === d));
+    updateHeader();
+    session = { sessionId };
+    stepsTaken = steps;
+    setDiffEnabled(false);
+    buildRoad();
+    chick.style.left = laneX(steps) + "px";
+    markLanes();
+    follow(steps);
+    goBtn.disabled = false;
+    actionBtn.textContent = steps > 0 ? `Cash Out ${multiplier}x` : "Cash Out";
+    statusEl.textContent = steps > 0
+      ? `Resumed on lane ${steps} · ${multiplier}x. Go on or cash out.`
+      : "Resumed. Press Go to leap a lane.";
+  }
+
   updateHeader();
   buildRoad();
-  return {};
+  return { restore };
 }

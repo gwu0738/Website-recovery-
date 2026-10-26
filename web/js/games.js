@@ -55,5 +55,5 @@ export const GAME_CATALOG = [
   { id: "crash", name: "Crash", blurb: "Cash out before the bust.", playable: false, icon: ICONS.crash },
   { id: "mines", name: "Mines", blurb: "Dodge the hidden bombs.", playable: false, icon: ICONS.mines },
   { id: "plinko", name: "Plinko", blurb: "Drop into a payout bucket.", playable: false, icon: ICONS.plinko },
-  { id: "roulette", name: "Roulette", blurb: "European single-zero wheel.", playable: false, icon: ICONS.roulette },
+  { id: "roulette", name: "Roulette", blurb: "Real wheel, real table, single zero.", playable: true, icon: ICONS.roulette },
 ];

@@ -50,6 +50,12 @@ export function getProvider() {
   return null;
 }
 
+/** The wallet account Phantom is currently on (null when unknown). */
+export function activeAddress() {
+  const pk = getProvider()?.publicKey;
+  return pk ? pk.toString() : null;
+}
+
 export async function connect() {
   const provider = getProvider();
   if (!provider) {
@@ -74,9 +80,10 @@ export async function getBalanceSol(address, rpc = rpcUrl()) {
 /**
  * Deposit: transfer `lamports` from the player's wallet to the house address.
  * Phantom signs and sends; we wait for confirmation and return the signature
- * for the server to verify and credit.
+ * for the server to verify and credit. `onSigned(signature)` fires as soon as
+ * Phantom returns the signature, before confirmation.
  */
-export async function sendDeposit(provider, fromAddress, houseAddress, lamports, rpc = rpcUrl()) {
+export async function sendDeposit(provider, fromAddress, houseAddress, lamports, rpc = rpcUrl(), onSigned) {
   const { Connection, PublicKey, SystemProgram, Transaction } = await loadWeb3();
   const conn = new Connection(rpc, "confirmed");
   const from = new PublicKey(fromAddress);
@@ -85,6 +92,7 @@ export async function sendDeposit(provider, fromAddress, houseAddress, lamports,
     SystemProgram.transfer({ fromPubkey: from, toPubkey: new PublicKey(houseAddress), lamports }),
   );
   const { signature } = await provider.signAndSendTransaction(tx);
+  onSigned?.(signature); // remembered before we wait, so a closed tab can't lose the deposit
   const res = await conn.confirmTransaction({ signature, blockhash, lastValidBlockHeight }, "confirmed");
   if (res.value.err) throw new Error("Deposit transaction failed on-chain");
   return signature;

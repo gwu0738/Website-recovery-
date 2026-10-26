@@ -10,7 +10,7 @@
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 import { pathToFileURL } from "node:url";
 import { SERVER, BET, FAUCET, WITHDRAW, CLUSTER, toSol } from "./config.ts";
-import { createChallenge, verifySignature, pubkeyForToken } from "./auth.ts";
+import { createChallenge, verifySignature, pubkeyForToken, revokeToken } from "./auth.ts";
 import {
   getOrCreateAccount,
   getAccount,
@@ -23,10 +23,10 @@ import {
   pendingWithdrawals,
 } from "./store.ts";
 import { createSolanaChain, isHouseConfigured, type Chain } from "./solana.ts";
-import { confirmDeposit, requestWithdrawal, WalletError } from "./wallet.ts";
+import { confirmDeposit, requestWithdrawal, reconcilePendingWithdrawals, WalletError } from "./wallet.ts";
 import { placeBet, claimFaucet, rotateSeed, setClientSeed, BetError } from "./bets.ts";
-import { towerStart, towerReveal, towerCashout, TowerError } from "./tower-session.ts";
-import { chickenStart, chickenStep, chickenCashout, ChickenError } from "./chicken-session.ts";
+import { towerStart, towerReveal, towerCashout, towerResumeView, TowerError } from "./tower-session.ts";
+import { chickenStart, chickenStep, chickenCashout, chickenResumeView, ChickenError } from "./chicken-session.ts";
 import { GAMES } from "../src/games/index.ts";
 
 const GAME_SET = new Set<string>(GAMES);
@@ -71,10 +71,9 @@ function readBody(req: IncomingMessage): Promise<any> {
   });
 }
 
-function authPubkey(req: IncomingMessage): string | null {
+function bearerToken(req: IncomingMessage): string | undefined {
   const header = req.headers["authorization"];
-  const token = header?.startsWith("Bearer ") ? header.slice(7) : undefined;
-  return pubkeyForToken(token);
+  return header?.startsWith("Bearer ") ? header.slice(7) : undefined;
 }
 
 const server = createServer(async (req, res) => {
@@ -128,7 +127,8 @@ const server = createServer(async (req, res) => {
     }
 
     // ---- authenticated ----
-    const pubkey = authPubkey(req);
+    const token = bearerToken(req);
+    const pubkey = pubkeyForToken(token);
     if (!pubkey) return send(res, 401, { error: "not signed in" });
     const acct = getAccount(pubkey) ?? getOrCreateAccount(pubkey);
 
@@ -136,19 +136,30 @@ const server = createServer(async (req, res) => {
       return send(res, 200, { account: publicView(acct) });
     }
 
+    // Sign out everywhere this token was used. The balance stays with the wallet.
+    if (path === "/api/auth/logout" && method === "POST") {
+      revokeToken(token);
+      return send(res, 200, { ok: true });
+    }
+
     // My Games: this account's settled bets (newest first).
     if (path === "/api/bets/mine" && method === "GET") {
       return send(res, 200, { bets: myBets(acct.pubkey, 50) });
     }
 
-    // Unfinished games to resume. Only public fields — never the hidden
-    // layout/death point, which stays server-side until the game ends.
+    // Unfinished games to resume (their stake is locked until they end). Only
+    // public progress — never the hidden layout/death point, which stays
+    // server-side until the game ends.
     if (path === "/api/sessions/active" && method === "GET") {
       const sessions = activeSessions(acct.pubkey).map((s) => ({
         sessionId: s.id,
         game: s.game,
         stakeLamports: s.stakeLamports,
         nonceUsed: s.nonceUsed,
+        progress:
+          s.game === "tower" ? towerResumeView(s)
+          : s.game === "chicken" ? chickenResumeView(s)
+          : null,
       }));
       return send(res, 200, { sessions });
     }
@@ -287,10 +298,19 @@ const server = createServer(async (req, res) => {
 });
 
 export function start(port = SERVER.port) {
+  // Settle withdrawals interrupted by a crash: refund what certainly never
+  // landed, mark what did. Nobody's balance stays debited for a payout that
+  // never happened.
   const pending = pendingWithdrawals();
   if (pending.length) {
-    console.warn(`⚠ ${pending.length} withdrawal(s) still pending — check their signatures on-chain:`,
-      pending.map((w) => `#${w.id} ${w.signature ?? "(unsigned)"}`).join(", "));
+    reconcilePendingWithdrawals(getChain())
+      .then((r) => {
+        console.warn(`⚠ reconciled ${pending.length} pending withdrawal(s): ${r.refunded} refunded, ${r.sent} confirmed sent, ${r.pending} still pending`);
+        if (r.pending) {
+          console.warn("  still pending:", pendingWithdrawals().map((w) => `#${w.id} ${w.signature ?? "(unsigned)"}`).join(", "));
+        }
+      })
+      .catch((e) => console.error("withdrawal reconciliation failed:", (e as Error).message));
   }
   return server.listen(port, () => {
     console.log(`Vanta backend on http://localhost:${port}`);

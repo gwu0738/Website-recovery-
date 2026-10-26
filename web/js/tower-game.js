@@ -170,7 +170,31 @@ export function createTowerGame(container, { onStart, onReveal, onCashout, amoun
     }
   });
 
+  /**
+   * Resume an unfinished game (stake already locked on the server). Marks the
+   * rows already climbed with their picks and continues from the next row.
+   */
+  function restore({ sessionId, difficulty: d, rowsClimbed: climbed, picks = [], multiplier }) {
+    difficulty = d;
+    container.querySelectorAll(".tower-diff .toggle-btn").forEach((x) =>
+      x.classList.toggle("active", x.dataset.d === d));
+    updateMax();
+    session = { sessionId };
+    rowsClimbed = climbed;
+    enableDiff(false);
+    buildGrid();
+    for (let r = 0; r < climbed; r++) {
+      rowEls(r).forEach((t) => t.classList.add("safe-row"));
+      if (picks[r] !== undefined) rowEls(r)[picks[r]]?.classList.add("picked");
+    }
+    actionBtn.textContent = `Cash Out x${multiplier ?? 1}`;
+    statusEl.textContent = climbed
+      ? `Resumed · ${climbed} row${climbed > 1 ? "s" : ""} cleared · x${multiplier}. Keep climbing or cash out.`
+      : "Resumed. Pick a tile on the bottom row.";
+    highlightActiveRow();
+  }
+
   updateMax();
   buildGrid();
-  return {};
+  return { restore };
 }

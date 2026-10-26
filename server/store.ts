@@ -438,3 +438,37 @@ export function myWithdrawals(pubkey: string, limit = 20) {
 export function pendingWithdrawals() {
   return (pendingWithdrawalsStmt.all() as any[]).map(rowToWithdrawal);
 }
+
+// ---------------------------------------------------------------------------
+// Sign-in sessions. Kept here (not in memory) so a server restart or redeploy
+// never signs players out: their token keeps resolving to their wallet, and
+// their balance is right there when the page reloads.
+// ---------------------------------------------------------------------------
+db.exec(`
+  CREATE TABLE IF NOT EXISTS auth_sessions (
+    token      TEXT PRIMARY KEY,
+    pubkey     TEXT NOT NULL,
+    expires_at INTEGER NOT NULL,
+    created_at INTEGER NOT NULL
+  );
+`);
+const insertAuthStmt = db.prepare(
+  "INSERT INTO auth_sessions (token, pubkey, expires_at, created_at) VALUES (?, ?, ?, ?)",
+);
+const selectAuthStmt = db.prepare("SELECT pubkey, expires_at FROM auth_sessions WHERE token = ?");
+const deleteAuthStmt = db.prepare("DELETE FROM auth_sessions WHERE token = ?");
+const purgeAuthStmt = db.prepare("DELETE FROM auth_sessions WHERE expires_at < ?");
+
+export function insertAuthSession(token: string, pubkey: string, expiresAt: number) {
+  purgeAuthStmt.run(Date.now());
+  insertAuthStmt.run(token, pubkey, expiresAt, Date.now());
+}
+
+export function getAuthSession(token: string): { pubkey: string; expiresAt: number } | undefined {
+  const r = selectAuthStmt.get(token) as { pubkey: string; expires_at: number } | undefined;
+  return r ? { pubkey: r.pubkey, expiresAt: r.expires_at } : undefined;
+}
+
+export function deleteAuthSession(token: string) {
+  deleteAuthStmt.run(token);
+}

@@ -37,7 +37,11 @@ async function req(path, { method = "GET", body, auth = false } = {}) {
     body: body ? JSON.stringify(body) : undefined,
   });
   const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
+  if (!res.ok) {
+    const err = new Error(data.error || `HTTP ${res.status}`);
+    err.status = res.status; // callers tell "signed out" (401) from "server unreachable"
+    throw err;
+  }
   return data;
 }
 
@@ -71,6 +75,10 @@ export const api = {
   config: () => req("/api/config"),
   me: () => req("/api/me", { auth: true }),
   faucet: () => req("/api/faucet", { method: "POST", auth: true }),
+  /** Unfinished Tower/Chicken games whose stake is still locked. */
+  sessionsActive: () => req("/api/sessions/active", { auth: true }),
+  /** Revoke this token server-side; the balance stays with the wallet. */
+  logout: () => req("/api/auth/logout", { method: "POST", auth: true }),
   rotateSeed: () => req("/api/rotate-seed", { method: "POST", auth: true }),
   setClientSeed: (clientSeed) =>
     req("/api/client-seed", { method: "POST", auth: true, body: { clientSeed } }),

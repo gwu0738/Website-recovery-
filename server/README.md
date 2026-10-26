@@ -37,6 +37,16 @@ npm run server      # starts on http://localhost:8787
 | `POST /api/client-seed` | ✓ | set your own client seed |
 | `POST /api/rotate-seed` | ✓ | reveal old server seed, commit a new one |
 | `POST /api/bet` | ✓ | `{ game, bet, stake }` → result + new balance |
+| `POST /api/auth/logout` | ✓ | revoke this token everywhere (balance stays with the wallet) |
+| `GET /api/sessions/active` | ✓ | unfinished Tower/Chicken games (locked stakes) + public progress, to resume |
+| `GET /api/wallet` | ✓ | house address, balance, wagering left, deposit/withdrawal history |
+| `POST /api/deposit/confirm` | ✓ | `{ signature }` → verify on-chain, credit once |
+| `POST /api/withdraw` | ✓ | `{ lamports }` → pay out from the house wallet |
+
+Roulette takes either one bet (`{ type: "red" }`, `{ type: "straight", number: 17 }`, …)
+or a whole table: `{ type: "multi", bets: [{ bet, weight }] }` where each `weight` is
+that chip's lamports and `stake` is their sum — one spin, one nonce, each chip paid
+at its own odds.
 
 The account view never exposes the live server seed — only its hash
 (the commitment). Rotating the seed reveals the previous one so players can
@@ -44,12 +54,17 @@ verify their past bets with the shared verifier (`src/fairness/verify.ts`).
 
 ## Data & persistence
 
-Accounts live in a **SQLite database** at `server/data/accounts.db` (gitignored),
+Accounts **and sign-in sessions** live in a **SQLite database** at `server/data/accounts.db` (gitignored),
 via Node's built-in `node:sqlite` — no dependency. Each account is keyed by wallet
 pubkey, so balances persist across logins and restarts: a user who signs out and
 returns weeks later gets the same balance back (the data lives here, not in the
 session). Writes are atomic ACID transactions in WAL mode, so a crash mid-bet
 can't corrupt the file or half-apply a wager.
+
+Because sessions are in the database too, restarting or redeploying the server
+never signs players out: the same token keeps resolving to the same wallet.
+Withdrawals interrupted mid-send are reconciled at startup (refunded when they
+certainly never landed, marked sent when they did).
 
 **Still back it up.** A database prevents corruption; backups prevent loss from a
 dead disk. For real money, run automated backups, e.g. a periodic

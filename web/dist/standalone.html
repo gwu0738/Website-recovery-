@@ -309,6 +309,73 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
   .hero h1 { font-size: 34px; }
 }
 
+/* Roulette game */
+.rl { display: grid; grid-template-columns: 200px 1fr; gap: 18px; margin-bottom: 16px; }
+.rl-left { display: flex; flex-direction: column; gap: 10px; }
+.rl-left .field { display: flex; flex-direction: column; gap: 4px; }
+.rl-left .k, .rl-total .k, .rl-hist .k { font-size: 10px; text-transform: uppercase; letter-spacing: .5px; color: var(--muted); }
+.rl-left input { width: 100%; padding: 10px; background: var(--bg-2); border: 1px solid var(--border); border-radius: 8px; color: var(--text); }
+.rl-quick { display: flex; gap: 6px; }
+.rl-quick .btn { flex: 1; padding: 6px 0; font-size: 12px; }
+.rl-total { background: var(--bg-2); border: 1px solid var(--border); border-radius: 10px; padding: 10px; display: flex; flex-direction: column; }
+.rl-total strong { font-size: 20px; color: var(--accent-2); }
+.rl-row { display: flex; gap: 6px; }
+.rl-row .btn { flex: 1; padding: 8px 0; }
+.rl-hist-list { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; }
+.rl-hist-chip { width: 26px; height: 26px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; color: #fff; }
+.rl-hist-chip.red { background: #d83a52; } .rl-hist-chip.black { background: #2a2e40; border: 1px solid var(--border); } .rl-hist-chip.green { background: #1f9d6b; }
+.rl-right { min-width: 0; display: flex; flex-direction: column; gap: 14px; }
+
+.rl-wheel-wrap { position: relative; width: min(340px, 100%); aspect-ratio: 1; margin: 6px auto 0; }
+.rl-rotor { position: absolute; inset: 0; transform-origin: 50% 50%; will-change: transform; filter: drop-shadow(0 10px 30px rgba(0,0,0,.6)); }
+.rl-wheel-svg { width: 100%; height: 100%; display: block; }
+.rl-num { fill: #fff; font-size: 13px; font-weight: 700; text-anchor: middle; dominant-baseline: middle; font-family: var(--font); }
+.rl-dividers line { stroke: #e8d18a; stroke-width: 1; opacity: .7; }
+.rl-pointer { position: absolute; top: -4px; left: 50%; width: 0; height: 0; transform: translateX(-50%); border-left: 9px solid transparent; border-right: 9px solid transparent; border-top: 16px solid var(--accent-2); filter: drop-shadow(0 0 6px var(--accent-2)); z-index: 3; }
+.rl-ball-orbit { position: absolute; inset: 0; transform-origin: 50% 50%; will-change: transform; pointer-events: none; z-index: 2; }
+.rl-ball { position: absolute; top: 50%; left: 50%; width: 13px; height: 13px; border-radius: 50%; background: radial-gradient(circle at 35% 30%, #fff, #c7c9d6 55%, #7d8093); box-shadow: 0 2px 6px rgba(0,0,0,.7); }
+.rl-result { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 10px 16px; border-radius: 14px; background: rgba(10, 11, 16, .92); border: 1px solid var(--border); opacity: 0; transition: opacity .25s; pointer-events: none; z-index: 4; }
+.rl-result.show { opacity: 1; }
+.rl-result-num { font-size: 34px; font-weight: 800; line-height: 1; }
+.rl-result.red .rl-result-num { color: #ff6b80; } .rl-result.black .rl-result-num { color: #e8eaf2; } .rl-result.green .rl-result-num { color: #35d07f; }
+.rl-result-sub { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; white-space: nowrap; }
+.rl-result.win { border-color: var(--win); box-shadow: 0 0 24px rgba(53,208,127,.45); }
+.rl-result.lose { border-color: var(--lose); }
+.rl-result.part { border-color: #ffce54; }
+
+.rl-table { display: grid; min-width: 0; grid-template-columns: minmax(0, 1.1fr) repeat(12, minmax(0, 1fr)) minmax(0, 1.1fr); grid-auto-rows: 38px; gap: 3px; }
+.rl-cell { position: relative; min-width: 0; overflow: visible; border: 1px solid rgba(255,255,255,.12); border-radius: 6px; color: #fff; font-weight: 700; font-size: 13px; cursor: pointer; background: #262a3a; padding: 0; transition: transform .05s, filter .15s; }
+.rl-cell:hover { filter: brightness(1.2); transform: translateY(-1px); }
+.rl-cell.red { background: #b92f45; }
+.rl-cell.black { background: #1b1e2c; }
+.rl-cell.green { background: #1a7f57; }
+.rl-cell.outside { background: #1e2234; color: var(--text); font-size: 11px; letter-spacing: .3px; }
+.rl-cell.outside.red { background: #7d2434; } .rl-cell.outside.black { background: #11131c; }
+.rl-cell.hit { outline: 2px solid var(--accent-2); box-shadow: 0 0 14px rgba(0,224,184,.55); z-index: 1; }
+.rl-chip { position: absolute; right: -4px; top: -6px; min-width: 22px; height: 22px; padding: 0 5px; border-radius: 11px; background: radial-gradient(circle at 40% 35%, #ffe59a, #d9a83c 70%, #8a6a26); color: #2a2412; font-size: 9px; font-weight: 800; display: flex; align-items: center; justify-content: center; border: 2px dashed rgba(255,255,255,.7); box-shadow: 0 2px 5px rgba(0,0,0,.6); pointer-events: none; }
+.rl.spinning .rl-cell, .spinning .rl-cell { cursor: default; filter: saturate(.8); }
+.spinning .rl-cell:hover { transform: none; filter: saturate(.8); }
+.rl-status { text-align: center; font-size: 12px; color: var(--muted); }
+@media (max-width: 720px) {
+  .rl { grid-template-columns: 1fr; }
+  .rl-table { grid-auto-rows: 30px; gap: 2px; }
+  .rl-cell { font-size: 11px; border-radius: 4px; }
+  .rl-cell.outside { font-size: 9px; }
+}
+
+/* Unfinished-game banner (a locked stake waiting to be resumed) */
+.resume-banner { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 14px; padding: 12px 14px; background: #1a1540; border: 1px solid #3a2f7a; border-radius: 10px; font-size: 13px; }
+.resume-banner strong { color: #ffce54; }
+.resume-banner .btn { padding: 7px 12px; font-size: 13px; }
+.resume-banner .grow { flex: 1 1 200px; }
+
+/* Wallet panel: deposit recovery */
+.wp-recover { margin-top: 10px; border-top: 1px dashed var(--border); padding-top: 10px; }
+.wp-recover summary { cursor: pointer; font-size: 12px; color: var(--muted); }
+.wp-recover .wp-inline { margin-top: 6px; }
+.wp-recover input { font-size: 12px; }
+.wp-pending { font-size: 12px; color: #ffce54; margin-top: 6px; }
+
 </style>
   </head>
   <body>
@@ -365,7 +432,10 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
           <!-- Real-SOL deposits / withdrawals (backend mode) -->
           <div id="wallet-panel" class="wallet-panel hidden"></div>
 
-          <!-- Rich game UIs render here (Dice built; others coming in the same style). -->
+          <!-- Unfinished game with a locked stake (backend mode): resume or cash out. -->
+          <div id="resume-banner" class="resume-banner hidden"></div>
+
+          <!-- Rich game UIs render here (Dice, Tower, Chicken, Roulette). -->
           <div id="game-view"></div>
 
           <div id="bet-controls" class="bet-controls" data-game="dice">
@@ -665,6 +735,7 @@ async function verifyCommitment(serverSeed, serverSeedHash) {
 
 
 
+
 const floor2 = (x) => Math.floor(x * 100) / 100;
 const payoutFor = (p, edge) => (p <= 0 ? 0 : floor2((1 / p) * (1 - edge)));
 
@@ -713,7 +784,7 @@ const GAME_CATALOG = [
   { id: "crash", name: "Crash", blurb: "Cash out before the bust.", playable: false, icon: ICONS.crash },
   { id: "mines", name: "Mines", blurb: "Dodge the hidden bombs.", playable: false, icon: ICONS.mines },
   { id: "plinko", name: "Plinko", blurb: "Drop into a payout bucket.", playable: false, icon: ICONS.plinko },
-  { id: "roulette", name: "Roulette", blurb: "European single-zero wheel.", playable: false, icon: ICONS.roulette },
+  { id: "roulette", name: "Roulette", blurb: "Real wheel, real table, single zero.", playable: true, icon: ICONS.roulette },
 ];
 
 
@@ -730,6 +801,7 @@ const GAME_CATALOG = [
 // jsdelivr (version pinned to match the server). The RPC URL comes from the
 // server's reported cluster, so the browser always talks to the same network.
 // =============================================================================
+
 
 const WEB3_BUNDLE_URL =
   "https://cdn.jsdelivr.net/npm/@solana/web3.js@1.95.3/lib/index.iife.min.js";
@@ -769,6 +841,12 @@ function getProvider() {
   return null;
 }
 
+/** The wallet account Phantom is currently on (null when unknown). */
+function activeAddress() {
+  const pk = getProvider()?.publicKey;
+  return pk ? pk.toString() : null;
+}
+
 async function connect() {
   const provider = getProvider();
   if (!provider) {
@@ -793,9 +871,10 @@ async function getBalanceSol(address, rpc = rpcUrl()) {
 /**
  * Deposit: transfer `lamports` from the player's wallet to the house address.
  * Phantom signs and sends; we wait for confirmation and return the signature
- * for the server to verify and credit.
+ * for the server to verify and credit. `onSigned(signature)` fires as soon as
+ * Phantom returns the signature, before confirmation.
  */
-async function sendDeposit(provider, fromAddress, houseAddress, lamports, rpc = rpcUrl()) {
+async function sendDeposit(provider, fromAddress, houseAddress, lamports, rpc = rpcUrl(), onSigned) {
   const { Connection, PublicKey, SystemProgram, Transaction } = await loadWeb3();
   const conn = new Connection(rpc, "confirmed");
   const from = new PublicKey(fromAddress);
@@ -804,6 +883,7 @@ async function sendDeposit(provider, fromAddress, houseAddress, lamports, rpc = 
     SystemProgram.transfer({ fromPubkey: from, toPubkey: new PublicKey(houseAddress), lamports }),
   );
   const { signature } = await provider.signAndSendTransaction(tx);
+  onSigned?.(signature); // remembered before we wait, so a closed tab can't lose the deposit
   const res = await conn.confirmTransaction({ signature, blockhash, lastValidBlockHeight }, "confirmed");
   if (res.value.err) throw new Error("Deposit transaction failed on-chain");
   return signature;
@@ -835,6 +915,7 @@ function clusterLabel() {
 //   - a URL       -> BACKEND mode: real sign-in, balances, faucet, server bets.
 // =============================================================================
 
+
 const BACKEND_ENABLED = !!(API_BASE && API_BASE.length > 0);
 
 let token = null;
@@ -864,7 +945,11 @@ async function req(path, { method = "GET", body, auth = false } = {}) {
     body: body ? JSON.stringify(body) : undefined,
   });
   const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
+  if (!res.ok) {
+    const err = new Error(data.error || `HTTP ${res.status}`);
+    err.status = res.status; // callers tell "signed out" (401) from "server unreachable"
+    throw err;
+  }
   return data;
 }
 
@@ -898,6 +983,10 @@ const api = {
   config: () => req("/api/config"),
   me: () => req("/api/me", { auth: true }),
   faucet: () => req("/api/faucet", { method: "POST", auth: true }),
+  /** Unfinished Tower/Chicken games whose stake is still locked. */
+  sessionsActive: () => req("/api/sessions/active", { auth: true }),
+  /** Revoke this token server-side; the balance stays with the wallet. */
+  logout: () => req("/api/auth/logout", { method: "POST", auth: true }),
   rotateSeed: () => req("/api/rotate-seed", { method: "POST", auth: true }),
   setClientSeed: (clientSeed) =>
     req("/api/client-seed", { method: "POST", auth: true, body: { clientSeed } }),
@@ -953,12 +1042,50 @@ const api = {
 // server, which verifies it on-chain and credits exactly what arrived.
 // Withdraw: the server checks the rules (balance, bonus wagering, house
 // solvency) and sends SOL from the house wallet to the signed-in wallet.
+//
+// Nobody loses a deposit:
+//   - the signature is saved in this browser the moment Phantom returns it,
+//     before we wait for confirmation; if the tab closes or the server is
+//     briefly unreachable, the next visit retries crediting it;
+//   - a deposit can also be credited by pasting its signature by hand;
+//   - a transfer is refused up front if Phantom has switched to a different
+//     account than the one signed in (the server only credits transfers from
+//     the signed-in wallet, so that SOL would otherwise sit uncredited).
 // =============================================================================
+
 
 
 
 const short = (s) => (s ? s.slice(0, 4) + "…" + s.slice(-4) : "—");
 const escapeAttr = (s) => String(s).replace(/[&"<>]/g, (c) => ({ "&": "&amp;", '"': "&quot;", "<": "&lt;", ">": "&gt;" })[c]);
+const SIGNATURE_RE = /^[1-9A-HJ-NP-Za-km-z]{64,90}$/;
+const PENDING_KEY = "vanta_pending_deposits";
+
+// ---- deposits awaiting credit, remembered per browser ------------------------
+function loadPending() {
+  try {
+    const v = JSON.parse(localStorage.getItem(PENDING_KEY) || "[]");
+    return Array.isArray(v) ? v : [];
+  } catch {
+    return [];
+  }
+}
+function savePending(list) {
+  try {
+    if (list.length) localStorage.setItem(PENDING_KEY, JSON.stringify(list));
+    else localStorage.removeItem(PENDING_KEY);
+  } catch {
+    /* storage unavailable: the manual signature field still works */
+  }
+}
+function rememberDeposit(pubkey, signature, lamports) {
+  const list = loadPending().filter((d) => d.signature !== signature);
+  list.push({ pubkey, signature, lamports, t: Date.now() });
+  savePending(list);
+}
+function forgetDeposit(signature) {
+  savePending(loadPending().filter((d) => d.signature !== signature));
+}
 
 function createWalletPanel(container, { getProvider, getAddress, onBalance, log }) {
   container.innerHTML = `
@@ -985,6 +1112,14 @@ function createWalletPanel(container, { getProvider, getAddress, onBalance, log 
         </form>
       </div>
       <div id="wp-status" class="wp-status" role="status"></div>
+      <div id="wp-pending" class="wp-pending"></div>
+      <details class="wp-recover">
+        <summary>Sent a deposit that wasn't credited? Paste its transaction signature.</summary>
+        <form id="wp-rec-form" class="wp-inline">
+          <input id="wp-rec" type="text" placeholder="transaction signature" autocomplete="off" spellcheck="false" />
+          <button class="btn btn-ghost" type="submit">Credit it</button>
+        </form>
+      </details>
       <div class="wp-hist"><span class="k">Recent</span><ul id="wp-list"></ul></div>
     </div>`;
 
@@ -996,6 +1131,48 @@ function createWalletPanel(container, { getProvider, getAddress, onBalance, log 
     $("#wp-status").textContent = msg;
     $("#wp-status").className = "wp-status " + kind;
   };
+
+  function myPending() {
+    const me = getAddress();
+    return loadPending().filter((d) => d.pubkey === me);
+  }
+
+  function renderPending() {
+    const list = myPending();
+    $("#wp-pending").textContent = list.length
+      ? `${list.length} deposit${list.length > 1 ? "s" : ""} awaiting credit (${list.map((d) => short(d.signature)).join(", ")}) — retrying automatically.`
+      : "";
+  }
+
+  /** Credit a signature; returns true when it's settled (credited or already credited). */
+  async function credit(signature, { quiet = false } = {}) {
+    try {
+      const r = await api.depositConfirm(signature);
+      forgetDeposit(signature);
+      status(`Deposited ${toSol(r.creditedLamports)} SOL.`, "ok");
+      log?.(`💰 Deposit +${toSol(r.creditedLamports)} SOL`);
+      onBalance(r.balanceLamports);
+      return true;
+    } catch (err) {
+      if (/already credited/i.test(err.message || "")) {
+        forgetDeposit(signature);
+        if (!quiet) status("That deposit was already credited to your balance.", "ok");
+        return true;
+      }
+      if (!quiet) status(err.message || "Couldn't credit that deposit", "bad");
+      return false;
+    }
+  }
+
+  /** Retry every remembered deposit for this wallet (e.g. after a closed tab). */
+  async function retryPending() {
+    let settled = 0;
+    for (const d of myPending()) {
+      if (await credit(d.signature, { quiet: true })) settled++;
+    }
+    renderPending();
+    return settled;
+  }
 
   async function refresh() {
     try {
@@ -1017,6 +1194,8 @@ function createWalletPanel(container, { getProvider, getAddress, onBalance, log 
             ? ` <a href="${escapeAttr(explorerTxUrl(i.sig, getActiveCluster()))}" target="_blank" rel="noopener">${short(i.sig)}</a>`
             : ""}</li>`).join("")
         : `<li class="empty">No deposits or withdrawals yet.</li>`;
+      renderPending();
+      if (myPending().length && (await retryPending())) await refresh();
     } catch (e) {
       status(e.message, "bad");
     }
@@ -1038,18 +1217,58 @@ function createWalletPanel(container, { getProvider, getAddress, onBalance, log 
     const sol = parseFloat($("#wp-dep").value);
     if (!(sol > 0)) return status("Enter an amount to deposit.", "bad");
     if (!houseAddress) return status("Deposits aren't configured on this server.", "bad");
+    const provider = getProvider();
+    if (!provider) return status("Phantom not found — install it from phantom.app", "bad");
+    const me = getAddress();
+    if (!provider.publicKey) {
+      // Session restored from a previous visit: Phantom itself isn't connected yet.
+      try { await provider.connect(); } catch { return status("Connect Phantom to deposit.", "bad"); }
+    }
+    const live = activeAddress();
+    if (live && me && live !== me) {
+      return status(
+        `Phantom is on account ${short(live)}, but you're signed in as ${short(me)}. ` +
+        `Switch Phantom back to that account (or reconnect) before depositing — only transfers from the signed-in wallet are credited.`,
+        "bad",
+      );
+    }
     busy = true;
     try {
       status("Approve the transfer in Phantom…");
       const lamports = Math.round(sol * LAMPORTS_PER_SOL);
-      const sig = await sendDeposit(getProvider(), getAddress(), houseAddress, lamports);
-      status("Sent — verifying on-chain…");
-      const r = await api.depositConfirm(sig);
-      status(`Deposited ${toSol(r.creditedLamports)} SOL.`, "ok");
-      log?.(`💰 Deposit +${toSol(r.creditedLamports)} SOL`);
+      const sig = await sendDeposit(provider, me, houseAddress, lamports, undefined, (signature) => {
+        rememberDeposit(me, signature, lamports); // saved before we wait on the network
+        renderPending();
+        status(`Sent (${short(signature)}) — waiting for the network…`);
+      });
+      status("Confirmed on-chain — crediting…");
+      await credit(sig);
       await refresh();
     } catch (err) {
-      status(err.message || "Deposit failed", "bad");
+      renderPending();
+      const remembered = myPending().length > 0;
+      status(
+        (err.message || "Deposit failed") +
+          (remembered ? " · Your transfer signature is saved; it will be credited automatically once it's visible on-chain." : ""),
+        "bad",
+      );
+    } finally {
+      busy = false;
+    }
+  });
+
+  $("#wp-rec-form").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    if (busy) return;
+    const sig = $("#wp-rec").value.trim();
+    if (!SIGNATURE_RE.test(sig)) return status("That doesn't look like a Solana transaction signature.", "bad");
+    busy = true;
+    try {
+      status("Checking that transaction on-chain…");
+      if (await credit(sig)) {
+        $("#wp-rec").value = "";
+        await refresh();
+      }
     } finally {
       busy = false;
     }
@@ -1067,7 +1286,7 @@ function createWalletPanel(container, { getProvider, getAddress, onBalance, log 
       status(
         r.status === "sent"
           ? `Withdrew ${toSol(r.lamports)} SOL to your wallet.`
-          : `Withdrawal is pending confirmation (${short(r.signature)}).`,
+          : `Withdrawal is pending confirmation (${short(r.signature)}). Your balance will be restored automatically if it never lands.`,
         r.status === "sent" ? "ok" : "",
       );
       log?.(`🏧 Withdraw −${toSol(r.lamports)} SOL · ${r.status}`);
@@ -1080,7 +1299,7 @@ function createWalletPanel(container, { getProvider, getAddress, onBalance, log 
   });
 
   refresh();
-  return { refresh };
+  return { refresh, retryPending };
 }
 
 
@@ -1097,6 +1316,7 @@ function createWalletPanel(container, { getProvider, getAddress, onBalance, log 
 // the app wires to either the in-browser engine (demo) or the backend (real).
 // This same pattern will drive the other games' UIs.
 // =============================================================================
+
 
 const diceClamp = (x, lo, hi) => Math.max(lo, Math.min(hi, x));
 const diceFloor2 = (x) => Math.floor(x * 100) / 100;
@@ -1241,6 +1461,7 @@ function createDiceGame(container, { onRoll, amountLabel = "Bet" }) {
 // =============================================================================
 
 
+
 const TOWER_COLS = 4;
 const TOWER_ROWS = 9;
 const TOWER_TRAPS = { easy: 1, medium: 2, hard: 3 };
@@ -1293,6 +1514,7 @@ async function towerLayout(ctx, difficulty) {
 // Presentation only. The app wires onStart/onReveal/onCashout to either the
 // in-browser logic (demo) or the backend tower-session API (real).
 // =============================================================================
+
 
 function createTowerGame(container, { onStart, onReveal, onCashout, amountLabel = "Bet" }) {
   let difficulty = "medium";
@@ -1456,9 +1678,33 @@ function createTowerGame(container, { onStart, onReveal, onCashout, amountLabel 
     }
   });
 
+  /**
+   * Resume an unfinished game (stake already locked on the server). Marks the
+   * rows already climbed with their picks and continues from the next row.
+   */
+  function restore({ sessionId, difficulty: d, rowsClimbed: climbed, picks = [], multiplier }) {
+    difficulty = d;
+    container.querySelectorAll(".tower-diff .toggle-btn").forEach((x) =>
+      x.classList.toggle("active", x.dataset.d === d));
+    updateMax();
+    session = { sessionId };
+    rowsClimbed = climbed;
+    enableDiff(false);
+    buildGrid();
+    for (let r = 0; r < climbed; r++) {
+      rowEls(r).forEach((t) => t.classList.add("safe-row"));
+      if (picks[r] !== undefined) rowEls(r)[picks[r]]?.classList.add("picked");
+    }
+    actionBtn.textContent = `Cash Out x${multiplier ?? 1}`;
+    statusEl.textContent = climbed
+      ? `Resumed · ${climbed} row${climbed > 1 ? "s" : ""} cleared · x${multiplier}. Keep climbing or cash out.`
+      : "Resumed. Pick a tile on the bottom row.";
+    highlightActiveRow();
+  }
+
   updateMax();
   buildGrid();
-  return {};
+  return { restore };
 }
 
 
@@ -1468,6 +1714,7 @@ function createTowerGame(container, { onStart, onReveal, onCashout, amountLabel 
 // Death-point model: 20 lanes, k hidden hazards (by difficulty); the chicken is
 // caught on the lowest hazard lane.
 // =============================================================================
+
 
 
 const CHICKEN_LANES = 20;
@@ -1522,6 +1769,7 @@ async function chickenDeathPoint(ctx, difficulty) {
 // and a car comes down that lane. Cash out any time.
 // Presentation only; the app wires onStart/onStep/onCashout.
 // =============================================================================
+
 
 const DIFFS = ["easy", "medium", "hard", "expert"];
 const SIDE = 90; // sidewalk width (px)
@@ -1756,9 +2004,446 @@ function createChickenGame(container, { onStart, onStep, onCashout, amountLabel 
     }
   });
 
+  /** Resume an unfinished game: chicken stands on the lane it last reached. */
+  function restore({ sessionId, difficulty: d, stepsTaken: steps, multiplier }) {
+    difficulty = d;
+    container.querySelectorAll(".chicken-diff .toggle-btn").forEach((x) =>
+      x.classList.toggle("active", x.dataset.d === d));
+    updateHeader();
+    session = { sessionId };
+    stepsTaken = steps;
+    setDiffEnabled(false);
+    buildRoad();
+    chick.style.left = laneX(steps) + "px";
+    markLanes();
+    follow(steps);
+    goBtn.disabled = false;
+    actionBtn.textContent = steps > 0 ? `Cash Out ${multiplier}x` : "Cash Out";
+    statusEl.textContent = steps > 0
+      ? `Resumed on lane ${steps} · ${multiplier}x. Go on or cash out.`
+      : "Resumed. Press Go to leap a lane.";
+  }
+
   updateHeader();
   buildRoad();
-  return {};
+  return { restore };
+}
+
+
+// ===== js/roulette-logic.js =====
+// =============================================================================
+// Browser Roulette logic — mirrors src/games/roulette.ts for DEMO mode and for
+// showing odds in the UI. European single-zero wheel; one float picks the pocket.
+// =============================================================================
+
+
+const RED = new Set([1, 3, 5, 7, 9, 12, 14, 16, 18, 19, 21, 23, 25, 27, 30, 32, 34, 36]);
+
+/** Pocket order around a real European wheel, clockwise from 0. */
+const WHEEL_ORDER = [
+  0, 32, 15, 19, 4, 21, 2, 25, 17, 34, 6, 27, 13, 36, 11, 30, 8, 23, 10, 5,
+  24, 16, 33, 1, 20, 14, 31, 9, 22, 18, 29, 7, 28, 12, 35, 3, 26,
+];
+
+const ROULETTE_MAX_CHIPS = 50;
+
+function pocketColor(pocket) {
+  if (pocket === 0) return "green";
+  return RED.has(pocket) ? "red" : "black";
+}
+
+/** Total returned per unit staked when the bet wins (stake included). */
+function roulettePayoutMultiplier(bet) {
+  switch (bet.type) {
+    case "straight": return 36;
+    case "dozen":
+    case "column": return 3;
+    default: return 2;
+  }
+}
+
+function rouletteBetWins(bet, pocket) {
+  const color = pocketColor(pocket);
+  switch (bet.type) {
+    case "straight": return pocket === bet.number;
+    case "red": return color === "red";
+    case "black": return color === "black";
+    case "odd": return pocket !== 0 && pocket % 2 === 1;
+    case "even": return pocket !== 0 && pocket % 2 === 0;
+    case "low": return pocket >= 1 && pocket <= 18;
+    case "high": return pocket >= 19 && pocket <= 36;
+    case "dozen": return pocket >= 1 && pocket <= 36 && Math.ceil(pocket / 12) === bet.dozen;
+    case "column": return pocket !== 0 && pocket % 3 === bet.column % 3;
+    default: return false;
+  }
+}
+
+/** Human label for a bet spot. */
+function rouletteBetLabel(bet) {
+  switch (bet.type) {
+    case "straight": return `#${bet.number}`;
+    case "dozen": return ["1st 12", "2nd 12", "3rd 12"][bet.dozen - 1];
+    case "column": return `col ${bet.column}`;
+    case "low": return "1-18";
+    case "high": return "19-36";
+    default: return bet.type;
+  }
+}
+
+/**
+ * Settle a set of chips against a pocket. `chips` = [{ bet, amount }].
+ * Returns the total returned (stake included for winning chips).
+ */
+function rouletteSettle(chips, pocket) {
+  let returned = 0;
+  for (const { bet, amount } of chips) {
+    if (rouletteBetWins(bet, pocket)) returned += amount * roulettePayoutMultiplier(bet);
+  }
+  return returned;
+}
+
+/** Spin from the provably-fair seeds (same float → same pocket as the server). */
+async function roulettePocket(ctx) {
+  const [u] = await floats(ctx.serverSeed, ctx.clientSeed, ctx.nonce, 1);
+  return Math.floor(u * 37);
+}
+
+
+// ===== js/roulette-game.js =====
+// =============================================================================
+// Roulette — a real table and a real wheel.
+//
+//   Right:  a European wheel (37 pockets in true wheel order) that spins while
+//           the ball orbits the other way, slows, and drops into the pocket
+//           the provably-fair engine chose. Below it, the betting table.
+//   Left:   chip value, Spin / Undo / Clear, total staked, last results.
+//
+// Presentation only. The spin itself comes from `onSpin(chips)`, which the app
+// wires to the in-browser engine (demo) or the backend (real balance). The
+// result is known before the animation; the balance update is held back via
+// `afterSpin()` until the ball lands, so nothing is spoiled.
+// =============================================================================
+
+
+const STEP = 360 / 37;
+const SPIN_MS = 4600;
+const WHEEL_TURNS = 4;
+const BALL_TURNS = 7;
+const RIM_R = 93; // ball orbit radius while spinning (% of the wheel radius; the rim track)
+const POCKET_R = 74; // where the ball rests: the middle of the pocket ring
+const COLORS = { red: "#d83a52", black: "#1e2130", green: "#1f9d6b" };
+const RED_SET = new Set([1, 3, 5, 7, 9, 12, 14, 16, 18, 19, 21, 23, 25, 27, 30, 32, 34, 36]);
+
+const reduced = () => !!window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+const easeOut = (t) => 1 - Math.pow(1 - t, 3.2);
+const fmt = (x) => (Math.round(x * 1e6) / 1e6).toString();
+
+// ---- the wheel as SVG ---------------------------------------------------------
+function polar(cx, cy, r, deg) {
+  const a = ((deg - 90) * Math.PI) / 180;
+  return [cx + r * Math.cos(a), cy + r * Math.sin(a)];
+}
+function wedge(cx, cy, r0, r1, a0, a1) {
+  const [x0, y0] = polar(cx, cy, r1, a0);
+  const [x1, y1] = polar(cx, cy, r1, a1);
+  const [x2, y2] = polar(cx, cy, r0, a1);
+  const [x3, y3] = polar(cx, cy, r0, a0);
+  return `M${x0} ${y0} A${r1} ${r1} 0 0 1 ${x1} ${y1} L${x2} ${y2} A${r0} ${r0} 0 0 0 ${x3} ${y3} Z`;
+}
+function wheelSvg() {
+  const c = 200;
+  let pockets = "";
+  let labels = "";
+  let dividers = "";
+  WHEEL_ORDER.forEach((n, i) => {
+    const a0 = i * STEP;
+    const a1 = (i + 1) * STEP;
+    const mid = a0 + STEP / 2;
+    pockets += `<path d="${wedge(c, c, 118, 176, a0, a1)}" fill="${COLORS[pocketColor(n)]}" data-pocket="${n}"/>`;
+    const [lx, ly] = polar(c, c, 158, mid);
+    labels += `<text x="${lx}" y="${ly}" transform="rotate(${mid} ${lx} ${ly})" class="rl-num">${n}</text>`;
+    const [dx0, dy0] = polar(c, c, 118, a0);
+    const [dx1, dy1] = polar(c, c, 176, a0);
+    dividers += `<line x1="${dx0}" y1="${dy0}" x2="${dx1}" y2="${dy1}"/>`;
+  });
+  return `<svg viewBox="0 0 400 400" class="rl-wheel-svg" aria-hidden="true">
+    <defs>
+      <radialGradient id="rl-cone" cx="50%" cy="50%" r="50%">
+        <stop offset="0" stop-color="#3a2f12"/><stop offset=".55" stop-color="#8a6a26"/><stop offset="1" stop-color="#5a4318"/>
+      </radialGradient>
+      <radialGradient id="rl-rim" cx="50%" cy="50%" r="50%">
+        <stop offset=".86" stop-color="#2a2412"/><stop offset=".93" stop-color="#c9a24a"/><stop offset="1" stop-color="#6b5420"/>
+      </radialGradient>
+    </defs>
+    <circle cx="200" cy="200" r="196" fill="url(#rl-rim)"/>
+    <circle cx="200" cy="200" r="178" fill="#0c0d14"/>
+    <g>${pockets}</g>
+    <g class="rl-dividers">${dividers}</g>
+    <g>${labels}</g>
+    <circle cx="200" cy="200" r="118" fill="url(#rl-cone)" stroke="#c9a24a" stroke-width="2"/>
+    <g class="rl-spokes" stroke="#e8d18a" stroke-width="5" stroke-linecap="round">
+      <line x1="200" y1="110" x2="200" y2="290"/><line x1="110" y1="200" x2="290" y2="200"/>
+      <line x1="136" y1="136" x2="264" y2="264"/><line x1="264" y1="136" x2="136" y2="264"/>
+    </g>
+    <circle cx="200" cy="200" r="22" fill="#e8d18a"/>
+    <circle cx="200" cy="200" r="10" fill="#8a6a26"/>
+  </svg>`;
+}
+
+// ---- the table ----------------------------------------------------------------
+const key = (bet) => JSON.stringify(bet);
+function tableHtml() {
+  const cell = (bet, text, cls = "", style = "") =>
+    `<button type="button" class="rl-cell ${cls}" data-bet='${JSON.stringify(bet)}' style="${style}">
+       <span class="rl-cell-txt">${text}</span></button>`;
+  let h = `<div class="rl-table">`;
+  h += cell({ type: "straight", number: 0 }, "0", "green zero", "grid-row: 1 / span 3; grid-column: 1");
+  for (let row = 0; row < 3; row++) {
+    for (let col = 0; col < 12; col++) {
+      const n = col * 3 + (3 - row);
+      h += cell({ type: "straight", number: n }, n, RED_SET.has(n) ? "red" : "black",
+        `grid-row:${row + 1}; grid-column:${col + 2}`);
+    }
+    h += cell({ type: "column", column: 3 - row }, "2:1", "outside", `grid-row:${row + 1}; grid-column:14`);
+  }
+  [1, 2, 3].forEach((d) =>
+    (h += cell({ type: "dozen", dozen: d }, ["1st 12", "2nd 12", "3rd 12"][d - 1], "outside",
+      `grid-row:4; grid-column:${2 + (d - 1) * 4} / span 4`)));
+  const even = [
+    [{ type: "low" }, "1-18"], [{ type: "even" }, "EVEN"], [{ type: "red" }, "RED", "red"],
+    [{ type: "black" }, "BLACK", "black"], [{ type: "odd" }, "ODD"], [{ type: "high" }, "19-36"],
+  ];
+  even.forEach(([bet, text, cls], i) =>
+    (h += cell(bet, text, "outside " + (cls ?? ""), `grid-row:5; grid-column:${2 + i * 2} / span 2`)));
+  return h + `</div>`;
+}
+
+function createRouletteGame(container, { onSpin, amountLabel = "Bet" }) {
+  const chips = new Map(); // key -> { bet, amount }
+  const order = []; // keys in placement order, for Undo
+  let spinning = false;
+  let wheelDeg = 0; // current rotor rotation
+  let ballDeg = 0;
+  const history = [];
+
+  container.innerHTML = `
+    <div class="rl">
+      <div class="rl-left">
+        <label class="field"><span class="k">Chip · ${amountLabel}</span>
+          <input id="rl-chip" type="number" step="0.001" min="0" value="0.001" /></label>
+        <div class="rl-quick">
+          <button type="button" class="btn btn-ghost rl-small" data-mul="0.5">½</button>
+          <button type="button" class="btn btn-ghost rl-small" data-mul="2">2×</button>
+          <button type="button" class="btn btn-ghost rl-small" data-mul="10">10×</button>
+        </div>
+        <div class="rl-total"><span class="k">Total staked</span><strong id="rl-total">0</strong>
+          <span class="k" id="rl-count">no chips</span></div>
+        <button id="rl-spin" class="btn btn-primary big" disabled>Spin</button>
+        <div class="rl-row">
+          <button id="rl-undo" class="btn btn-ghost" type="button" disabled>Undo</button>
+          <button id="rl-clear" class="btn btn-ghost" type="button" disabled>Clear</button>
+        </div>
+        <div class="rl-hist"><span class="k">Last results</span><div id="rl-hist" class="rl-hist-list"></div></div>
+      </div>
+      <div class="rl-right">
+        <div class="rl-wheel-wrap">
+          <div class="rl-pointer"></div>
+          <div id="rl-rotor" class="rl-rotor">${wheelSvg()}</div>
+          <div id="rl-ball-orbit" class="rl-ball-orbit"><div id="rl-ball" class="rl-ball"></div></div>
+          <div id="rl-result" class="rl-result"><span class="rl-result-num">·</span><span class="rl-result-sub">place your chips</span></div>
+        </div>
+        ${tableHtml()}
+        <div id="rl-status" class="rl-status">Click the table to place chips, then Spin.</div>
+      </div>
+    </div>`;
+
+  const $ = (s) => container.querySelector(s);
+  const chipEl = $("#rl-chip");
+  const spinBtn = $("#rl-spin");
+  const undoBtn = $("#rl-undo");
+  const clearBtn = $("#rl-clear");
+  const statusEl = $("#rl-status");
+  const rotor = $("#rl-rotor");
+  const orbit = $("#rl-ball-orbit");
+  const ball = $("#rl-ball");
+  const resultEl = $("#rl-result");
+
+  const chipValue = () => Math.max(0, parseFloat(chipEl.value) || 0);
+  const total = () => [...chips.values()].reduce((s, c) => s + c.amount, 0);
+
+  const wheelWrap = $(".rl-wheel-wrap");
+  function setBall(deg, rPct) {
+    const px = ((wheelWrap.clientWidth || 340) / 2) * (rPct / 100);
+    orbit.style.transform = `rotate(${deg}deg)`;
+    ball.style.transform = `translate(-50%, -50%) translateY(-${px}px)`;
+  }
+  setBall(0, POCKET_R);
+  window.addEventListener("resize", () => !spinning && setBall(ballDeg, POCKET_R));
+
+  function renderChips() {
+    container.querySelectorAll(".rl-cell").forEach((cell) => {
+      const k = cell.dataset.bet;
+      const c = chips.get(k);
+      let badge = cell.querySelector(".rl-chip");
+      if (c) {
+        if (!badge) {
+          badge = document.createElement("span");
+          badge.className = "rl-chip";
+          cell.appendChild(badge);
+        }
+        badge.textContent = fmt(c.amount);
+      } else if (badge) badge.remove();
+    });
+    const t = total();
+    $("#rl-total").textContent = fmt(t);
+    $("#rl-count").textContent = chips.size ? `${chips.size} chip${chips.size > 1 ? "s" : ""}` : "no chips";
+    spinBtn.disabled = spinning || t <= 0;
+    undoBtn.disabled = spinning || order.length === 0;
+    clearBtn.disabled = spinning || chips.size === 0;
+  }
+
+  function place(bet) {
+    if (spinning) return;
+    const v = chipValue();
+    if (!(v > 0)) {
+      statusEl.textContent = "Set a chip value first.";
+      return;
+    }
+    const k = key(bet);
+    const existing = chips.get(k);
+    if (!existing && chips.size >= ROULETTE_MAX_CHIPS) {
+      statusEl.textContent = `At most ${ROULETTE_MAX_CHIPS} spots per spin.`;
+      return;
+    }
+    chips.set(k, { bet, amount: (existing?.amount ?? 0) + v });
+    order.push(k);
+    statusEl.textContent = `${fmt(v)} on ${rouletteBetLabel(bet)} · pays ${roulettePayoutMultiplier(bet)}× on a hit`;
+    clearResultMarks();
+    renderChips();
+  }
+
+  container.querySelectorAll(".rl-cell").forEach((cell) => {
+    cell.addEventListener("click", () => place(JSON.parse(cell.dataset.bet)));
+  });
+
+  undoBtn.addEventListener("click", () => {
+    if (spinning || !order.length) return;
+    const k = order.pop();
+    const c = chips.get(k);
+    if (!c) return;
+    // Remove the most recent chip value placed on that spot.
+    const v = chipValue() || c.amount;
+    const left = Math.round((c.amount - v) * 1e9) / 1e9;
+    if (left > 0) chips.set(k, { bet: c.bet, amount: left });
+    else chips.delete(k);
+    renderChips();
+  });
+  clearBtn.addEventListener("click", () => {
+    if (spinning) return;
+    chips.clear();
+    order.length = 0;
+    clearResultMarks();
+    renderChips();
+  });
+  container.querySelectorAll(".rl-quick .btn").forEach((b) =>
+    b.addEventListener("click", () => {
+      chipEl.value = fmt(Math.max(0, chipValue() * Number(b.dataset.mul)));
+    }));
+
+  function clearResultMarks() {
+    container.querySelectorAll(".rl-cell.hit").forEach((c) => c.classList.remove("hit"));
+  }
+
+  function showResult(pocket, text, cls) {
+    const color = pocketColor(pocket);
+    resultEl.querySelector(".rl-result-num").textContent = pocket;
+    resultEl.querySelector(".rl-result-sub").textContent = text;
+    resultEl.className = `rl-result show ${color} ${cls}`;
+    const cell = container.querySelector(`.rl-cell[data-bet='${JSON.stringify({ type: "straight", number: pocket })}']`);
+    cell?.classList.add("hit");
+    history.unshift(pocket);
+    if (history.length > 14) history.pop();
+    $("#rl-hist").innerHTML = history
+      .map((p) => `<span class="rl-hist-chip ${pocketColor(p)}">${p}</span>`).join("");
+  }
+
+  /** Spin the wheel one way and the ball the other; both stop with `pocket` under the pointer. */
+  function animateTo(pocket) {
+    const idx = WHEEL_ORDER.indexOf(pocket);
+    const pocketAngle = (idx + 0.5) * STEP; // where this pocket sits on the unrotated wheel
+    // Rotor must end at an angle where pocketAngle + rotor ≡ 0 (pocket under the top pointer).
+    const targetMod = (360 - pocketAngle) % 360;
+    const curMod = ((wheelDeg % 360) + 360) % 360;
+    const delta = (targetMod - curMod + 360) % 360;
+    const wheelEnd = wheelDeg + WHEEL_TURNS * 360 + delta;
+    // Ball orbits the opposite way and ends exactly at the pointer (0°).
+    const ballCur = ((ballDeg % 360) + 360) % 360;
+    const ballEnd = ballDeg - BALL_TURNS * 360 - ballCur;
+    const wheelStart = wheelDeg;
+    const ballStart = ballDeg;
+
+    if (reduced()) {
+      wheelDeg = wheelEnd;
+      ballDeg = ballEnd;
+      rotor.style.transform = `rotate(${wheelDeg}deg)`;
+      setBall(ballDeg, POCKET_R);
+      return Promise.resolve();
+    }
+    return new Promise((resolve) => {
+      const t0 = performance.now();
+      const frame = (now) => {
+        const t = Math.min(1, (now - t0) / SPIN_MS);
+        const e = easeOut(t);
+        wheelDeg = wheelStart + (wheelEnd - wheelStart) * e;
+        ballDeg = ballStart + (ballEnd - ballStart) * e;
+        // The ball rides the rim, then drops into the pocket ring over the last stretch.
+        const drop = t < 0.72 ? 0 : (t - 0.72) / 0.28;
+        const r = RIM_R - (RIM_R - POCKET_R) * drop + (drop > 0 && drop < 1 ? Math.sin(drop * Math.PI * 3) * 1.5 * (1 - drop) : 0);
+        rotor.style.transform = `rotate(${wheelDeg}deg)`;
+        setBall(ballDeg, r);
+        if (t < 1) requestAnimationFrame(frame);
+        else resolve();
+      };
+      requestAnimationFrame(frame);
+    });
+  }
+
+  spinBtn.addEventListener("click", async () => {
+    if (spinning || total() <= 0) return;
+    spinning = true;
+    renderChips();
+    spinBtn.textContent = "Spinning…";
+    resultEl.className = "rl-result";
+    clearResultMarks();
+    container.classList.add("spinning");
+    try {
+      const staked = total();
+      const res = await onSpin({ chips: [...chips.values()], total: staked });
+      if (!res) return;
+      statusEl.textContent = "No more bets…";
+      await animateTo(res.pocket);
+      const net = res.payout - staked;
+      const color = pocketColor(res.pocket);
+      if (res.payout > 0) {
+        showResult(res.pocket, `${color} · returned ${fmt(res.payout)}`, net >= 0 ? "win" : "part");
+        statusEl.textContent = net >= 0
+          ? `🎯 ${res.pocket} ${color} — won ${fmt(res.payout)} (net +${fmt(net)})`
+          : `🎯 ${res.pocket} ${color} — returned ${fmt(res.payout)} (net ${fmt(net)})`;
+      } else {
+        showResult(res.pocket, `${color} · no hit`, "lose");
+        statusEl.textContent = `🎯 ${res.pocket} ${color} — lost ${fmt(staked)}`;
+      }
+      res.afterSpin?.();
+    } finally {
+      spinning = false;
+      container.classList.remove("spinning");
+      spinBtn.textContent = "Spin";
+      renderChips();
+    }
+  });
+
+  renderChips();
+  return { place };
 }
 
 
@@ -1902,6 +2587,9 @@ function escapeHtml(s) {
 
 
 
+
+
+
 const $ = (sel) => document.querySelector(sel);
 
 // In BACKEND mode, holds the signed-in account; null until sign-in.
@@ -1944,9 +2632,7 @@ walletBtn.addEventListener("click", async () => {
   try {
     if (connected) {
       await disconnect();
-      connected = null;
-      account = null;
-      api.clearToken();
+      await signOut();
       walletBtn.textContent = "Connect Wallet";
       walletInfo.textContent = "";
       $("#account-row").classList.add("hidden");
@@ -1994,6 +2680,34 @@ function updateBalance(lamports) {
   $("#balance-val").textContent = toSol(lamports);
 }
 
+// Leave the signed-in state. The balance lives with the wallet on the server,
+// so signing out never loses anything — signing back in shows the same amount.
+async function signOut() {
+  if (BACKEND_ENABLED && api.hasToken()) {
+    try { await api.logout(); } catch { /* token may already be gone */ }
+  }
+  connected = null;
+  account = null;
+  api.clearToken();
+  $("#resume-banner").classList.add("hidden");
+}
+
+// Phantom lets people switch accounts without reconnecting. A deposit from the
+// new account would never be credited to the old sign-in, so follow the switch.
+getProvider()?.on?.("accountChanged", async (pk) => {
+  const next = pk ? pk.toString() : null;
+  if (!connected || next === connected) return;
+  await signOut();
+  walletBtn.textContent = "Connect Wallet";
+  $("#account-row").classList.add("hidden");
+  $("#wallet-panel").classList.add("hidden");
+  $("#bet-btn").textContent = "Place demo bet";
+  walletInfo.textContent = next
+    ? "Phantom switched accounts — connect again to sign in with it"
+    : "Phantom disconnected";
+  await refreshSeeds();
+});
+
 // After sign-in: follow the server's Solana cluster, then set up the wallet panel.
 let walletPanel = null;
 async function afterSignIn() {
@@ -2014,6 +2728,52 @@ async function afterSignIn() {
     onBalance: updateBalance,
     log: logResult,
   });
+  await showUnfinishedGames();
+}
+
+// ---- Unfinished games: a stake locked in a Tower/Chicken game must never be
+// lost to a page refresh. Offer to resume it (or cash out) right away.
+async function showUnfinishedGames() {
+  const banner = $("#resume-banner");
+  banner.classList.add("hidden");
+  if (!BACKEND_ENABLED || !account) return;
+  let sessions = [];
+  try {
+    sessions = (await api.sessionsActive()).sessions.filter((s) => s.progress && RICH_GAMES.has(s.game));
+  } catch {
+    return;
+  }
+  if (!sessions.length) return;
+  const s = sessions[0];
+  const name = GAME_CATALOG.find((g) => g.id === s.game)?.name ?? s.game;
+  const p = s.progress;
+  const progressText = s.game === "tower"
+    ? `${p.rowsClimbed} row${p.rowsClimbed === 1 ? "" : "s"} climbed`
+    : `${p.stepsTaken} lane${p.stepsTaken === 1 ? "" : "s"} crossed`;
+  const progress = s.game === "tower" ? p.rowsClimbed : p.stepsTaken;
+  banner.innerHTML =
+    `<span class="grow">You have an unfinished <strong>${name}</strong> game (${p.difficulty}) with ` +
+    `<strong>${toSol(s.stakeLamports)} SOL</strong> staked · ${progressText} · x${p.multiplier}` +
+    (sessions.length > 1 ? ` (+${sessions.length - 1} more)` : "") + `</span>` +
+    `<button class="btn btn-primary" id="resume-go">Resume</button>` +
+    (progress > 0 ? `<button class="btn btn-ghost" id="resume-cashout">Cash out x${p.multiplier}</button>` : "");
+  banner.classList.remove("hidden");
+  banner.querySelector("#resume-go").addEventListener("click", () => {
+    selectGame(s.game);
+    currentGameUi?.restore?.({ sessionId: s.sessionId, ...p });
+    banner.classList.add("hidden");
+    $("#game-view").scrollIntoView({ behavior: "smooth", block: "center" });
+  });
+  banner.querySelector("#resume-cashout")?.addEventListener("click", async () => {
+    try {
+      const r = s.game === "tower" ? await api.tower.cashout(s.sessionId) : await api.chicken.cashout(s.sessionId);
+      updateBalance(r.balanceLamports);
+      logResult(`💰 ${name} cashed out x${r.multiplier} (+${toSol(r.payoutLamports)} SOL)`);
+    } catch (e) {
+      logResult("error: " + e.message);
+    }
+    await showUnfinishedGames();
+  });
 }
 
 $("#wallet-open").addEventListener("click", () => {
@@ -2029,6 +2789,7 @@ const grid = $("#games-grid");
 for (const g of GAME_CATALOG) {
   const card = document.createElement("button");
   card.className = "game-card" + (g.playable ? "" : " soon");
+  card.dataset.game = g.id;
   card.innerHTML =
     `<span class="game-ico-wrap">${g.icon ?? ""}</span>` +
     `<span class="game-name">${g.name}</span>` +
@@ -2057,32 +2818,37 @@ async function refreshSeeds() {
   $("#seed-nonce").textContent = nonce;
 }
 
-const RICH_GAMES = new Set(["dice", "tower", "chicken"]); // games with a full interactive UI
+const RICH_GAMES = new Set(["dice", "tower", "chicken", "roulette"]); // games with a full interactive UI
+let currentGameUi = null;
 
 function mountGame(id) {
   const view = $("#game-view");
   view.innerHTML = "";
   const amountLabel = BACKEND_ENABLED ? "Bet (SOL)" : "Bet";
-  if (id === "dice") createDiceGame(view, { onRoll: diceOnRoll, amountLabel });
+  currentGameUi = null;
+  if (id === "dice") currentGameUi = createDiceGame(view, { onRoll: diceOnRoll, amountLabel });
   else if (id === "tower") {
-    createTowerGame(view, {
+    currentGameUi = createTowerGame(view, {
       onStart: towerOnStart,
       onReveal: towerOnReveal,
       onCashout: towerOnCashout,
       amountLabel,
     });
   } else if (id === "chicken") {
-    createChickenGame(view, {
+    currentGameUi = createChickenGame(view, {
       onStart: chickenOnStart,
       onStep: chickenOnStep,
       onCashout: chickenOnCashout,
       amountLabel,
     });
+  } else if (id === "roulette") {
+    currentGameUi = createRouletteGame(view, { onSpin: rouletteOnSpin, amountLabel });
   }
 }
 
 function selectGame(id) {
   currentGame = id;
+  grid.querySelectorAll(".game-card").forEach((c) => c.classList.toggle("active", c.dataset.game === id));
   $("#panel-title").textContent = GAME_CATALOG.find((g) => g.id === id).name;
   $("#bet-controls").dataset.game = id;
   const rich = RICH_GAMES.has(id);
@@ -2184,8 +2950,9 @@ function describeServer(out) {
   else if (r.game === "limbo") detail = `🚀 Limbo ${o.result}x`;
   else if (r.game === "coinflip") detail = `🪙 ${o.flip}`;
   else if (r.game === "wheel") detail = `🎡 seg ${o.segment} (${o.multiplier}x)`;
-  const money = r.win
-    ? `WIN +${toSol(out.payoutLamports)}`
+  else if (r.game === "roulette") detail = `🎯 Roulette ${o.pocket} ${o.color}`;
+  const money = out.payoutLamports > 0
+    ? `returned ${toSol(out.payoutLamports)} (net ${out.payoutLamports >= out.stakeLamports ? "+" : "−"}${toSol(Math.abs(out.payoutLamports - out.stakeLamports))})`
     : `-${toSol(out.stakeLamports)}`;
   return `${detail} — ${money} SOL · bal ${toSol(out.balanceLamports)}`;
 }
@@ -2251,6 +3018,45 @@ async function diceOnRoll({ target, direction, amount }) {
   nonce++;
   await refreshSeeds();
   return { roll: res.roll, win: res.win, multiplier: res.multiplier };
+}
+
+// ---- Roulette (rich interactive game: a table of chips on one spin) --------
+// The result is decided before the wheel moves; the balance/log update waits
+// in `afterSpin` until the ball has landed so the animation isn't spoiled.
+async function rouletteOnSpin({ chips, total }) {
+  if (BACKEND_ENABLED) {
+    if (!account) { logResult("Connect your wallet to sign in first."); return null; }
+    if (!(total > 0)) { logResult("Place at least one chip."); return null; }
+    try {
+      const weighted = chips.map((c) => ({ bet: c.bet, weight: Math.round(c.amount * SOL) })).filter((c) => c.weight > 0);
+      const stake = weighted.reduce((s, c) => s + c.weight, 0);
+      const out = await api.bet("roulette", { type: "multi", bets: weighted }, stake);
+      account.serverSeedHash = out.serverSeedHash;
+      account.clientSeed = out.clientSeed;
+      account.nonce = out.nonceUsed + 1;
+      await refreshSeeds();
+      return {
+        pocket: out.result.outcome.pocket,
+        color: out.result.outcome.color,
+        payout: out.payoutLamports / SOL,
+        afterSpin: () => {
+          logResult(describeServer(out));
+          updateBalance(out.balanceLamports);
+        },
+      };
+    } catch (e) { logResult("error: " + e.message); return null; }
+  }
+  // demo: same math on the in-browser seeds
+  const pocket = await roulettePocket({ serverSeed, clientSeed, nonce });
+  nonce++;
+  await refreshSeeds();
+  const payout = rouletteSettle(chips, pocket);
+  return {
+    pocket,
+    color: pocketColor(pocket),
+    payout,
+    afterSpin: () => logResult(`🎯 Roulette ${pocket} ${pocketColor(pocket)} — ${payout > 0 ? `returned ${payout} on ${total} staked` : `lost ${total}`}`),
+  };
 }
 
 // ---- Tower (rich interactive game: stateful reveals) -----------------------
@@ -2396,13 +3202,22 @@ async function init() {
   if (BACKEND_ENABLED && api.hasToken()) {
     try {
       account = (await api.me()).account;
+      connected = account.pubkey;
+      walletBtn.textContent = account.pubkey.slice(0, 4) + "…" + account.pubkey.slice(-4);
       $("#account-row").classList.remove("hidden");
       $("#bet-btn").textContent = "Place bet";
       await afterSignIn();
       $("#wallet-info").textContent = `signed in (${getActiveCluster()})`;
       updateBalance(account.balanceLamports);
-    } catch {
-      api.clearToken(); // stale/expired token
+      // Credit any deposit this browser sent but never got to confirm.
+      walletPanel?.retryPending?.();
+    } catch (e) {
+      if (e.status === 401) {
+        api.clearToken(); // the session really is gone: sign in again to see the same balance
+      } else {
+        // Server unreachable: keep the token so a reload restores the session.
+        $("#wallet-info").textContent = "can't reach the server — your balance is safe; reload to try again";
+      }
     }
   }
   await refreshSeeds();

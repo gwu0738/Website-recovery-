@@ -119,3 +119,26 @@ test("a locked stake survives a server restart and the game resumes", () => {
   assert.ok(b.payout > 4_000_000, "payout should exceed the stake after a safe row");
   assert.equal(b.balance, 6_000_000 + b.payout);
 });
+
+test("a sign-in token survives a server restart (sessions are persisted, not in memory)", () => {
+  const root = join(import.meta.dirname, "..");
+  const scriptA = join(DATA, "auth-a.mjs");
+  const scriptB = join(DATA, "auth-b.mjs");
+  // Process A: issue a token the way /api/auth/verify does (store it), then exit.
+  writeFileSync(
+    scriptA,
+    `const { insertAuthSession } = await import(${JSON.stringify(join(root, "server/store.ts"))});
+     insertAuthSession("tok-restart-test", "WalletRestart", Date.now() + 60_000);
+     console.log("ok");`,
+  );
+  // Process B (a "restarted server"): the token must still resolve to the wallet.
+  writeFileSync(
+    scriptB,
+    `const { pubkeyForToken } = await import(${JSON.stringify(join(root, "server/auth.ts"))});
+     console.log(JSON.stringify({ pubkey: pubkeyForToken("tok-restart-test"), expired: pubkeyForToken("nope") }));`,
+  );
+  const env = { ...process.env, VANTA_DATA_DIR: DATA, NODE_NO_WARNINGS: "1" };
+  execFileSync(process.execPath, [scriptA], { env });
+  const b = JSON.parse(execFileSync(process.execPath, [scriptB], { env }).toString().trim().split("\n").pop()!);
+  assert.deepEqual(b, { pubkey: "WalletRestart", expired: null });
+});

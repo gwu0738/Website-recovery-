@@ -131,3 +131,43 @@ test("a send that errored but actually landed is marked sent, not refunded", asy
   assert.equal(r.status, "sent");
   assert.equal(getAccount("Landed")!.balanceLamports, 6_000_000);
 });
+
+test("startup reconciliation settles withdrawals a crash left pending", async () => {
+  const { reconcilePendingWithdrawals, WITHDRAWAL_STALE_MS } = await import("../server/wallet.ts");
+  const { insertWithdrawal, pendingWithdrawals } = await import("../server/store.ts");
+
+  // 1. Debited, but the server died before signing: never broadcast → refund.
+  const unsigned = funded("CrashUnsigned", 6_000_000);
+  insertWithdrawal(unsigned.pubkey, 4_000_000); // (balance already reflects the debit)
+  // 2. Signed + sent, confirmation lost: the chain says it landed → mark sent, keep debited.
+  const landed = funded("CrashLanded", 10_000_000);
+  await requestWithdrawal(landed, 4_000_000, fakeChain({ sendError: new Error("socket hang up"), status: "missing" }));
+  assert.equal(myWithdrawals("CrashLanded")[0].status, "pending");
+  // 3. Signed, chain has no record, and it's old enough that it can never land → refund.
+  const stale = funded("CrashStale", 10_000_000);
+  await requestWithdrawal(stale, 4_000_000, fakeChain({ sendError: new Error("socket hang up"), status: "missing" }));
+
+  const before = pendingWithdrawals().length;
+  assert.ok(before >= 3);
+  // First pass: "landed" for everything with a signature, and it's still fresh.
+  const r1 = await reconcilePendingWithdrawals(fakeChain({ status: "landed" }));
+  assert.equal(getAccount("CrashUnsigned")!.balanceLamports, 10_000_000, "unsigned one refunded");
+  assert.equal(myWithdrawals("CrashUnsigned")[0].status, "failed");
+  assert.equal(getAccount("CrashLanded")!.balanceLamports, 6_000_000, "landed one stays debited");
+  assert.equal(myWithdrawals("CrashLanded")[0].status, "sent");
+  assert.ok(r1.refunded >= 1 && r1.sent >= 1);
+
+  // A fresh "missing" is left pending (could still be in flight)…
+  const fresh = funded("CrashFresh", 10_000_000);
+  await requestWithdrawal(fresh, 4_000_000, fakeChain({ sendError: new Error("socket hang up"), status: "missing" }));
+  const r2 = await reconcilePendingWithdrawals(fakeChain({ status: "missing" }));
+  assert.equal(getAccount("CrashFresh")!.balanceLamports, 6_000_000);
+  assert.equal(myWithdrawals("CrashFresh")[0].status, "pending");
+  assert.ok(r2.pending >= 1);
+  // …but once it's older than the stale window, it can never land → refund.
+  const r3 = await reconcilePendingWithdrawals(fakeChain({ status: "missing" }), Date.now() + WITHDRAWAL_STALE_MS + 1);
+  assert.equal(getAccount("CrashFresh")!.balanceLamports, 10_000_000);
+  assert.equal(myWithdrawals("CrashFresh")[0].status, "failed");
+  assert.ok(r3.refunded >= 1);
+  assert.equal(pendingWithdrawals().length, 0);
+});

@@ -7,7 +7,7 @@ import { playLimbo, resultMultiplier } from "../src/games/limbo.ts";
 import { playCrash } from "../src/games/crash.ts";
 import { playMines, minesMultiplier } from "../src/games/mines.ts";
 import { playPlinko, plinkoTable, plinkoRtp } from "../src/games/plinko.ts";
-import { playRoulette, pocketColor } from "../src/games/roulette.ts";
+import { playRoulette, pocketColor, rouletteBetWins, roulettePayoutMultiplier } from "../src/games/roulette.ts";
 import { playCoinflip } from "../src/games/coinflip.ts";
 import type { BetContext } from "../src/games/types.ts";
 
@@ -138,4 +138,45 @@ test("dice RTP is within ~1% of (1 - houseEdge) over many bets", () => {
   }
   const rtp = returned / n;
   assert.ok(Math.abs(rtp - 0.99) < 0.02, `RTP was ${rtp}`);
+});
+
+test("roulette: a table of chips settles on one spin, paying each chip its odds", () => {
+  const { pocket } = playRoulette(ctx(7), { type: "red" }).outcome;
+  const color = pocketColor(pocket);
+  const losingDozen = ((Math.ceil(pocket / 12) % 3) + 1) as 1 | 2 | 3; // never the pocket's dozen
+  const chips: { bet: any; weight: number }[] = [
+    { bet: { type: "straight", number: pocket }, weight: 3 }, // hits: 3 × 36
+    { bet: { type: "dozen", dozen: losingDozen }, weight: 1 }, // misses
+  ];
+  if (color !== "green") chips.push({ bet: { type: color }, weight: 2 }); // hits: 2 × 2
+  const r = playRoulette(ctx(7), { type: "multi", bets: chips });
+  assert.equal(r.outcome.pocket, pocket, "same seeds, same pocket");
+  const staked = chips.reduce((s, c) => s + c.weight, 0);
+  assert.equal(r.multiplier, (3 * 36 + (color !== "green" ? 4 : 0)) / staked);
+  assert.equal(r.win, true);
+});
+
+test("roulette rejects malformed bets before any money could move", () => {
+  assert.throws(() => playRoulette(ctx(1), { type: "straight", number: 37 }), /0-36/);
+  assert.throws(() => playRoulette(ctx(1), { type: "dozen", dozen: 0 } as any), /1-3/);
+  assert.throws(() => playRoulette(ctx(1), { type: "zebra" } as any), /Unknown/);
+  assert.throws(() => playRoulette(ctx(1), { type: "multi", bets: [] }), /chips/);
+  assert.throws(
+    () => playRoulette(ctx(1), { type: "multi", bets: [{ bet: { type: "red" }, weight: 0.5 }] }),
+    /whole amount/,
+  );
+});
+
+test("roulette single-zero edge: every bet type returns 36/37 on average", () => {
+  const bets = [
+    { type: "red" }, { type: "odd" }, { type: "high" }, { type: "dozen", dozen: 2 },
+    { type: "column", column: 3 }, { type: "straight", number: 17 },
+  ] as const;
+  for (const bet of bets) {
+    let returned = 0;
+    for (let pocket = 0; pocket <= 36; pocket++) {
+      returned += rouletteBetWins(bet, pocket) ? roulettePayoutMultiplier(bet) : 0;
+    }
+    assert.ok(Math.abs(returned / 37 - 36 / 37) < 1e-12, `${bet.type} pays 36/37`);
+  }
 });

@@ -52,7 +52,7 @@ All eight sit on the one fairness engine in `src/fairness/`:
 | Crash | `src/games/crash.ts` | Limbo on a timeline — cash out before the bust |
 | Mines | `src/games/mines.ts` | provably-fair shuffle hides N mines on a 5×5 grid |
 | Plinko | `src/games/plinko.ts` | 16-row binomial drop into a payout bucket |
-| Roulette | `src/games/roulette.ts` | European single-zero wheel + standard bets |
+| Roulette | `src/games/roulette.ts` | European single-zero wheel; one spin settles a whole table of chips |
 | Wheel | `src/games/wheel.ts` | segmented wheel, multiplier per segment |
 | Coinflip | `src/games/coinflip.ts` | heads/tails, ~2× payout |
 
@@ -79,7 +79,10 @@ web/                   front-end (static, no build step)
     config.js          brand, socials, Solana cluster/RPC (one place)
     fairness.js        same fairness engine, in-browser (Web Crypto)
     games.js           playable Dice/Limbo/Coinflip/Wheel
+    roulette-game.js   real spinning wheel + betting table (chips, undo, history)
+    dice-game.js, tower-game.js, chicken-game.js   the other interactive games
     wallet.js          Phantom connect + balance (cluster-aware)
+    wallet-panel.js    deposits/withdrawals; remembers deposits until credited
     chat.js            live chat UI: rolling history, auto-scroll, persistence
 
 marketing/             Telegram post templates + visual-assets guide

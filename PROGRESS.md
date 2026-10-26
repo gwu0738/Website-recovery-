@@ -1,6 +1,6 @@
 # Vanta — Progress & What's Left
 
-_Living tracker. Last updated: 2026-10-25._
+_Living tracker. Last updated: 2026-10-26._
 
 Vanta is an original, provably-fair crypto casino (Solana) built from scratch —
 not a copy of any site. It benchmarks against nuts.gg for scope/UX (see
@@ -35,6 +35,29 @@ Legend: ✅ done · 🟡 partial · ⬜ not started
   Two modes via `API_BASE`: in-browser demo, or real backend.
 - ✅ **Interactive Dice UI** — slider with win/lose zones, live odds, animated
   roll. Works in demo and backend modes. (The quality bar for the rest.)
+- ✅ **Roulette UI** — a real European wheel (37 pockets in true wheel order)
+  with the ball orbiting against the spin and dropping into the engine's pocket;
+  a full betting table (straights, columns, dozens, even-money) with stacked
+  chips, Undo/Clear, and a results strip. All chips settle on ONE spin as one
+  bet (`{ type: "multi" }` in the engine), so the stake is the sum of chips and
+  each chip pays its own odds. Demo + backend.
+- ✅ **Nobody loses a balance** (`server/`, `web/js/`):
+  - Sign-in sessions are stored in SQLite, so a server restart or redeploy no
+    longer signs everyone out — reload the page and the balance is right there.
+    Sign-out revokes the token server-side; signing back in shows the same balance.
+  - Withdrawals a crash left "pending" are reconciled at startup: never
+    broadcast → refunded; landed → marked sent; failed/expired → refunded.
+  - An unfinished Tower/Chicken game (locked stake) is listed by
+    `/api/sessions/active` with its public progress, and the site shows a
+    banner to **Resume** it (or cash out) — a page refresh can't strand a stake.
+  - Deposits: the transaction signature is saved in the browser the moment
+    Phantom returns it and retried until credited; a signature can also be
+    pasted by hand; a deposit is refused if Phantom switched to another account
+    than the signed-in one (that SOL would never be credited).
+  - Payouts use `payoutLamports()` (floor with a 1e-6 tolerance) so an exact
+    product like 3 chips × 2.00 can't lose a lamport to float noise.
+  - Browser smoke test for all of it: `node scripts/ui-smoke.mjs` (no validator
+    needed).
 - ✅ **Single-file build** (`web/dist/standalone.html`) — runs in sandbox / by
   double-click.
 - ✅ **Marketing** (`marketing/`) — Telegram templates + visual-assets guide.
@@ -49,7 +72,7 @@ Legend: ✅ done · 🟡 partial · ⬜ not started
 | Crash | ✅ | 🟡 basic | shares Limbo's formula; not in reference set |
 | Mines | ✅ | ⬜ | aligned: mines placed one at a time from free tiles |
 | Plinko | ✅ | ⬜ | 8–16 rows × 3 risks; published path; our generated tables (98.7–99.0% RTP) |
-| Roulette | ✅ | ⬜ | published mechanic (matches) |
+| Roulette | ✅ | ✅ | published mechanic (matches); real wheel + table, multi-chip spins |
 | Wheel | ✅ | 🟡 basic | not in nuts.gg set |
 | Coinflip | ✅ | 🟡 basic | not in nuts.gg set |
 | Tower | ✅ | ✅ | aligned: safe tiles placed one at a time; interactive climb, demo + backend |
@@ -65,8 +88,8 @@ Legend: ✅ done · 🟡 partial · ⬜ not started
 
 ### 1. Game UIs (the "real games" work) — biggest chunk
 Build each remaining game to Dice quality, following the nuts.gg layout spec
-below. Suggested order: Tower → Chicken → HiLo → Keno → Darts → Snakes, then
-polish Limbo/Mines/Plinko/Roulette.
+below. Suggested order: HiLo → Keno → Darts → Snakes, then
+polish Limbo/Mines/Plinko.
 - [ ] Also add the 6 new games to the front-end catalog (`web/js/games.js`) with
       icons (currently only the original 8 show in the grid).
 
@@ -128,7 +151,7 @@ Per-game notes:
   trap-count when building the UI.)
 - **Mines:** 5×5, mine-count slider, "Random Pick", max-payout header.
 - **Plinko:** rows 8/12/16 + Low/Med/High risk; symmetric buckets.
-- **Roulette:** European single-zero wheel, animated spinner.
+- **Roulette:** European single-zero wheel, animated spinner. ✅ built.
 
 ---
 
@@ -156,7 +179,8 @@ Per-game notes:
 ## How to run
 
 ```bash
-npm test          # 30 tests (engine + games + backend)
+npm test          # 58 tests (engine + games + backend + real-balance rules)
+node scripts/ui-smoke.mjs   # browser: roulette spin, balance survives reload/restart, resume
 npm run demo      # play one bet of every game + verify, in the terminal
 npm run server    # backend API on :8787
 npm run build:web # regenerate web/dist/standalone.html

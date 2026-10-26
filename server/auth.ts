@@ -13,12 +13,15 @@
  */
 import { createPublicKey, verify, randomBytes } from "node:crypto";
 import { base58Decode } from "./lib/base58.ts";
+import { deleteAuthSession, getAuthSession, insertAuthSession } from "./store.ts";
 
 const CHALLENGE_TTL_MS = 5 * 60 * 1000;
-const SESSION_TTL_MS = 24 * 60 * 60 * 1000;
+const SESSION_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 
+// Challenges are short-lived and only matter on the server that issued them,
+// so memory is fine. Sessions are persisted (store.ts): a restart must never
+// sign players out of their balance.
 const challenges = new Map<string, { nonce: string; expires: number }>();
-const sessions = new Map<string, { pubkey: string; expires: number }>();
 
 /** The exact message the wallet is asked to sign. */
 export function challengeMessage(nonce: string): string {
@@ -62,17 +65,22 @@ export function verifySignature(pubkey: string, signatureB58: string): string | 
 
   challenges.delete(pubkey); // one-time use
   const token = randomBytes(24).toString("hex");
-  sessions.set(token, { pubkey, expires: Date.now() + SESSION_TTL_MS });
+  insertAuthSession(token, pubkey, Date.now() + SESSION_TTL_MS);
   return token;
 }
 
 /** Resolve a session token to its pubkey, or null if invalid/expired. */
 export function pubkeyForToken(token: string | undefined): string | null {
-  if (!token) return null;
-  const s = sessions.get(token);
-  if (!s || s.expires < Date.now()) {
-    if (s) sessions.delete(token);
+  if (!token || typeof token !== "string" || token.length > 128) return null;
+  const s = getAuthSession(token);
+  if (!s || s.expiresAt < Date.now()) {
+    if (s) deleteAuthSession(token);
     return null;
   }
   return s.pubkey;
+}
+
+/** Sign out: the token stops resolving everywhere, not just in this process. */
+export function revokeToken(token: string | undefined) {
+  if (token) deleteAuthSession(token);
 }

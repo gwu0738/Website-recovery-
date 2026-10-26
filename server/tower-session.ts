@@ -20,7 +20,7 @@ import {
   sessionStart,
   type SessionGame,
 } from "./sessions.ts";
-import type { Account } from "./store.ts";
+import type { Account, SessionRow } from "./store.ts";
 
 export { SessionError as TowerError };
 
@@ -109,5 +109,19 @@ export function towerCashout(acct: Account, sessionId: string) {
     rowsClimbed: r.state.rowsClimbed,
     payoutLamports: r.payoutLamports,
     balanceLamports: r.balanceLamports,
+  };
+}
+
+/** What the player may see of an unfinished game (never the hidden layout). */
+export function towerResumeView(row: SessionRow) {
+  const s = row.state as TowerState;
+  return {
+    difficulty: s.difficulty,
+    cols: TOWER_COLS,
+    rows: TOWER_ROWS,
+    rowsClimbed: s.rowsClimbed,
+    picks: s.picks,
+    multiplier: towerMultiplier(s.difficulty, s.rowsClimbed),
+    maxMultiplier: towerMaxMultiplier(s.difficulty),
   };
 }

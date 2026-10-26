@@ -9,6 +9,7 @@
  */
 import { generateServerSeed, hashServerSeed } from "../src/fairness/engine.ts";
 import { replay, type AnyBet } from "../src/fairness/verify.ts";
+import { payoutLamports } from "../src/games/shared.ts";
 import { BET, FAUCET } from "./config.ts";
 import { recordBet, reloadAccount, save, tx, type Account } from "./store.ts";
 
@@ -35,7 +36,7 @@ export function placeBet(acct: Account, spec: AnyBet, stakeLamports: number) {
       throw new BetError((e as Error).message); // bad game parameters -> 400
     }
 
-    const payout = Math.floor(stakeLamports * result.multiplier);
+    const payout = payoutLamports(stakeLamports, result.multiplier);
     acct.balanceLamports += payout - stakeLamports;
     acct.wagered += stakeLamports;
     acct.wagerRemaining = Math.max(0, acct.wagerRemaining - stakeLamports);

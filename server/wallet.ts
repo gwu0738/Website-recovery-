@@ -16,8 +16,10 @@ import { WITHDRAW, toSol } from "./config.ts";
 import { WithdrawalDroppedError, type Chain } from "./solana.ts";
 import {
   depositExists,
+  getAccount,
   insertDeposit,
   insertWithdrawal,
+  pendingWithdrawals,
   recordWithdrawalSignature,
   reloadAccount,
   save,
@@ -117,4 +119,66 @@ export async function requestWithdrawal(acct: Account, lamports: number, chain: 
     // Uncertain: leave it pending (balance stays debited) rather than risk paying twice.
     return { id, status: "pending", signature, lamports, balanceLamports: acct.balanceLamports };
   }
+}
+
+/**
+ * After a blockhash has been expired this long, a transaction the network has
+ * no record of can never land (validity is ~1–2 minutes), so refunding it is safe.
+ */
+export const WITHDRAWAL_STALE_MS = 15 * 60 * 1000;
+
+function refundWithdrawal(w: { id: number; pubkey: string; lamports: number; signature: string | null }, reason: string) {
+  tx(() => {
+    const acct = getAccount(w.pubkey);
+    if (!acct) throw new Error(`Account ${w.pubkey} not found for refund`);
+    acct.balanceLamports += w.lamports;
+    save(acct);
+    updateWithdrawal(w.id, "failed", w.signature, reason);
+  });
+}
+
+/**
+ * Settle withdrawals left "pending" by a crash or a network error mid-send, so
+ * a player's debited balance is never stuck forever:
+ *   - no signature recorded  → it was never broadcast (we sign before sending):
+ *                              refund now
+ *   - landed on-chain        → mark sent
+ *   - failed on-chain        → refund
+ *   - no record, and older than WITHDRAWAL_STALE_MS → can never land: refund
+ *   - otherwise              → still pending; checked again next time
+ * Called at startup; safe to call any time (each step is one transaction).
+ */
+export async function reconcilePendingWithdrawals(chain: Chain | null, now = Date.now()) {
+  const summary = { refunded: 0, sent: 0, pending: 0 };
+  for (const w of pendingWithdrawals()) {
+    if (!w.signature) {
+      refundWithdrawal(w, "never broadcast (server stopped before signing)");
+      summary.refunded++;
+      continue;
+    }
+    if (!chain) {
+      summary.pending++;
+      continue;
+    }
+    let status: "landed" | "failed" | "missing";
+    try {
+      status = await chain.signatureStatus(w.signature);
+    } catch {
+      summary.pending++;
+      continue;
+    }
+    if (status === "landed") {
+      updateWithdrawal(w.id, "sent", w.signature, null);
+      summary.sent++;
+    } else if (status === "failed") {
+      refundWithdrawal(w, "failed on-chain");
+      summary.refunded++;
+    } else if (now - w.updatedAt > WITHDRAWAL_STALE_MS) {
+      refundWithdrawal(w, "expired before landing");
+      summary.refunded++;
+    } else {
+      summary.pending++;
+    }
+  }
+  return summary;
 }

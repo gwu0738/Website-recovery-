@@ -69,3 +69,12 @@ export function shuffleIndices(n: number, fs: number[]): number[] {
   }
   return arr;
 }
+
+/**
+ * Lamports paid for a stake at a multiplier: floored, but tolerant of float
+ * noise so an exact product (e.g. 3 chips × 2.00) never loses a lamport to
+ * 2.9999999…; the tolerance (one millionth of a lamport) can never overpay.
+ */
+export function payoutLamports(stakeLamports: number, multiplier: number): number {
+  return Math.floor(stakeLamports * multiplier + 1e-6);
+}

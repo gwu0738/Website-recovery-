@@ -19,7 +19,7 @@ import {
   sessionStart,
   type SessionGame,
 } from "./sessions.ts";
-import type { Account } from "./store.ts";
+import type { Account, SessionRow } from "./store.ts";
 
 export { SessionError as ChickenError };
 
@@ -95,5 +95,17 @@ export function chickenCashout(acct: Account, sessionId: string) {
     stepsTaken: r.state.stepsTaken,
     payoutLamports: r.payoutLamports,
     balanceLamports: r.balanceLamports,
+  };
+}
+
+/** What the player may see of an unfinished game (never the death point). */
+export function chickenResumeView(row: SessionRow) {
+  const s = row.state as ChickenState;
+  return {
+    difficulty: s.difficulty,
+    stepsTaken: s.stepsTaken,
+    maxSteps: chickenMaxSteps(s.difficulty),
+    multiplier: chickenMultiplier(s.difficulty, s.stepsTaken),
+    maxMultiplier: chickenMaxMultiplier(s.difficulty),
   };
 }

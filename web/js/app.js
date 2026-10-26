@@ -6,6 +6,8 @@ import { BRAND, SOCIALS, HOUSE_EDGE, CLUSTER, toSol, setActiveCluster, getActive
 import { randomHex, hashServerSeed, verifyCommitment } from "./fairness.js";
 import { playDice, playLimbo, playCoinflip, playWheel, GAME_CATALOG } from "./games.js";
 import { connect, disconnect, getBalanceSol, getProvider } from "./wallet.js";
+import { roulettePocket, rouletteSettle, pocketColor } from "./roulette-logic.js";
+import { createRouletteGame } from "./roulette-game.js";
 import { api, BACKEND_ENABLED } from "./api.js";
 import { createWalletPanel } from "./wallet-panel.js";
 import { createDiceGame } from "./dice-game.js";
@@ -57,9 +59,7 @@ walletBtn.addEventListener("click", async () => {
   try {
     if (connected) {
       await disconnect();
-      connected = null;
-      account = null;
-      api.clearToken();
+      await signOut();
       walletBtn.textContent = "Connect Wallet";
       walletInfo.textContent = "";
       $("#account-row").classList.add("hidden");
@@ -107,6 +107,34 @@ function updateBalance(lamports) {
   $("#balance-val").textContent = toSol(lamports);
 }
 
+// Leave the signed-in state. The balance lives with the wallet on the server,
+// so signing out never loses anything — signing back in shows the same amount.
+async function signOut() {
+  if (BACKEND_ENABLED && api.hasToken()) {
+    try { await api.logout(); } catch { /* token may already be gone */ }
+  }
+  connected = null;
+  account = null;
+  api.clearToken();
+  $("#resume-banner").classList.add("hidden");
+}
+
+// Phantom lets people switch accounts without reconnecting. A deposit from the
+// new account would never be credited to the old sign-in, so follow the switch.
+getProvider()?.on?.("accountChanged", async (pk) => {
+  const next = pk ? pk.toString() : null;
+  if (!connected || next === connected) return;
+  await signOut();
+  walletBtn.textContent = "Connect Wallet";
+  $("#account-row").classList.add("hidden");
+  $("#wallet-panel").classList.add("hidden");
+  $("#bet-btn").textContent = "Place demo bet";
+  walletInfo.textContent = next
+    ? "Phantom switched accounts — connect again to sign in with it"
+    : "Phantom disconnected";
+  await refreshSeeds();
+});
+
 // After sign-in: follow the server's Solana cluster, then set up the wallet panel.
 let walletPanel = null;
 async function afterSignIn() {
@@ -127,6 +155,52 @@ async function afterSignIn() {
     onBalance: updateBalance,
     log: logResult,
   });
+  await showUnfinishedGames();
+}
+
+// ---- Unfinished games: a stake locked in a Tower/Chicken game must never be
+// lost to a page refresh. Offer to resume it (or cash out) right away.
+async function showUnfinishedGames() {
+  const banner = $("#resume-banner");
+  banner.classList.add("hidden");
+  if (!BACKEND_ENABLED || !account) return;
+  let sessions = [];
+  try {
+    sessions = (await api.sessionsActive()).sessions.filter((s) => s.progress && RICH_GAMES.has(s.game));
+  } catch {
+    return;
+  }
+  if (!sessions.length) return;
+  const s = sessions[0];
+  const name = GAME_CATALOG.find((g) => g.id === s.game)?.name ?? s.game;
+  const p = s.progress;
+  const progressText = s.game === "tower"
+    ? `${p.rowsClimbed} row${p.rowsClimbed === 1 ? "" : "s"} climbed`
+    : `${p.stepsTaken} lane${p.stepsTaken === 1 ? "" : "s"} crossed`;
+  const progress = s.game === "tower" ? p.rowsClimbed : p.stepsTaken;
+  banner.innerHTML =
+    `<span class="grow">You have an unfinished <strong>${name}</strong> game (${p.difficulty}) with ` +
+    `<strong>${toSol(s.stakeLamports)} SOL</strong> staked · ${progressText} · x${p.multiplier}` +
+    (sessions.length > 1 ? ` (+${sessions.length - 1} more)` : "") + `</span>` +
+    `<button class="btn btn-primary" id="resume-go">Resume</button>` +
+    (progress > 0 ? `<button class="btn btn-ghost" id="resume-cashout">Cash out x${p.multiplier}</button>` : "");
+  banner.classList.remove("hidden");
+  banner.querySelector("#resume-go").addEventListener("click", () => {
+    selectGame(s.game);
+    currentGameUi?.restore?.({ sessionId: s.sessionId, ...p });
+    banner.classList.add("hidden");
+    $("#game-view").scrollIntoView({ behavior: "smooth", block: "center" });
+  });
+  banner.querySelector("#resume-cashout")?.addEventListener("click", async () => {
+    try {
+      const r = s.game === "tower" ? await api.tower.cashout(s.sessionId) : await api.chicken.cashout(s.sessionId);
+      updateBalance(r.balanceLamports);
+      logResult(`💰 ${name} cashed out x${r.multiplier} (+${toSol(r.payoutLamports)} SOL)`);
+    } catch (e) {
+      logResult("error: " + e.message);
+    }
+    await showUnfinishedGames();
+  });
 }
 
 $("#wallet-open").addEventListener("click", () => {
@@ -142,6 +216,7 @@ const grid = $("#games-grid");
 for (const g of GAME_CATALOG) {
   const card = document.createElement("button");
   card.className = "game-card" + (g.playable ? "" : " soon");
+  card.dataset.game = g.id;
   card.innerHTML =
     `<span class="game-ico-wrap">${g.icon ?? ""}</span>` +
     `<span class="game-name">${g.name}</span>` +
@@ -170,32 +245,37 @@ async function refreshSeeds() {
   $("#seed-nonce").textContent = nonce;
 }
 
-const RICH_GAMES = new Set(["dice", "tower", "chicken"]); // games with a full interactive UI
+const RICH_GAMES = new Set(["dice", "tower", "chicken", "roulette"]); // games with a full interactive UI
+let currentGameUi = null;
 
 function mountGame(id) {
   const view = $("#game-view");
   view.innerHTML = "";
   const amountLabel = BACKEND_ENABLED ? "Bet (SOL)" : "Bet";
-  if (id === "dice") createDiceGame(view, { onRoll: diceOnRoll, amountLabel });
+  currentGameUi = null;
+  if (id === "dice") currentGameUi = createDiceGame(view, { onRoll: diceOnRoll, amountLabel });
   else if (id === "tower") {
-    createTowerGame(view, {
+    currentGameUi = createTowerGame(view, {
       onStart: towerOnStart,
       onReveal: towerOnReveal,
       onCashout: towerOnCashout,
       amountLabel,
     });
   } else if (id === "chicken") {
-    createChickenGame(view, {
+    currentGameUi = createChickenGame(view, {
       onStart: chickenOnStart,
       onStep: chickenOnStep,
       onCashout: chickenOnCashout,
       amountLabel,
     });
+  } else if (id === "roulette") {
+    currentGameUi = createRouletteGame(view, { onSpin: rouletteOnSpin, amountLabel });
   }
 }
 
 function selectGame(id) {
   currentGame = id;
+  grid.querySelectorAll(".game-card").forEach((c) => c.classList.toggle("active", c.dataset.game === id));
   $("#panel-title").textContent = GAME_CATALOG.find((g) => g.id === id).name;
   $("#bet-controls").dataset.game = id;
   const rich = RICH_GAMES.has(id);
@@ -297,8 +377,9 @@ function describeServer(out) {
   else if (r.game === "limbo") detail = `🚀 Limbo ${o.result}x`;
   else if (r.game === "coinflip") detail = `🪙 ${o.flip}`;
   else if (r.game === "wheel") detail = `🎡 seg ${o.segment} (${o.multiplier}x)`;
-  const money = r.win
-    ? `WIN +${toSol(out.payoutLamports)}`
+  else if (r.game === "roulette") detail = `🎯 Roulette ${o.pocket} ${o.color}`;
+  const money = out.payoutLamports > 0
+    ? `returned ${toSol(out.payoutLamports)} (net ${out.payoutLamports >= out.stakeLamports ? "+" : "−"}${toSol(Math.abs(out.payoutLamports - out.stakeLamports))})`
     : `-${toSol(out.stakeLamports)}`;
   return `${detail} — ${money} SOL · bal ${toSol(out.balanceLamports)}`;
 }
@@ -364,6 +445,45 @@ async function diceOnRoll({ target, direction, amount }) {
   nonce++;
   await refreshSeeds();
   return { roll: res.roll, win: res.win, multiplier: res.multiplier };
+}
+
+// ---- Roulette (rich interactive game: a table of chips on one spin) --------
+// The result is decided before the wheel moves; the balance/log update waits
+// in `afterSpin` until the ball has landed so the animation isn't spoiled.
+async function rouletteOnSpin({ chips, total }) {
+  if (BACKEND_ENABLED) {
+    if (!account) { logResult("Connect your wallet to sign in first."); return null; }
+    if (!(total > 0)) { logResult("Place at least one chip."); return null; }
+    try {
+      const weighted = chips.map((c) => ({ bet: c.bet, weight: Math.round(c.amount * SOL) })).filter((c) => c.weight > 0);
+      const stake = weighted.reduce((s, c) => s + c.weight, 0);
+      const out = await api.bet("roulette", { type: "multi", bets: weighted }, stake);
+      account.serverSeedHash = out.serverSeedHash;
+      account.clientSeed = out.clientSeed;
+      account.nonce = out.nonceUsed + 1;
+      await refreshSeeds();
+      return {
+        pocket: out.result.outcome.pocket,
+        color: out.result.outcome.color,
+        payout: out.payoutLamports / SOL,
+        afterSpin: () => {
+          logResult(describeServer(out));
+          updateBalance(out.balanceLamports);
+        },
+      };
+    } catch (e) { logResult("error: " + e.message); return null; }
+  }
+  // demo: same math on the in-browser seeds
+  const pocket = await roulettePocket({ serverSeed, clientSeed, nonce });
+  nonce++;
+  await refreshSeeds();
+  const payout = rouletteSettle(chips, pocket);
+  return {
+    pocket,
+    color: pocketColor(pocket),
+    payout,
+    afterSpin: () => logResult(`🎯 Roulette ${pocket} ${pocketColor(pocket)} — ${payout > 0 ? `returned ${payout} on ${total} staked` : `lost ${total}`}`),
+  };
 }
 
 // ---- Tower (rich interactive game: stateful reveals) -----------------------
@@ -509,13 +629,22 @@ async function init() {
   if (BACKEND_ENABLED && api.hasToken()) {
     try {
       account = (await api.me()).account;
+      connected = account.pubkey;
+      walletBtn.textContent = account.pubkey.slice(0, 4) + "…" + account.pubkey.slice(-4);
       $("#account-row").classList.remove("hidden");
       $("#bet-btn").textContent = "Place bet";
       await afterSignIn();
       $("#wallet-info").textContent = `signed in (${getActiveCluster()})`;
       updateBalance(account.balanceLamports);
-    } catch {
-      api.clearToken(); // stale/expired token
+      // Credit any deposit this browser sent but never got to confirm.
+      walletPanel?.retryPending?.();
+    } catch (e) {
+      if (e.status === 401) {
+        api.clearToken(); // the session really is gone: sign in again to see the same balance
+      } else {
+        // Server unreachable: keep the token so a reload restores the session.
+        $("#wallet-info").textContent = "can't reach the server — your balance is safe; reload to try again";
+      }
     }
   }
   await refreshSeeds();
