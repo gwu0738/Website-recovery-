@@ -75,17 +75,27 @@ Chosen faucet model = nuts.gg style: claim every 3 min, **requires verified
 email** (anti-bot). Needs: email field on account, verification token + email
 send, and enforcing `FAUCET.requireVerifiedEmail` in `claimFaucet`.
 
-### 3. Phase 2 — real SOL
-- [ ] House hot wallet; secret key from env/untracked file (never committed).
-      **Use a throwaway wallet with a small balance, not a main wallet.**
-- [ ] Deposits: watch house address, credit sender's account.
-- [ ] Withdrawals: debit balance, sign + send transfer.
-- [ ] Faucet credit = **bonus** with a wagering requirement before withdraw
-      (so a small bankroll, e.g. $2, isn't drained). `FAUCET.wagerRequirementX`
-      already stubbed.
-- [ ] Cluster is one config switch (localnet → devnet → mainnet). Test the full
-      deposit→bet→withdraw cycle on **localnet/devnet first** (free, no 403s);
-      flip to mainnet only once proven. (`@solana/web3.js` confirmed installable.)
+### 3. Phase 2 — real SOL ✅ (built + tested on a real local Solana validator)
+- [x] House hot wallet; key from `HOUSE_KEYPAIR_FILE` / `HOUSE_SECRET_KEY`
+      (never committed or logged). **Use a throwaway wallet holding only what
+      you're willing to lose.**
+- [x] Deposits: Phantom sends SOL to the house address; the server verifies the
+      transfer on-chain (from the signed-in wallet, to the house) and credits
+      exactly that amount, once per transaction signature.
+- [x] Withdrawals: solvency + wagering + balance checks; debit and record in one
+      transaction; signature stored before broadcast; refunds only when a send
+      certainly didn't land, otherwise "pending" (flagged at startup).
+- [x] Faucet credit is bonus: `FAUCET_WAGER_X` × amount must be wagered first.
+- [x] Per-cluster safe defaults (mainnet faucet 0.0001 SOL, max stake 0.01 SOL);
+      all limits are env vars (see `server/config.ts`).
+- [x] Site wallet panel (deposit / withdraw / history with explorer links);
+      browser follows the server's cluster; real-money mode is labelled as such
+      and shows no simulated chat players.
+- Verify any setup: `node scripts/sol-e2e.mjs` (API) and
+  `node scripts/ui-wallet-e2e.mjs` (through the browser) against a validator.
+- To go live: run the server with `SOLANA_CLUSTER=mainnet`, your own RPC URL in
+  `SOLANA_RPC_URL`, and `HOUSE_KEYPAIR_FILE` pointing at your hot wallet; set
+  `API_BASE` in `web/js/config.js` to your server.
 
 ### 4. Deployment
 - [ ] VPS: run backend as a service (always-on); serve `web/`.

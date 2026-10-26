@@ -50,6 +50,16 @@ export const RPC_ENDPOINTS = {
   mainnet: "https://api.mainnet-beta.solana.com",
 };
 
+// In BACKEND mode the server reports which cluster it runs on; the browser
+// follows it so deposits and balances always use the same network.
+let activeCluster = CLUSTER;
+export function setActiveCluster(cluster) {
+  if (RPC_ENDPOINTS[cluster]) activeCluster = cluster;
+}
+export function getActiveCluster() {
+  return activeCluster;
+}
+
 export function rpcUrl() {
-  return RPC_ENDPOINTS[CLUSTER] ?? RPC_ENDPOINTS.devnet;
+  return RPC_ENDPOINTS[activeCluster] ?? RPC_ENDPOINTS.devnet;
 }

@@ -2,11 +2,12 @@
 // App bootstrap — wires branding, socials, games grid, the playable bet panel,
 // wallet connect, and the live chat together.
 // =============================================================================
-import { BRAND, SOCIALS, HOUSE_EDGE, CLUSTER, toSol } from "./config.js";
+import { BRAND, SOCIALS, HOUSE_EDGE, CLUSTER, toSol, setActiveCluster, getActiveCluster } from "./config.js";
 import { randomHex, hashServerSeed, verifyCommitment } from "./fairness.js";
 import { playDice, playLimbo, playCoinflip, playWheel, GAME_CATALOG } from "./games.js";
 import { connect, disconnect, getBalanceSol, getProvider } from "./wallet.js";
 import { api, BACKEND_ENABLED } from "./api.js";
+import { createWalletPanel } from "./wallet-panel.js";
 import { createDiceGame } from "./dice-game.js";
 import { createTowerGame } from "./tower-game.js";
 import { towerLayout, towerMultiplier, TOWER_ROWS } from "./tower-logic.js";
@@ -62,6 +63,8 @@ walletBtn.addEventListener("click", async () => {
       walletBtn.textContent = "Connect Wallet";
       walletInfo.textContent = "";
       $("#account-row").classList.add("hidden");
+      $("#wallet-panel").classList.add("hidden");
+      $("#wallet-open").setAttribute("aria-expanded", "false");
       $("#bet-btn").textContent = "Place demo bet";
       await refreshSeeds();
       return;
@@ -81,7 +84,8 @@ walletBtn.addEventListener("click", async () => {
       account = await api.signIn(provider, addr);
       $("#account-row").classList.remove("hidden");
       $("#bet-btn").textContent = "Place bet";
-      walletInfo.textContent = `signed in (${CLUSTER})`;
+      await afterSignIn();
+      walletInfo.textContent = `signed in (${getActiveCluster()})`;
       updateBalance(account.balanceLamports);
       await refreshSeeds();
     } else {
@@ -102,6 +106,36 @@ walletBtn.addEventListener("click", async () => {
 function updateBalance(lamports) {
   $("#balance-val").textContent = toSol(lamports);
 }
+
+// After sign-in: follow the server's Solana cluster, then set up the wallet panel.
+let walletPanel = null;
+async function afterSignIn() {
+  try {
+    const cfg = await api.config();
+    setActiveCluster(cfg.cluster);
+    $("#mode-note").textContent =
+      `Real SOL on ${cfg.cluster}: every bet moves your balance, and deposits and ` +
+      `withdrawals are on-chain transactions. 18+. Only play with what you can afford to lose.`;
+    $("#cluster-badge").textContent = cfg.cluster;
+    $("#cluster-badge").classList.toggle("mainnet", cfg.cluster === "mainnet");
+  } catch {
+    /* keep the default cluster */
+  }
+  walletPanel = createWalletPanel($("#wallet-panel"), {
+    getProvider,
+    getAddress: () => connected ?? account?.pubkey,
+    onBalance: updateBalance,
+    log: logResult,
+  });
+}
+
+$("#wallet-open").addEventListener("click", () => {
+  const panel = $("#wallet-panel");
+  const opening = panel.classList.contains("hidden");
+  panel.classList.toggle("hidden", !opening);
+  $("#wallet-open").setAttribute("aria-expanded", String(opening));
+  if (opening) walletPanel?.refresh();
+});
 
 // ---- Games grid -------------------------------------------------------------
 const grid = $("#games-grid");
@@ -463,7 +497,9 @@ async function chickenOnCashout(sessionId) {
 
 // ---- Chat -------------------------------------------------------------------
 const chat = new Chat($("#chat-list"), $("#chat-input"), $("#chat-form"));
-chat.startAmbient();
+// Simulated chatter is for the demo only. With real money on, fake players and
+// fake wins would mislead real people, so the room shows only real messages.
+if (!BACKEND_ENABLED) chat.startAmbient();
 
 // init
 selectGame("dice");
@@ -475,7 +511,8 @@ async function init() {
       account = (await api.me()).account;
       $("#account-row").classList.remove("hidden");
       $("#bet-btn").textContent = "Place bet";
-      $("#wallet-info").textContent = `signed in (${CLUSTER})`;
+      await afterSignIn();
+      $("#wallet-info").textContent = `signed in (${getActiveCluster()})`;
       updateBalance(account.balanceLamports);
     } catch {
       api.clearToken(); // stale/expired token

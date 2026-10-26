@@ -74,6 +74,10 @@ export const api = {
   rotateSeed: () => req("/api/rotate-seed", { method: "POST", auth: true }),
   setClientSeed: (clientSeed) =>
     req("/api/client-seed", { method: "POST", auth: true, body: { clientSeed } }),
+  wallet: () => req("/api/wallet", { auth: true }),
+  depositConfirm: (signature) =>
+    req("/api/deposit/confirm", { method: "POST", auth: true, body: { signature } }),
+  withdraw: (lamports) => req("/api/withdraw", { method: "POST", auth: true, body: { lamports } }),
   bet: (game, bet, stake) =>
     req("/api/bet", { method: "POST", auth: true, body: { game, bet, stake } }),
   tower: {

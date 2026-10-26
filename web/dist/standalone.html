@@ -136,6 +136,29 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
 .seeds .k { display: block; font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; }
 .seeds code { font-size: 11px; word-break: break-all; color: var(--text); }
 
+/* Wallet panel (real-SOL deposits / withdrawals) */
+.wallet-panel { margin-bottom: 14px; padding: 14px; background: var(--bg-2); border: 1px solid var(--border); border-radius: 12px; }
+.wp-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+.wp-cluster { font-size: 11px; text-transform: uppercase; letter-spacing: .5px; color: var(--muted); border: 1px solid var(--border); border-radius: 999px; padding: 1px 8px; }
+.wp-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 8px; }
+.wp-row .k, .wp-form .k, .wp-hist .k { font-size: 10px; text-transform: uppercase; letter-spacing: .5px; color: var(--muted); }
+.wp-house { font-size: 12px; word-break: break-all; color: var(--text); }
+.wp-small { padding: 4px 10px; font-size: 12px; }
+.wp-wager { font-size: 12px; color: #ffce54; }
+.wp-forms { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 10px 0; }
+.wp-form { display: flex; flex-direction: column; gap: 4px; }
+.wp-inline { display: flex; gap: 8px; }
+.wp-inline input { flex: 1; min-width: 0; padding: 9px; background: var(--panel); border: 1px solid var(--border); border-radius: 8px; color: var(--text); }
+.wp-status { min-height: 18px; font-size: 12px; color: var(--muted); }
+.wp-status.ok { color: var(--win); }
+.wp-status.bad { color: var(--lose); }
+.wp-hist ul { list-style: none; margin: 6px 0 0; padding: 0; display: flex; flex-direction: column; gap: 4px; font-size: 12px; }
+.wp-hist li.in { color: var(--win); }
+.wp-hist li.failed { color: var(--lose); }
+.wp-hist li.empty { color: var(--muted); }
+.wp-hist a { color: var(--accent-2); }
+@media (max-width: 620px) { .wp-forms { grid-template-columns: 1fr; } }
+
 /* Dice game */
 .dice { margin-bottom: 16px; }
 .dice-track { position: relative; height: 54px; background: var(--bg-2); border: 1px solid var(--border); border-radius: 12px; margin: 20px 0 10px; cursor: pointer; overflow: visible; }
@@ -336,7 +359,11 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
             <div class="bal"><span class="k">balance</span><strong id="balance-val">—</strong><span class="unit">SOL</span></div>
             <label class="stake" id="stake-field"><span class="k">stake</span><input id="stake-input" type="number" step="0.001" min="0" value="0.001" /></label>
             <button id="faucet-btn" class="btn btn-ghost">Claim free faucet</button>
+            <button id="wallet-open" class="btn btn-ghost" type="button" aria-expanded="false" aria-controls="wallet-panel">Wallet</button>
           </div>
+
+          <!-- Real-SOL deposits / withdrawals (backend mode) -->
+          <div id="wallet-panel" class="wallet-panel hidden"></div>
 
           <!-- Rich game UIs render here (Dice built; others coming in the same style). -->
           <div id="game-view"></div>
@@ -353,7 +380,7 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
           </div>
 
           <div id="result-log" class="result-log"></div>
-          <p class="disclaimer">
+          <p id="mode-note" class="disclaimer">
             Demo mode — no real funds move. Bets run on the in-browser fairness
             engine so you can watch and verify outcomes.
           </p>
@@ -461,8 +488,18 @@ const RPC_ENDPOINTS = {
   mainnet: "https://api.mainnet-beta.solana.com",
 };
 
+// In BACKEND mode the server reports which cluster it runs on; the browser
+// follows it so deposits and balances always use the same network.
+let activeCluster = CLUSTER;
+function setActiveCluster(cluster) {
+  if (RPC_ENDPOINTS[cluster]) activeCluster = cluster;
+}
+function getActiveCluster() {
+  return activeCluster;
+}
+
 function rpcUrl() {
-  return RPC_ENDPOINTS[CLUSTER] ?? RPC_ENDPOINTS.devnet;
+  return RPC_ENDPOINTS[activeCluster] ?? RPC_ENDPOINTS.devnet;
 }
 
 
@@ -682,23 +719,48 @@ const GAME_CATALOG = [
 
 // ===== js/wallet.js =====
 // =============================================================================
-// Phantom wallet connect — reads YOUR OWN wallet + balance on the configured
-// cluster. Connecting a wallet and reading a balance is non-custodial and safe
-// on any cluster, including mainnet.
+// Phantom wallet + Solana in the browser.
 //
-// @solana/web3.js is loaded from a CDN at runtime (in the visitor's browser),
-// so there's no build step. Swap the cluster/RPC in config.js.
+// - connect/disconnect the player's own wallet (non-custodial)
+// - read a wallet's SOL balance
+// - send a deposit: a plain SOL transfer to the house address, signed and sent
+//   by Phantom; the server then verifies it on-chain before crediting anything
 //
-// NOTE: sending real SOL (deposits/bets) is intentionally NOT wired here yet.
-// Build and test that flow on localnet/devnet first — see js/README notes.
+// @solana/web3.js is loaded on demand as its prebuilt browser bundle from
+// jsdelivr (version pinned to match the server). The RPC URL comes from the
+// server's reported cluster, so the browser always talks to the same network.
 // =============================================================================
 
-let web3 = null;
-async function web3js() {
-  if (!web3) {
-    web3 = await import("https://esm.sh/@solana/web3.js@1.95.3");
-  }
-  return web3;
+const WEB3_BUNDLE_URL =
+  "https://cdn.jsdelivr.net/npm/@solana/web3.js@1.95.3/lib/index.iife.min.js";
+
+// web3.js's browser bundle encodes amounts with a global `Buffer`, which
+// browsers don't have — without this, building any transfer throws
+// "Buffer is not defined" (in Phantom too, since it serializes our tx).
+const BUFFER_POLYFILL_URL = "https://cdn.jsdelivr.net/npm/buffer@6.0.3/+esm";
+
+let web3Promise = null;
+function loadWeb3() {
+  if (window.solanaWeb3 && window.Buffer) return Promise.resolve(window.solanaWeb3);
+  web3Promise ??= (async () => {
+    if (!window.Buffer) window.Buffer = (await import(BUFFER_POLYFILL_URL)).Buffer;
+    if (window.solanaWeb3) return window.solanaWeb3;
+    return injectWeb3Bundle();
+  })().catch((e) => {
+    web3Promise = null;
+    throw e;
+  });
+  return web3Promise;
+}
+
+function injectWeb3Bundle() {
+  return new Promise((resolve, reject) => {
+    const s = document.createElement("script");
+    s.src = WEB3_BUNDLE_URL;
+    s.onload = () => (window.solanaWeb3 ? resolve(window.solanaWeb3) : reject(new Error("Solana library failed to load")));
+    s.onerror = () => reject(new Error("Couldn't load the Solana library"));
+    document.head.appendChild(s);
+  });
 }
 
 function getProvider() {
@@ -721,15 +783,45 @@ async function disconnect() {
   if (provider) await provider.disconnect();
 }
 
-async function getBalanceSol(address) {
-  const { Connection, PublicKey, LAMPORTS_PER_SOL } = await web3js();
-  const conn = new Connection(rpcUrl(), "confirmed");
+async function getBalanceSol(address, rpc = rpcUrl()) {
+  const { Connection, PublicKey, LAMPORTS_PER_SOL } = await loadWeb3();
+  const conn = new Connection(rpc, "confirmed");
   const lamports = await conn.getBalance(new PublicKey(address));
   return lamports / LAMPORTS_PER_SOL;
 }
 
+/**
+ * Deposit: transfer `lamports` from the player's wallet to the house address.
+ * Phantom signs and sends; we wait for confirmation and return the signature
+ * for the server to verify and credit.
+ */
+async function sendDeposit(provider, fromAddress, houseAddress, lamports, rpc = rpcUrl()) {
+  const { Connection, PublicKey, SystemProgram, Transaction } = await loadWeb3();
+  const conn = new Connection(rpc, "confirmed");
+  const from = new PublicKey(fromAddress);
+  const { blockhash, lastValidBlockHeight } = await conn.getLatestBlockhash("confirmed");
+  const tx = new Transaction({ feePayer: from, blockhash, lastValidBlockHeight }).add(
+    SystemProgram.transfer({ fromPubkey: from, toPubkey: new PublicKey(houseAddress), lamports }),
+  );
+  const { signature } = await provider.signAndSendTransaction(tx);
+  const res = await conn.confirmTransaction({ signature, blockhash, lastValidBlockHeight }, "confirmed");
+  if (res.value.err) throw new Error("Deposit transaction failed on-chain");
+  return signature;
+}
+
+/** Block-explorer link for a transaction on the given cluster. */
+function explorerTxUrl(signature, cluster = getActiveCluster(), rpc = rpcUrl()) {
+  const q =
+    cluster === "mainnet"
+      ? ""
+      : cluster === "devnet"
+        ? "?cluster=devnet"
+        : `?cluster=custom&customUrl=${encodeURIComponent(rpc)}`;
+  return `https://explorer.solana.com/tx/${signature}${q}`;
+}
+
 function clusterLabel() {
-  return CLUSTER;
+  return getActiveCluster();
 }
 
 
@@ -809,6 +901,10 @@ const api = {
   rotateSeed: () => req("/api/rotate-seed", { method: "POST", auth: true }),
   setClientSeed: (clientSeed) =>
     req("/api/client-seed", { method: "POST", auth: true, body: { clientSeed } }),
+  wallet: () => req("/api/wallet", { auth: true }),
+  depositConfirm: (signature) =>
+    req("/api/deposit/confirm", { method: "POST", auth: true, body: { signature } }),
+  withdraw: (lamports) => req("/api/withdraw", { method: "POST", auth: true, body: { lamports } }),
   bet: (game, bet, stake) =>
     req("/api/bet", { method: "POST", auth: true, body: { game, bet, stake } }),
   tower: {
@@ -847,6 +943,145 @@ const api = {
     return out.account;
   },
 };
+
+
+// ===== js/wallet-panel.js =====
+// =============================================================================
+// Wallet panel (BACKEND mode): real-SOL deposits and withdrawals.
+//
+// Deposit: Phantom sends SOL to the house address; the signature goes to the
+// server, which verifies it on-chain and credits exactly what arrived.
+// Withdraw: the server checks the rules (balance, bonus wagering, house
+// solvency) and sends SOL from the house wallet to the signed-in wallet.
+// =============================================================================
+
+
+
+const short = (s) => (s ? s.slice(0, 4) + "…" + s.slice(-4) : "—");
+const escapeAttr = (s) => String(s).replace(/[&"<>]/g, (c) => ({ "&": "&amp;", '"': "&quot;", "<": "&lt;", ">": "&gt;" })[c]);
+
+function createWalletPanel(container, { getProvider, getAddress, onBalance, log }) {
+  container.innerHTML = `
+    <div class="wp">
+      <div class="wp-head">
+        <strong>Wallet</strong>
+        <span class="wp-cluster" id="wp-cluster"></span>
+      </div>
+      <div class="wp-row"><span class="k">Deposit address</span>
+        <code id="wp-house" class="wp-house">—</code>
+        <button id="wp-copy" class="btn btn-ghost wp-small" type="button">Copy</button></div>
+      <div class="wp-row"><span class="k">Balance</span><strong id="wp-bal">—</strong>
+        <span id="wp-wager" class="wp-wager"></span></div>
+      <div class="wp-forms">
+        <form id="wp-dep-form" class="wp-form">
+          <label class="k" for="wp-dep">Deposit (SOL)</label>
+          <div class="wp-inline"><input id="wp-dep" type="number" min="0" step="0.001" value="0.05" />
+          <button class="btn btn-primary" type="submit">Deposit</button></div>
+        </form>
+        <form id="wp-wd-form" class="wp-form">
+          <label class="k" for="wp-wd">Withdraw (SOL)</label>
+          <div class="wp-inline"><input id="wp-wd" type="number" min="0" step="0.001" value="0.01" />
+          <button class="btn btn-ghost" type="submit">Withdraw</button></div>
+        </form>
+      </div>
+      <div id="wp-status" class="wp-status" role="status"></div>
+      <div class="wp-hist"><span class="k">Recent</span><ul id="wp-list"></ul></div>
+    </div>`;
+
+  const $ = (s) => container.querySelector(s);
+  let houseAddress = null;
+  let busy = false;
+
+  const status = (msg, kind = "") => {
+    $("#wp-status").textContent = msg;
+    $("#wp-status").className = "wp-status " + kind;
+  };
+
+  async function refresh() {
+    try {
+      const w = await api.wallet();
+      houseAddress = w.houseAddress;
+      $("#wp-cluster").textContent = w.cluster;
+      $("#wp-house").textContent = houseAddress ? houseAddress : "not configured on this server";
+      $("#wp-bal").textContent = toSol(w.balanceLamports) + " SOL";
+      $("#wp-wager").textContent = w.wagerRemaining > 0
+        ? `· wager ${toSol(w.wagerRemaining)} SOL more to unlock withdrawals`
+        : "";
+      onBalance(w.balanceLamports);
+      const items = [
+        ...w.deposits.map((d) => ({ t: d.createdAt, label: `+${toSol(d.lamports)} deposit`, sig: d.signature, cls: "in" })),
+        ...w.withdrawals.map((x) => ({ t: x.createdAt, label: `−${toSol(x.lamports)} withdraw · ${x.status}`, sig: x.signature, cls: x.status })),
+      ].sort((a, b) => b.t - a.t).slice(0, 8);
+      $("#wp-list").innerHTML = items.length
+        ? items.map((i) => `<li class="${i.cls}">${i.label}${i.sig
+            ? ` <a href="${escapeAttr(explorerTxUrl(i.sig, getActiveCluster()))}" target="_blank" rel="noopener">${short(i.sig)}</a>`
+            : ""}</li>`).join("")
+        : `<li class="empty">No deposits or withdrawals yet.</li>`;
+    } catch (e) {
+      status(e.message, "bad");
+    }
+  }
+
+  $("#wp-copy").addEventListener("click", async () => {
+    if (!houseAddress) return;
+    try {
+      await navigator.clipboard.writeText(houseAddress);
+      status("Deposit address copied.");
+    } catch {
+      status("Copy failed — select the address manually.", "bad");
+    }
+  });
+
+  $("#wp-dep-form").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    if (busy) return;
+    const sol = parseFloat($("#wp-dep").value);
+    if (!(sol > 0)) return status("Enter an amount to deposit.", "bad");
+    if (!houseAddress) return status("Deposits aren't configured on this server.", "bad");
+    busy = true;
+    try {
+      status("Approve the transfer in Phantom…");
+      const lamports = Math.round(sol * LAMPORTS_PER_SOL);
+      const sig = await sendDeposit(getProvider(), getAddress(), houseAddress, lamports);
+      status("Sent — verifying on-chain…");
+      const r = await api.depositConfirm(sig);
+      status(`Deposited ${toSol(r.creditedLamports)} SOL.`, "ok");
+      log?.(`💰 Deposit +${toSol(r.creditedLamports)} SOL`);
+      await refresh();
+    } catch (err) {
+      status(err.message || "Deposit failed", "bad");
+    } finally {
+      busy = false;
+    }
+  });
+
+  $("#wp-wd-form").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    if (busy) return;
+    const sol = parseFloat($("#wp-wd").value);
+    if (!(sol > 0)) return status("Enter an amount to withdraw.", "bad");
+    busy = true;
+    try {
+      status("Sending your withdrawal…");
+      const r = await api.withdraw(Math.round(sol * LAMPORTS_PER_SOL));
+      status(
+        r.status === "sent"
+          ? `Withdrew ${toSol(r.lamports)} SOL to your wallet.`
+          : `Withdrawal is pending confirmation (${short(r.signature)}).`,
+        r.status === "sent" ? "ok" : "",
+      );
+      log?.(`🏧 Withdraw −${toSol(r.lamports)} SOL · ${r.status}`);
+      await refresh();
+    } catch (err) {
+      status(err.message || "Withdrawal failed", "bad");
+    } finally {
+      busy = false;
+    }
+  });
+
+  refresh();
+  return { refresh };
+}
 
 
 // ===== js/dice-game.js =====
@@ -1666,6 +1901,7 @@ function escapeHtml(s) {
 
 
 
+
 const $ = (sel) => document.querySelector(sel);
 
 // In BACKEND mode, holds the signed-in account; null until sign-in.
@@ -1714,6 +1950,8 @@ walletBtn.addEventListener("click", async () => {
       walletBtn.textContent = "Connect Wallet";
       walletInfo.textContent = "";
       $("#account-row").classList.add("hidden");
+      $("#wallet-panel").classList.add("hidden");
+      $("#wallet-open").setAttribute("aria-expanded", "false");
       $("#bet-btn").textContent = "Place demo bet";
       await refreshSeeds();
       return;
@@ -1733,7 +1971,8 @@ walletBtn.addEventListener("click", async () => {
       account = await api.signIn(provider, addr);
       $("#account-row").classList.remove("hidden");
       $("#bet-btn").textContent = "Place bet";
-      walletInfo.textContent = `signed in (${CLUSTER})`;
+      await afterSignIn();
+      walletInfo.textContent = `signed in (${getActiveCluster()})`;
       updateBalance(account.balanceLamports);
       await refreshSeeds();
     } else {
@@ -1754,6 +1993,36 @@ walletBtn.addEventListener("click", async () => {
 function updateBalance(lamports) {
   $("#balance-val").textContent = toSol(lamports);
 }
+
+// After sign-in: follow the server's Solana cluster, then set up the wallet panel.
+let walletPanel = null;
+async function afterSignIn() {
+  try {
+    const cfg = await api.config();
+    setActiveCluster(cfg.cluster);
+    $("#mode-note").textContent =
+      `Real SOL on ${cfg.cluster}: every bet moves your balance, and deposits and ` +
+      `withdrawals are on-chain transactions. 18+. Only play with what you can afford to lose.`;
+    $("#cluster-badge").textContent = cfg.cluster;
+    $("#cluster-badge").classList.toggle("mainnet", cfg.cluster === "mainnet");
+  } catch {
+    /* keep the default cluster */
+  }
+  walletPanel = createWalletPanel($("#wallet-panel"), {
+    getProvider,
+    getAddress: () => connected ?? account?.pubkey,
+    onBalance: updateBalance,
+    log: logResult,
+  });
+}
+
+$("#wallet-open").addEventListener("click", () => {
+  const panel = $("#wallet-panel");
+  const opening = panel.classList.contains("hidden");
+  panel.classList.toggle("hidden", !opening);
+  $("#wallet-open").setAttribute("aria-expanded", String(opening));
+  if (opening) walletPanel?.refresh();
+});
 
 // ---- Games grid -------------------------------------------------------------
 const grid = $("#games-grid");
@@ -2115,7 +2384,9 @@ async function chickenOnCashout(sessionId) {
 
 // ---- Chat -------------------------------------------------------------------
 const chat = new Chat($("#chat-list"), $("#chat-input"), $("#chat-form"));
-chat.startAmbient();
+// Simulated chatter is for the demo only. With real money on, fake players and
+// fake wins would mislead real people, so the room shows only real messages.
+if (!BACKEND_ENABLED) chat.startAmbient();
 
 // init
 selectGame("dice");
@@ -2127,7 +2398,8 @@ async function init() {
       account = (await api.me()).account;
       $("#account-row").classList.remove("hidden");
       $("#bet-btn").textContent = "Place bet";
-      $("#wallet-info").textContent = `signed in (${CLUSTER})`;
+      await afterSignIn();
+      $("#wallet-info").textContent = `signed in (${getActiveCluster()})`;
       updateBalance(account.balanceLamports);
     } catch {
       api.clearToken(); // stale/expired token
