@@ -184,18 +184,36 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
 .chicken-controls .field { display: flex; flex-direction: column; gap: 4px; }
 .chicken-controls .field .k { font-size: 10px; text-transform: uppercase; letter-spacing: .5px; color: var(--muted); }
 .chicken-controls input { width: 100%; padding: 10px; background: var(--bg-2); border: 1px solid var(--border); border-radius: 8px; color: var(--text); }
-.chicken-board { background: var(--bg-2); border: 1px solid var(--border); border-radius: 12px; padding: 14px; }
+.ck-go-btn { width: 100%; padding: 9px; background: linear-gradient(90deg, #4b3fa0, #8a3f9e); color: #fff; border: none; letter-spacing: 1px; text-transform: uppercase; }
+.ck-go-btn:disabled { opacity: .45; cursor: default; }
+.chicken-board { background: var(--bg-2); border: 1px solid var(--border); border-radius: 12px; padding: 14px; min-width: 0; }
 .chicken-max { text-align: center; font-size: 11px; letter-spacing: .5px; color: var(--muted); text-transform: uppercase; margin-bottom: 12px; }
 .chicken-max strong { color: var(--accent-2); }
-.chicken-lane { display: flex; gap: 6px; overflow-x: auto; padding: 8px 2px; }
-.chicken-cell { flex: 0 0 auto; min-width: 58px; height: 56px; border-radius: 9px; border: 1px solid var(--border); background: var(--panel-2); display: flex; align-items: center; justify-content: center; }
-.chicken-cell .ck-mult { font-size: 12px; color: var(--muted); }
-.chicken-cell.passed { background: #10261e; border-color: #1d4b44; }
-.chicken-cell.passed .ck-mult { color: var(--win); }
-.chicken-cell.next { border-color: var(--accent-2); box-shadow: 0 0 0 1px var(--accent-2) inset; }
-.chicken-cell.next .ck-mult { color: var(--text); }
-.chicken-cell.dead { background: linear-gradient(135deg, #6a2030, var(--lose)); border-color: var(--lose); }
-.chicken-go { width: 100%; margin-top: 12px; }
+.road-viewport { overflow-x: auto; overflow-y: hidden; border-radius: 10px; background: #14161e; }
+.road { position: relative; display: flex; height: 260px; }
+.sidewalk { flex: 0 0 90px; background: repeating-linear-gradient(0deg, #2b2f3d 0 30px, #262a37 30px 32px); border-right: 4px solid #3a3f51; }
+.lane { position: relative; flex: 0 0 96px; overflow: hidden; background: #1b1e29; border-left: 2px dashed rgba(255,255,255,.12); }
+.lane-hole { position: absolute; bottom: 52px; left: 50%; width: 48px; height: 22px; margin-left: -24px; border-radius: 50%; background: #262a37; border: 2px solid #323748; }
+.lane-badge { position: absolute; bottom: 14px; left: 50%; transform: translateX(-50%); padding: 3px 10px; border-radius: 999px; background: #2a2f40; color: var(--muted); font-size: 12px; font-weight: 700; white-space: nowrap; }
+.lane.next .lane-badge { color: var(--text); box-shadow: 0 0 0 1px var(--accent-2); }
+.lane.passed { background: #172720; }
+.lane.passed .lane-badge { background: #1b6b4a; color: #e8fff3; }
+.lane .car { position: absolute; top: -96px; left: 50%; width: 56px; height: 84px; margin-left: -28px; transition: top .38s cubic-bezier(.5,0,.9,.6); }
+.lane .car svg { width: 100%; height: 100%; display: block; }
+.lane.crash .car { top: 128px; }
+.lane.crash .lane-badge { background: var(--lose); color: #fff; }
+.chick { position: absolute; bottom: 70px; left: 45px; width: 56px; height: 56px; margin-left: -28px; z-index: 2; transition: left .36s ease; }
+.chick-body { width: 100%; height: 100%; transform-origin: 50% 100%; transition: transform .2s, opacity .2s; }
+.chick-body svg { width: 100%; height: 100%; display: block; }
+.chick-body.hop { animation: chick-hop .36s ease; }
+.chick.squashed .chick-body { transform: scaleY(.3); opacity: .5; }
+.chick.win .chick-body { animation: chick-cheer .6s ease 2; }
+@keyframes chick-hop { 0% { transform: translateY(0); } 45% { transform: translateY(-36px) scale(1.06); } 100% { transform: translateY(0); } }
+@keyframes chick-cheer { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-14px); } }
+@media (prefers-reduced-motion: reduce) {
+  .chick, .lane .car, .chick-body { transition: none; }
+  .chick-body.hop, .chick.win .chick-body { animation: none; }
+}
 .chicken-status { text-align: center; font-size: 12px; color: var(--muted); margin-top: 10px; }
 @media (max-width: 620px) { .chicken { grid-template-columns: 1fr; } }
 

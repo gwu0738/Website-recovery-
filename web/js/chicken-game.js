@@ -1,11 +1,41 @@
 // =============================================================================
-// Chicken — interactive crash-ladder UI. Advance step by step across a lane;
-// each cell shows the multiplier you'd lock in. Cash out before a step kills
-// the chicken. Presentation only; app wires onStart/onStep/onCashout.
+// Chicken — road-crossing crash-ladder. A sidewalk on the left, then lanes;
+// each lane carries the multiplier you lock in by reaching it. Press Go and the
+// chicken hops one lane; get caught and a car comes down the lane. Cash out any
+// time. Presentation only; the app wires onStart/onStep/onCashout.
 // =============================================================================
 import { CHICKEN_MAX_STEPS, chickenMultiplier, chickenMaxMultiplier } from "./chicken-logic.js";
 
 const DIFFS = ["easy", "medium", "hard", "expert"];
+const SIDE = 90; // sidewalk width (px)
+const LANE = 96; // lane width (px)
+const HOP_MS = 360;
+const CRASH_MS = 380;
+
+const chickSleep = (ms) => new Promise((r) => setTimeout(r, ms));
+const reducedMotion = () =>
+  !!window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+// Original artwork (not anyone else's mascot).
+const CHICK_SVG = `<svg viewBox="0 0 64 64" aria-hidden="true">
+  <ellipse cx="30" cy="40" rx="18" ry="16" fill="#f5f2ea"/>
+  <path d="M14 40 q-8 4 -2 12 q6 -2 9 -8z" fill="#e3ddcf"/>
+  <circle cx="40" cy="24" r="11" fill="#f5f2ea"/>
+  <path d="M35 14 q3 -7 6 -1 q3 -6 6 1 q-5 3 -12 0z" fill="#ff4d6d"/>
+  <path d="M50 23 l8 3 -8 3z" fill="#ffb02e"/>
+  <circle cx="44" cy="22" r="2" fill="#11131c"/>
+  <path d="M27 55 v6 M35 55 v6" stroke="#ffb02e" stroke-width="3" stroke-linecap="round"/>
+</svg>`;
+
+const CAR_SVG = `<svg viewBox="0 0 56 84" aria-hidden="true">
+  <rect x="4" y="4" width="48" height="76" rx="12" fill="#7c5cff"/>
+  <rect x="10" y="12" width="36" height="16" rx="4" fill="#0a0b10" opacity=".65"/>
+  <rect x="10" y="52" width="36" height="12" rx="4" fill="#0a0b10" opacity=".5"/>
+  <rect x="8" y="75" width="11" height="5" rx="2" fill="#ffce54"/>
+  <rect x="37" y="75" width="11" height="5" rx="2" fill="#ffce54"/>
+</svg>`;
+
+const laneX = (step) => (step === 0 ? SIDE / 2 : SIDE + (step - 1) * LANE + LANE / 2);
 
 export function createChickenGame(container, { onStart, onStep, onCashout, amountLabel = "Bet" }) {
   let difficulty = "medium";
@@ -19,50 +49,82 @@ export function createChickenGame(container, { onStart, onStep, onCashout, amoun
         <div class="toggle chicken-diff">
           ${DIFFS.map((d) => `<button class="toggle-btn${d === "medium" ? " active" : ""}" data-d="${d}">${d[0].toUpperCase() + d.slice(1)}</button>`).join("")}
         </div>
+        <button id="ck-go" class="btn ck-go-btn" disabled>Go</button>
         <button id="ck-action" class="btn btn-primary big">Bet</button>
         <label class="field"><span class="k">${amountLabel}</span>
           <input id="ck-amount" type="number" step="0.001" min="0" value="0.001" /></label>
       </div>
       <div class="chicken-board">
         <div class="chicken-max">MAX PAYOUT <strong id="ck-max">x0</strong></div>
-        <div id="ck-lane" class="chicken-lane"></div>
-        <button id="ck-go" class="btn btn-ghost chicken-go" disabled>Go ▶</button>
+        <div id="ck-viewport" class="road-viewport">
+          <div id="ck-road" class="road"></div>
+        </div>
         <div id="ck-status" class="chicken-status">Pick a difficulty and press Bet.</div>
       </div>
     </div>`;
 
   const $ = (s) => container.querySelector(s);
-  const lane = $("#ck-lane");
+  const viewport = $("#ck-viewport");
+  const road = $("#ck-road");
   const actionBtn = $("#ck-action");
   const goBtn = $("#ck-go");
   const amountEl = $("#ck-amount");
   const statusEl = $("#ck-status");
   const maxEl = $("#ck-max");
+  let chick = null;
 
   function updateMax() {
     maxEl.textContent = "x" + chickenMaxMultiplier(difficulty).toLocaleString();
   }
 
-  function buildLane() {
-    lane.innerHTML = "";
+  function buildRoad() {
+    let html = `<div class="sidewalk"></div>`;
     for (let i = 1; i <= CHICKEN_MAX_STEPS; i++) {
-      const cell = document.createElement("div");
-      cell.className = "chicken-cell";
-      cell.dataset.step = i;
-      cell.innerHTML = `<span class="ck-mult">x${chickenMultiplier(difficulty, i)}</span>`;
-      lane.appendChild(cell);
+      html += `<div class="lane" data-step="${i}">
+          <div class="car">${CAR_SVG}</div>
+          <div class="lane-hole"></div>
+          <div class="lane-badge">${chickenMultiplier(difficulty, i)}x</div>
+        </div>`;
     }
-    markLane();
+    html += `<div class="chick" id="ck-chick"><div class="chick-body">${CHICK_SVG}</div></div>`;
+    road.innerHTML = html;
+    road.style.width = SIDE + CHICKEN_MAX_STEPS * LANE + "px";
+    chick = $("#ck-chick");
+    chick.style.left = laneX(0) + "px";
+    viewport.scrollLeft = 0;
+    markLanes();
   }
 
-  function markLane() {
-    lane.querySelectorAll(".chicken-cell").forEach((c) => {
-      const step = Number(c.dataset.step);
-      c.classList.toggle("passed", session && step <= stepsTaken);
-      c.classList.toggle("next", !!session && step === stepsTaken + 1);
+  function markLanes() {
+    road.querySelectorAll(".lane").forEach((ln) => {
+      const step = Number(ln.dataset.step);
+      ln.classList.toggle("passed", !!session && step <= stepsTaken);
+      ln.classList.toggle("next", !!session && step === stepsTaken + 1);
     });
-    const next = lane.querySelector(".chicken-cell.next");
-    if (next) next.scrollIntoView({ block: "nearest", inline: "center", behavior: "smooth" });
+  }
+
+  function follow(step) {
+    const left = Math.max(0, laneX(step) - viewport.clientWidth / 2);
+    if (viewport.scrollTo) {
+      viewport.scrollTo({ left, behavior: reducedMotion() ? "auto" : "smooth" });
+    } else {
+      viewport.scrollLeft = left;
+    }
+  }
+
+  async function hopTo(step) {
+    chick.style.left = laneX(step) + "px";
+    follow(step);
+    if (reducedMotion()) return;
+    const body = chick.querySelector(".chick-body");
+    body.classList.remove("hop");
+    void body.offsetWidth; // restart the animation
+    body.classList.add("hop");
+    await chickSleep(HOP_MS);
+  }
+
+  function setDiffEnabled(on) {
+    container.querySelectorAll(".chicken-diff .toggle-btn").forEach((b) => (b.disabled = !on));
   }
 
   function endGame() {
@@ -70,11 +132,7 @@ export function createChickenGame(container, { onStart, onStep, onCashout, amoun
     stepsTaken = 0;
     goBtn.disabled = true;
     actionBtn.textContent = "Bet";
-    enableDiff(true);
-  }
-
-  function enableDiff(on) {
-    container.querySelectorAll(".chicken-diff .toggle-btn").forEach((b) => (b.disabled = !on));
+    setDiffEnabled(true);
   }
 
   container.querySelectorAll(".chicken-diff .toggle-btn").forEach((b) => {
@@ -84,7 +142,7 @@ export function createChickenGame(container, { onStart, onStep, onCashout, amoun
       container.querySelectorAll(".chicken-diff .toggle-btn").forEach((x) => x.classList.remove("active"));
       b.classList.add("active");
       updateMax();
-      buildLane();
+      buildRoad();
     });
   });
 
@@ -92,38 +150,55 @@ export function createChickenGame(container, { onStart, onStep, onCashout, amoun
     if (!session || busy) return;
     busy = true;
     goBtn.disabled = true;
+    actionBtn.disabled = true; // no cash-out mid-hop
     try {
       const r = await onStep(session.sessionId);
-      if (!r) return;
+      if (!r) {
+        goBtn.disabled = false;
+        return;
+      }
       if (r.bust) {
-        const cell = lane.querySelector(`.chicken-cell[data-step="${r.step + 1}"]`);
-        if (cell) cell.classList.add("dead");
-        statusEl.textContent = `💥 Caught on step ${r.step + 1}. Lost.`;
+        const lane = r.step + 1;
+        await hopTo(lane);
+        road.querySelector(`.lane[data-step="${lane}"]`)?.classList.add("crash");
+        if (!reducedMotion()) await chickSleep(CRASH_MS);
+        chick.classList.add("squashed");
+        statusEl.textContent = `💥 Hit on lane ${lane}. Lost.`;
+        endGame();
+        return;
+      }
+      stepsTaken = r.stepsTaken;
+      markLanes();
+      await hopTo(stepsTaken);
+      if (r.completed) {
+        chick.classList.add("win");
+        statusEl.textContent = `🏆 Crossed every lane! ${r.multiplier}x`;
         endGame();
       } else {
-        stepsTaken = r.stepsTaken;
-        markLane();
-        if (r.completed) {
-          statusEl.textContent = `🏆 Made it all the way! x${r.multiplier}`;
-          endGame();
-        } else {
-          actionBtn.textContent = `Cash Out x${r.multiplier}`;
-          statusEl.textContent = `Safe! Step ${stepsTaken} · x${r.multiplier}`;
-          goBtn.disabled = false;
-        }
+        actionBtn.textContent = `Cash Out ${r.multiplier}x`;
+        statusEl.textContent = `Safe! Lane ${stepsTaken} · ${r.multiplier}x`;
+        goBtn.disabled = false;
       }
     } finally {
       busy = false;
+      actionBtn.disabled = false;
     }
   });
 
   actionBtn.addEventListener("click", async () => {
     if (busy) return;
     if (session) {
+      if (stepsTaken === 0) {
+        statusEl.textContent = "Take at least one step before cashing out.";
+        return;
+      }
       busy = true;
       try {
         const r = await onCashout(session.sessionId);
-        if (r) statusEl.textContent = `💰 Cashed out x${r.multiplier}.`;
+        if (r) {
+          chick.classList.add("win");
+          statusEl.textContent = `💰 Cashed out ${r.multiplier}x.`;
+        }
         endGame();
       } finally {
         busy = false;
@@ -138,11 +213,11 @@ export function createChickenGame(container, { onStart, onStep, onCashout, amoun
       if (!s) return;
       session = s;
       stepsTaken = 0;
-      enableDiff(false);
-      buildLane();
+      setDiffEnabled(false);
+      buildRoad();
       goBtn.disabled = false;
-      actionBtn.textContent = "Cash Out x1";
-      statusEl.textContent = "Press Go to advance. Cash out any time.";
+      actionBtn.textContent = "Cash Out";
+      statusEl.textContent = "Press Go to hop a lane. Cash out any time.";
     } finally {
       busy = false;
       actionBtn.disabled = false;
@@ -150,6 +225,6 @@ export function createChickenGame(container, { onStart, onStep, onCashout, amoun
   });
 
   updateMax();
-  buildLane();
+  buildRoad();
   return {};
 }
