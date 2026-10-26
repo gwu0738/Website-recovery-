@@ -62,4 +62,13 @@ export const ICONS = {
      <path d="M25 19 V31 M22 22 H27 A2.5 2.5 0 0 1 27 27 H22 A2.5 2.5 0 0 0 22 32 H28" stroke="GRAD" stroke-width="1.8" stroke-linecap="round"/>
      <path d="M11 16 A11 11 0 0 1 15 11" stroke="GRAD" stroke-width="2" stroke-linecap="round"/>`,
   ),
+  tower: S(
+    "tower",
+    `<rect x="13" y="10" width="9" height="9" rx="1.5" stroke="GRAD" stroke-width="2"/>
+     <rect x="26" y="10" width="9" height="9" rx="1.5" stroke="GRAD" stroke-width="2"/>
+     <rect x="13" y="21" width="9" height="9" rx="1.5" stroke="GRAD" stroke-width="2"/>
+     <rect x="26" y="21" width="9" height="9" rx="1.5" fill="GRAD" opacity="0.25" stroke="GRAD" stroke-width="2"/>
+     <rect x="13" y="32" width="9" height="9" rx="1.5" fill="GRAD" opacity="0.25" stroke="GRAD" stroke-width="2"/>
+     <rect x="26" y="32" width="9" height="9" rx="1.5" stroke="GRAD" stroke-width="2"/>`,
+  ),
 };

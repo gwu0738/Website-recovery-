@@ -160,6 +160,30 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
 .toggle-btn.active { background: var(--accent); color: #fff; }
 .dice-roll { width: 100%; }
 
+/* Tower game */
+.tower { display: grid; grid-template-columns: 220px 1fr; gap: 18px; margin-bottom: 16px; }
+.tower-controls { display: flex; flex-direction: column; gap: 12px; }
+.tower-diff { width: 100%; }
+.tower-diff .toggle-btn { flex: 1; padding: 8px 6px; font-size: 13px; }
+.tower-controls .field { display: flex; flex-direction: column; gap: 4px; }
+.tower-controls .field .k { font-size: 10px; text-transform: uppercase; letter-spacing: .5px; color: var(--muted); }
+.tower-controls input { width: 100%; padding: 10px; background: var(--bg-2); border: 1px solid var(--border); border-radius: 8px; color: var(--text); }
+.tower-board { background: var(--bg-2); border: 1px solid var(--border); border-radius: 12px; padding: 14px; }
+.tower-max { text-align: center; font-size: 11px; letter-spacing: .5px; color: var(--muted); text-transform: uppercase; margin-bottom: 10px; }
+.tower-max strong { color: var(--accent-2); }
+.tower-grid { display: flex; flex-direction: column; gap: 6px; }
+.tower-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; opacity: .45; transition: opacity .15s; }
+.tower-row.active { opacity: 1; }
+.tower-tile { height: 34px; border-radius: 7px; border: 1px solid var(--border); background: var(--panel-2); cursor: pointer; transition: transform .05s, background .15s, border-color .15s; }
+.tower-row.active .tower-tile:not(:disabled):hover { border-color: var(--accent-2); transform: translateY(-1px); }
+.tower-tile:disabled { cursor: default; }
+.tower-tile.safe-row { background: #10261e; border-color: #1d4b44; }
+.tower-tile.picked { background: linear-gradient(135deg, #1b6b4a, var(--win)); border-color: var(--win); }
+.tower-tile.trap { background: #2a1116; border-color: #6a2030; }
+.tower-tile.hit { background: linear-gradient(135deg, #6a2030, var(--lose)); border-color: var(--lose); }
+.tower-status { text-align: center; font-size: 12px; color: var(--muted); margin-top: 12px; }
+@media (max-width: 620px) { .tower { grid-template-columns: 1fr; } }
+
 .result-log { display: flex; flex-direction: column; gap: 6px; max-height: 190px; overflow: auto; }
 .result-row { background: var(--bg-2); border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; font-size: 13px; }
 .disclaimer { font-size: 11px; color: var(--muted); margin: 12px 0 0; }
@@ -446,6 +470,15 @@ const ICONS = {
      <path d="M25 19 V31 M22 22 H27 A2.5 2.5 0 0 1 27 27 H22 A2.5 2.5 0 0 0 22 32 H28" stroke="GRAD" stroke-width="1.8" stroke-linecap="round"/>
      <path d="M11 16 A11 11 0 0 1 15 11" stroke="GRAD" stroke-width="2" stroke-linecap="round"/>`,
   ),
+  tower: S(
+    "tower",
+    `<rect x="13" y="10" width="9" height="9" rx="1.5" stroke="GRAD" stroke-width="2"/>
+     <rect x="26" y="10" width="9" height="9" rx="1.5" stroke="GRAD" stroke-width="2"/>
+     <rect x="13" y="21" width="9" height="9" rx="1.5" stroke="GRAD" stroke-width="2"/>
+     <rect x="26" y="21" width="9" height="9" rx="1.5" fill="GRAD" opacity="0.25" stroke="GRAD" stroke-width="2"/>
+     <rect x="13" y="32" width="9" height="9" rx="1.5" fill="GRAD" opacity="0.25" stroke="GRAD" stroke-width="2"/>
+     <rect x="26" y="32" width="9" height="9" rx="1.5" stroke="GRAD" stroke-width="2"/>`,
+  ),
 };
 
 
@@ -566,6 +599,7 @@ const GAME_CATALOG = [
   { id: "limbo", name: "Limbo", blurb: "Beat the multiplier.", playable: true, icon: ICONS.limbo },
   { id: "coinflip", name: "Coinflip", blurb: "Heads or tails, ~2x.", playable: true, icon: ICONS.coinflip },
   { id: "wheel", name: "Wheel", blurb: "Spin for a multiplier.", playable: true, icon: ICONS.wheel },
+  { id: "tower", name: "Tower", blurb: "Climb, dodge the traps.", playable: true, icon: ICONS.tower },
   { id: "crash", name: "Crash", blurb: "Cash out before the bust.", playable: false, icon: ICONS.crash },
   { id: "mines", name: "Mines", blurb: "Dodge the hidden bombs.", playable: false, icon: ICONS.mines },
   { id: "plinko", name: "Plinko", blurb: "Drop into a payout bucket.", playable: false, icon: ICONS.plinko },
@@ -704,6 +738,14 @@ const api = {
     req("/api/client-seed", { method: "POST", auth: true, body: { clientSeed } }),
   bet: (game, bet, stake) =>
     req("/api/bet", { method: "POST", auth: true, body: { game, bet, stake } }),
+  tower: {
+    start: (difficulty, stake) =>
+      req("/api/tower/start", { method: "POST", auth: true, body: { difficulty, stake } }),
+    reveal: (sessionId, pick) =>
+      req("/api/tower/reveal", { method: "POST", auth: true, body: { sessionId, pick } }),
+    cashout: (sessionId) =>
+      req("/api/tower/cashout", { method: "POST", auth: true, body: { sessionId } }),
+  },
 
   /** Full wallet sign-in using the provider's signMessage. Returns account. */
   async signIn(provider, pubkey) {
@@ -875,6 +917,234 @@ function createDiceGame(container, { onRoll, amountLabel = "Bet" }) {
 }
 
 
+// ===== js/tower-logic.js =====
+// =============================================================================
+// Browser Tower logic — mirrors src/games/tower.ts for DEMO mode (no backend).
+// 4 columns per row; difficulty sets trap count. Uses the browser fairness
+// engine (async floats).
+// =============================================================================
+
+
+const TOWER_COLS = 4;
+const TOWER_ROWS = 9;
+const TOWER_TRAPS = { easy: 1, medium: 2, hard: 3 };
+
+const twFloor2 = (x) => Math.floor(x * 100) / 100;
+
+function towerMultiplier(difficulty, rows, edge = HOUSE_EDGE) {
+  if (rows <= 0) return 1;
+  const safe = TOWER_COLS - TOWER_TRAPS[difficulty];
+  const survival = Math.pow(safe / TOWER_COLS, rows);
+  return twFloor2((1 / survival) * (1 - edge));
+}
+
+function towerMaxMultiplier(difficulty) {
+  return towerMultiplier(difficulty, TOWER_ROWS);
+}
+
+function shuffle(n, fs) {
+  const arr = Array.from({ length: n }, (_, i) => i);
+  for (let i = n - 1; i > 0; i--) {
+    const f = fs[n - 1 - i] ?? 0;
+    const j = Math.floor(f * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}
+
+/** Full trap map: trap tile indices per row. Async (browser floats). */
+async function towerLayout(ctx, difficulty) {
+  const traps = TOWER_TRAPS[difficulty];
+  const perRow = TOWER_COLS - 1;
+  const all = await floats(ctx.serverSeed, ctx.clientSeed, ctx.nonce, TOWER_ROWS * perRow);
+  const rows = [];
+  for (let r = 0; r < TOWER_ROWS; r++) {
+    const slice = all.slice(r * perRow, r * perRow + perRow);
+    const order = shuffle(TOWER_COLS, slice);
+    rows.push(order.slice(0, traps).sort((a, b) => a - b));
+  }
+  return rows;
+}
+
+
+// ===== js/tower-game.js =====
+// =============================================================================
+// Tower — interactive game UI (two-column layout, like nuts.gg).
+//   Left:  difficulty tabs, PLAY / CASH OUT button, bet amount.
+//   Right: MAX PAYOUT header + a 4-column grid you climb from the bottom.
+//
+// Presentation only. The app wires onStart/onReveal/onCashout to either the
+// in-browser logic (demo) or the backend tower-session API (real).
+// =============================================================================
+
+function createTowerGame(container, { onStart, onReveal, onCashout, amountLabel = "Bet" }) {
+  let difficulty = "medium";
+  let session = null; // { sessionId } while a game is live
+  let rowsClimbed = 0;
+  let busy = false;
+
+  container.innerHTML = `
+    <div class="tower">
+      <div class="tower-controls">
+        <div class="toggle tower-diff">
+          <button class="toggle-btn" data-d="easy">Easy</button>
+          <button class="toggle-btn active" data-d="medium">Medium</button>
+          <button class="toggle-btn" data-d="hard">Hard</button>
+        </div>
+        <button id="tw-action" class="btn btn-primary big">Bet</button>
+        <label class="field"><span class="k">${amountLabel}</span>
+          <input id="tw-amount" type="number" step="0.001" min="0" value="0.001" /></label>
+      </div>
+      <div class="tower-board">
+        <div class="tower-max">MAX PAYOUT <strong id="tw-max">x0</strong></div>
+        <div id="tw-grid" class="tower-grid"></div>
+        <div id="tw-status" class="tower-status">Pick a difficulty and press Bet.</div>
+      </div>
+    </div>`;
+
+  const $ = (s) => container.querySelector(s);
+  const grid = $("#tw-grid");
+  const actionBtn = $("#tw-action");
+  const amountEl = $("#tw-amount");
+  const statusEl = $("#tw-status");
+  const maxEl = $("#tw-max");
+
+  function updateMax() {
+    maxEl.textContent = "x" + towerMaxMultiplier(difficulty).toLocaleString();
+  }
+
+  // Build the grid: rows top (highest) to bottom (row 0). Climb from the bottom.
+  function buildGrid() {
+    grid.innerHTML = "";
+    for (let r = TOWER_ROWS - 1; r >= 0; r--) {
+      const row = document.createElement("div");
+      row.className = "tower-row";
+      row.dataset.row = r;
+      for (let c = 0; c < TOWER_COLS; c++) {
+        const tile = document.createElement("button");
+        tile.className = "tower-tile";
+        tile.dataset.row = r;
+        tile.dataset.col = c;
+        tile.disabled = true;
+        tile.addEventListener("click", () => onTileClick(r, c));
+        row.appendChild(tile);
+      }
+      grid.appendChild(row);
+    }
+    highlightActiveRow();
+  }
+
+  function rowEls(r) {
+    return [...grid.querySelectorAll(`.tower-tile[data-row="${r}"]`)];
+  }
+
+  function highlightActiveRow() {
+    grid.querySelectorAll(".tower-row").forEach((rw) => {
+      const r = Number(rw.dataset.row);
+      const active = session && r === rowsClimbed;
+      rw.classList.toggle("active", !!active);
+      rowEls(r).forEach((t) => (t.disabled = !active || busy));
+    });
+  }
+
+  async function onTileClick(r, c) {
+    if (!session || r !== rowsClimbed || busy) return;
+    busy = true;
+    highlightActiveRow();
+    try {
+      const res = await onReveal(session.sessionId, c);
+      if (!res) return;
+      // Mark the row: picked tile safe/trap, and show that row's traps.
+      rowEls(r).forEach((t) => {
+        const col = Number(t.dataset.col);
+        if (res.rowTraps && res.rowTraps.includes(col)) t.classList.add("trap");
+        else t.classList.add("safe-row");
+      });
+      const picked = rowEls(r)[c];
+      picked.classList.add(res.bust ? "hit" : "picked");
+
+      if (res.bust) {
+        statusEl.textContent = `💥 Trap on row ${r + 1}. Lost the climb.`;
+        endGame();
+      } else {
+        rowsClimbed = res.rowsClimbed;
+        if (res.completed) {
+          statusEl.textContent = `🏆 Topped out! x${res.multiplier} — paid out.`;
+          endGame();
+        } else {
+          actionBtn.textContent = `Cash Out x${res.multiplier}`;
+          statusEl.textContent = `Safe! Row ${rowsClimbed} cleared · x${res.multiplier}`;
+          highlightActiveRow();
+        }
+      }
+    } finally {
+      busy = false;
+      highlightActiveRow();
+    }
+  }
+
+  function endGame() {
+    session = null;
+    rowsClimbed = 0;
+    actionBtn.textContent = "Bet";
+    grid.querySelectorAll(".tower-tile").forEach((t) => (t.disabled = true));
+    enableDiff(true);
+  }
+
+  function enableDiff(on) {
+    container.querySelectorAll(".tower-diff .toggle-btn").forEach((b) => (b.disabled = !on));
+  }
+
+  container.querySelectorAll(".tower-diff .toggle-btn").forEach((b) => {
+    b.addEventListener("click", () => {
+      if (session) return;
+      difficulty = b.dataset.d;
+      container.querySelectorAll(".tower-diff .toggle-btn").forEach((x) => x.classList.remove("active"));
+      b.classList.add("active");
+      updateMax();
+    });
+  });
+
+  actionBtn.addEventListener("click", async () => {
+    if (busy) return;
+    if (session) {
+      // Cash out
+      busy = true;
+      try {
+        const res = await onCashout(session.sessionId);
+        if (res) statusEl.textContent = `💰 Cashed out x${res.multiplier}.`;
+        endGame();
+      } finally {
+        busy = false;
+      }
+      return;
+    }
+    // Start a new game
+    const amount = parseFloat(amountEl.value) || 0;
+    busy = true;
+    actionBtn.disabled = true;
+    try {
+      const s = await onStart({ difficulty, amount });
+      if (!s) return;
+      session = s;
+      rowsClimbed = 0;
+      enableDiff(false);
+      buildGrid();
+      actionBtn.textContent = "Cash Out x1";
+      statusEl.textContent = "Climb! Pick a tile on the bottom row.";
+    } finally {
+      busy = false;
+      actionBtn.disabled = false;
+      highlightActiveRow();
+    }
+  });
+
+  updateMax();
+  buildGrid();
+  return {};
+}
+
+
 // ===== js/chat.js =====
 // =============================================================================
 // Live chat UI — front-end only, exactly as you asked.
@@ -1010,6 +1280,8 @@ function escapeHtml(s) {
 
 
 
+
+
 const $ = (sel) => document.querySelector(sel);
 
 // In BACKEND mode, holds the signed-in account; null until sign-in.
@@ -1132,7 +1404,22 @@ async function refreshSeeds() {
   $("#seed-nonce").textContent = nonce;
 }
 
-const RICH_GAMES = new Set(["dice"]); // games with a full interactive UI (more coming)
+const RICH_GAMES = new Set(["dice", "tower"]); // games with a full interactive UI (more coming)
+
+function mountGame(id) {
+  const view = $("#game-view");
+  view.innerHTML = "";
+  const amountLabel = BACKEND_ENABLED ? "Bet (SOL)" : "Bet";
+  if (id === "dice") createDiceGame(view, { onRoll: diceOnRoll, amountLabel });
+  else if (id === "tower") {
+    createTowerGame(view, {
+      onStart: towerOnStart,
+      onReveal: towerOnReveal,
+      onCashout: towerOnCashout,
+      amountLabel,
+    });
+  }
+}
 
 function selectGame(id) {
   currentGame = id;
@@ -1143,6 +1430,7 @@ function selectGame(id) {
   $("#bet-btn").classList.toggle("hidden", rich); // rich games have their own roll button
   const sf = $("#stake-field");
   if (sf) sf.classList.toggle("hidden", rich); // rich games have their own amount field
+  if (rich) mountGame(id);
 }
 
 $("#new-seed").addEventListener("click", async () => {
@@ -1305,10 +1593,73 @@ async function diceOnRoll({ target, direction, amount }) {
   return { roll: res.roll, win: res.win, multiplier: res.multiplier };
 }
 
-createDiceGame($("#game-view"), {
-  onRoll: diceOnRoll,
-  amountLabel: BACKEND_ENABLED ? "Bet (SOL)" : "Bet",
-});
+// ---- Tower (rich interactive game: stateful reveals) -----------------------
+// Demo mode keeps the layout client-side; backend mode uses the session API.
+let demoTower = null;
+
+async function towerOnStart({ difficulty, amount }) {
+  if (BACKEND_ENABLED) {
+    if (!account) { logResult("Connect your wallet to sign in first."); return null; }
+    if (!(amount > 0)) { logResult("Enter a bet amount."); return null; }
+    try {
+      const s = await api.tower.start(difficulty, Math.round(amount * SOL));
+      updateBalance(s.balanceLamports);
+      account.nonce = s.nonceUsed + 1;
+      await refreshSeeds();
+      logResult(`🧗 Tower (${difficulty}) started · stake ${amount}`);
+      return s;
+    } catch (e) { logResult("error: " + e.message); return null; }
+  }
+  // demo: fix the layout from the current demo seeds
+  const layout = await towerLayout({ serverSeed, clientSeed, nonce }, difficulty);
+  demoTower = { layout, difficulty, rowsClimbed: 0, stake: amount };
+  nonce++;
+  await refreshSeeds();
+  logResult(`🧗 Tower (${difficulty}) started (demo)`);
+  return { sessionId: "demo", cols: 4, rows: TOWER_ROWS };
+}
+
+async function towerOnReveal(sessionId, pick) {
+  if (BACKEND_ENABLED) {
+    try {
+      const r = await api.tower.reveal(sessionId, pick);
+      if (r.completed || r.bust) updateBalance(r.balanceLamports);
+      if (r.bust) logResult(`💥 Tower trap — lost.`);
+      else if (r.completed) logResult(`🏆 Tower topped out x${r.multiplier}!`);
+      return r;
+    } catch (e) { logResult("error: " + e.message); return null; }
+  }
+  // demo
+  const t = demoTower;
+  const traps = t.layout[t.rowsClimbed];
+  if (traps.includes(pick)) {
+    const row = t.rowsClimbed;
+    logResult(`💥 Tower trap on row ${row + 1} (demo)`);
+    return { safe: false, bust: true, row, pick, rowTraps: traps, multiplier: 0, rowsClimbed: row };
+  }
+  t.rowsClimbed++;
+  const multiplier = towerMultiplier(t.difficulty, t.rowsClimbed);
+  const completed = t.rowsClimbed >= TOWER_ROWS;
+  if (completed) logResult(`🏆 Tower topped out x${multiplier} (demo)`);
+  return {
+    safe: true, bust: false, row: t.rowsClimbed - 1, pick, rowTraps: traps,
+    multiplier, rowsClimbed: t.rowsClimbed, completed,
+  };
+}
+
+async function towerOnCashout(sessionId) {
+  if (BACKEND_ENABLED) {
+    try {
+      const r = await api.tower.cashout(sessionId);
+      updateBalance(r.balanceLamports);
+      logResult(`💰 Tower cashed out x${r.multiplier}`);
+      return r;
+    } catch (e) { logResult("error: " + e.message); return null; }
+  }
+  const m = towerMultiplier(demoTower.difficulty, demoTower.rowsClimbed);
+  logResult(`💰 Tower cashed out x${m} (demo)`);
+  return { multiplier: m, rowsClimbed: demoTower.rowsClimbed };
+}
 
 // ---- Chat -------------------------------------------------------------------
 const chat = new Chat($("#chat-list"), $("#chat-input"), $("#chat-form"));

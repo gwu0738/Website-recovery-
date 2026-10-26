@@ -8,6 +8,8 @@ import { playDice, playLimbo, playCoinflip, playWheel, GAME_CATALOG } from "./ga
 import { connect, disconnect, getBalanceSol, getProvider } from "./wallet.js";
 import { api, BACKEND_ENABLED } from "./api.js";
 import { createDiceGame } from "./dice-game.js";
+import { createTowerGame } from "./tower-game.js";
+import { towerLayout, towerMultiplier, TOWER_ROWS } from "./tower-logic.js";
 import { Chat } from "./chat.js";
 
 const $ = (sel) => document.querySelector(sel);
@@ -132,7 +134,22 @@ async function refreshSeeds() {
   $("#seed-nonce").textContent = nonce;
 }
 
-const RICH_GAMES = new Set(["dice"]); // games with a full interactive UI (more coming)
+const RICH_GAMES = new Set(["dice", "tower"]); // games with a full interactive UI (more coming)
+
+function mountGame(id) {
+  const view = $("#game-view");
+  view.innerHTML = "";
+  const amountLabel = BACKEND_ENABLED ? "Bet (SOL)" : "Bet";
+  if (id === "dice") createDiceGame(view, { onRoll: diceOnRoll, amountLabel });
+  else if (id === "tower") {
+    createTowerGame(view, {
+      onStart: towerOnStart,
+      onReveal: towerOnReveal,
+      onCashout: towerOnCashout,
+      amountLabel,
+    });
+  }
+}
 
 function selectGame(id) {
   currentGame = id;
@@ -143,6 +160,7 @@ function selectGame(id) {
   $("#bet-btn").classList.toggle("hidden", rich); // rich games have their own roll button
   const sf = $("#stake-field");
   if (sf) sf.classList.toggle("hidden", rich); // rich games have their own amount field
+  if (rich) mountGame(id);
 }
 
 $("#new-seed").addEventListener("click", async () => {
@@ -305,10 +323,73 @@ async function diceOnRoll({ target, direction, amount }) {
   return { roll: res.roll, win: res.win, multiplier: res.multiplier };
 }
 
-createDiceGame($("#game-view"), {
-  onRoll: diceOnRoll,
-  amountLabel: BACKEND_ENABLED ? "Bet (SOL)" : "Bet",
-});
+// ---- Tower (rich interactive game: stateful reveals) -----------------------
+// Demo mode keeps the layout client-side; backend mode uses the session API.
+let demoTower = null;
+
+async function towerOnStart({ difficulty, amount }) {
+  if (BACKEND_ENABLED) {
+    if (!account) { logResult("Connect your wallet to sign in first."); return null; }
+    if (!(amount > 0)) { logResult("Enter a bet amount."); return null; }
+    try {
+      const s = await api.tower.start(difficulty, Math.round(amount * SOL));
+      updateBalance(s.balanceLamports);
+      account.nonce = s.nonceUsed + 1;
+      await refreshSeeds();
+      logResult(`🧗 Tower (${difficulty}) started · stake ${amount}`);
+      return s;
+    } catch (e) { logResult("error: " + e.message); return null; }
+  }
+  // demo: fix the layout from the current demo seeds
+  const layout = await towerLayout({ serverSeed, clientSeed, nonce }, difficulty);
+  demoTower = { layout, difficulty, rowsClimbed: 0, stake: amount };
+  nonce++;
+  await refreshSeeds();
+  logResult(`🧗 Tower (${difficulty}) started (demo)`);
+  return { sessionId: "demo", cols: 4, rows: TOWER_ROWS };
+}
+
+async function towerOnReveal(sessionId, pick) {
+  if (BACKEND_ENABLED) {
+    try {
+      const r = await api.tower.reveal(sessionId, pick);
+      if (r.completed || r.bust) updateBalance(r.balanceLamports);
+      if (r.bust) logResult(`💥 Tower trap — lost.`);
+      else if (r.completed) logResult(`🏆 Tower topped out x${r.multiplier}!`);
+      return r;
+    } catch (e) { logResult("error: " + e.message); return null; }
+  }
+  // demo
+  const t = demoTower;
+  const traps = t.layout[t.rowsClimbed];
+  if (traps.includes(pick)) {
+    const row = t.rowsClimbed;
+    logResult(`💥 Tower trap on row ${row + 1} (demo)`);
+    return { safe: false, bust: true, row, pick, rowTraps: traps, multiplier: 0, rowsClimbed: row };
+  }
+  t.rowsClimbed++;
+  const multiplier = towerMultiplier(t.difficulty, t.rowsClimbed);
+  const completed = t.rowsClimbed >= TOWER_ROWS;
+  if (completed) logResult(`🏆 Tower topped out x${multiplier} (demo)`);
+  return {
+    safe: true, bust: false, row: t.rowsClimbed - 1, pick, rowTraps: traps,
+    multiplier, rowsClimbed: t.rowsClimbed, completed,
+  };
+}
+
+async function towerOnCashout(sessionId) {
+  if (BACKEND_ENABLED) {
+    try {
+      const r = await api.tower.cashout(sessionId);
+      updateBalance(r.balanceLamports);
+      logResult(`💰 Tower cashed out x${r.multiplier}`);
+      return r;
+    } catch (e) { logResult("error: " + e.message); return null; }
+  }
+  const m = towerMultiplier(demoTower.difficulty, demoTower.rowsClimbed);
+  logResult(`💰 Tower cashed out x${m} (demo)`);
+  return { multiplier: m, rowsClimbed: demoTower.rowsClimbed };
+}
 
 // ---- Chat -------------------------------------------------------------------
 const chat = new Chat($("#chat-list"), $("#chat-input"), $("#chat-form"));

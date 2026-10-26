@@ -152,6 +152,30 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
 .toggle-btn.active { background: var(--accent); color: #fff; }
 .dice-roll { width: 100%; }
 
+/* Tower game */
+.tower { display: grid; grid-template-columns: 220px 1fr; gap: 18px; margin-bottom: 16px; }
+.tower-controls { display: flex; flex-direction: column; gap: 12px; }
+.tower-diff { width: 100%; }
+.tower-diff .toggle-btn { flex: 1; padding: 8px 6px; font-size: 13px; }
+.tower-controls .field { display: flex; flex-direction: column; gap: 4px; }
+.tower-controls .field .k { font-size: 10px; text-transform: uppercase; letter-spacing: .5px; color: var(--muted); }
+.tower-controls input { width: 100%; padding: 10px; background: var(--bg-2); border: 1px solid var(--border); border-radius: 8px; color: var(--text); }
+.tower-board { background: var(--bg-2); border: 1px solid var(--border); border-radius: 12px; padding: 14px; }
+.tower-max { text-align: center; font-size: 11px; letter-spacing: .5px; color: var(--muted); text-transform: uppercase; margin-bottom: 10px; }
+.tower-max strong { color: var(--accent-2); }
+.tower-grid { display: flex; flex-direction: column; gap: 6px; }
+.tower-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; opacity: .45; transition: opacity .15s; }
+.tower-row.active { opacity: 1; }
+.tower-tile { height: 34px; border-radius: 7px; border: 1px solid var(--border); background: var(--panel-2); cursor: pointer; transition: transform .05s, background .15s, border-color .15s; }
+.tower-row.active .tower-tile:not(:disabled):hover { border-color: var(--accent-2); transform: translateY(-1px); }
+.tower-tile:disabled { cursor: default; }
+.tower-tile.safe-row { background: #10261e; border-color: #1d4b44; }
+.tower-tile.picked { background: linear-gradient(135deg, #1b6b4a, var(--win)); border-color: var(--win); }
+.tower-tile.trap { background: #2a1116; border-color: #6a2030; }
+.tower-tile.hit { background: linear-gradient(135deg, #6a2030, var(--lose)); border-color: var(--lose); }
+.tower-status { text-align: center; font-size: 12px; color: var(--muted); margin-top: 12px; }
+@media (max-width: 620px) { .tower { grid-template-columns: 1fr; } }
+
 .result-log { display: flex; flex-direction: column; gap: 6px; max-height: 190px; overflow: auto; }
 .result-row { background: var(--bg-2); border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; font-size: 13px; }
 .disclaimer { font-size: 11px; color: var(--muted); margin: 12px 0 0; }

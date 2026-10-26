@@ -76,6 +76,14 @@ export const api = {
     req("/api/client-seed", { method: "POST", auth: true, body: { clientSeed } }),
   bet: (game, bet, stake) =>
     req("/api/bet", { method: "POST", auth: true, body: { game, bet, stake } }),
+  tower: {
+    start: (difficulty, stake) =>
+      req("/api/tower/start", { method: "POST", auth: true, body: { difficulty, stake } }),
+    reveal: (sessionId, pick) =>
+      req("/api/tower/reveal", { method: "POST", auth: true, body: { sessionId, pick } }),
+    cashout: (sessionId) =>
+      req("/api/tower/cashout", { method: "POST", auth: true, body: { sessionId } }),
+  },
 
   /** Full wallet sign-in using the provider's signMessage. Returns account. */
   async signIn(provider, pubkey) {

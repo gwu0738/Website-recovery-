@@ -43,7 +43,7 @@ Legend: ✅ done · 🟡 partial · ⬜ not started
 | Roulette | ✅ | ⬜ | wheel UI needed |
 | Wheel | ✅ | 🟡 basic | not in nuts.gg set |
 | Coinflip | ✅ | 🟡 basic | not in nuts.gg set |
-| Tower | ✅ | ⬜ | **align engine to 4 cols + trap-count difficulty** (see below) |
+| Tower | ✅ | ✅ | 4-col model; interactive climb (start/reveal/cashout), demo + backend |
 | HiLo | ✅ | ⬜ | card-flip UI; streak mode is a UI layer |
 | Chicken | ✅ | ⬜ | crash-ladder UI |
 | Darts | ✅ | ⬜ | ⚠️ payout weights are our own — RTP-tune |
