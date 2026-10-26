@@ -43,11 +43,15 @@ function getChain(): Chain | null {
   return chain;
 }
 
+// Lock the API to your site's origin in production (CORS_ORIGIN=https://your.domain).
+const CORS_ORIGIN = process.env.CORS_ORIGIN || "*";
+
 function send(res: ServerResponse, status: number, body: unknown) {
   const json = JSON.stringify(body);
   res.writeHead(status, {
     "content-type": "application/json",
-    "access-control-allow-origin": "*",
+    "access-control-allow-origin": CORS_ORIGIN,
+    ...(CORS_ORIGIN !== "*" ? { vary: "Origin" } : {}),
     "access-control-allow-headers": "content-type, authorization",
     "access-control-allow-methods": "GET, POST, OPTIONS",
   });

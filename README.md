@@ -117,6 +117,12 @@ one-line change. (A `403 Forbidden` on mainnet almost always means the free publ
 RPC is rate-limiting you — use a proper RPC provider or your own node, not the
 public endpoint.)
 
+## Hosting it
+
+`deploy/DEPLOY.md` walks through a VPS setup end to end: systemd service for the
+backend, nginx serving `web/` and proxying `/api/`, HTTPS via certbot, the house
+wallet, environment variables, and backups. Start on devnet, then mainnet.
+
 ## A note on responsibility
 
 Code that handles real money is unforgiving — bugs are irreversible. Keep the house

@@ -10,6 +10,7 @@
  *   MIN_STAKE_LAMPORTS / MAX_STAKE_LAMPORTS
  *   MIN_WITHDRAW_LAMPORTS
  *   HOUSE_RESERVE_LAMPORTS  kept in the house wallet, never paid out
+ *   CORS_ORIGIN      your site's origin (default "*"); see deploy/DEPLOY.md
  */
 import { HOUSE_EDGE } from "../src/config.ts";
 

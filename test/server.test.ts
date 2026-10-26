@@ -34,7 +34,11 @@ before(async () => {
 
 after(() => {
   httpServer.close();
-  rmSync(process.env.VANTA_DATA_DIR!, { recursive: true, force: true });
+  try {
+    rmSync(process.env.VANTA_DATA_DIR!, { recursive: true, force: true });
+  } catch {
+    // Windows keeps the SQLite file locked while the store is open; the temp dir is harmless.
+  }
 });
 
 const j = async (res: Response) => ({ status: res.status, body: await res.json() });

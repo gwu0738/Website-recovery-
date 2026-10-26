@@ -6,6 +6,10 @@ import { mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { execFileSync } from "node:child_process";
+import { pathToFileURL } from "node:url";
+
+// A module path for a generated script: import() needs a file:// URL on Windows.
+const mod = (...parts: string[]) => JSON.stringify(pathToFileURL(join(...parts)).href);
 
 const DATA = mkdtempSync(join(tmpdir(), "vanta-real-"));
 process.env.VANTA_DATA_DIR = DATA;
@@ -87,9 +91,9 @@ test("a locked stake survives a server restart and the game resumes", () => {
   // Process A: fund, start a tower game, find a safe tile for row 0, then exit.
   writeFileSync(
     scriptA,
-    `const { getOrCreateAccount, save } = await import(${JSON.stringify(join(root, "server/store.ts"))});
-     const { towerStart } = await import(${JSON.stringify(join(root, "server/tower-session.ts"))});
-     const { towerLayout } = await import(${JSON.stringify(join(root, "src/games/tower.ts"))});
+    `const { getOrCreateAccount, save } = await import(${mod(root, "server/store.ts")});
+     const { towerStart } = await import(${mod(root, "server/tower-session.ts")});
+     const { towerLayout } = await import(${mod(root, "src/games/tower.ts")});
      const a = getOrCreateAccount("Restarter"); a.balanceLamports = 10_000_000; save(a);
      const s = towerStart(a, "easy", 4_000_000);
      const layout = towerLayout({ serverSeed: a.serverSeed, clientSeed: a.clientSeed, nonce: s.nonceUsed }, "easy");
@@ -99,8 +103,8 @@ test("a locked stake survives a server restart and the game resumes", () => {
   // Process B (a "restarted server"): reveal + cash out the same session.
   writeFileSync(
     scriptB,
-    `const { getAccount } = await import(${JSON.stringify(join(root, "server/store.ts"))});
-     const { towerReveal, towerCashout } = await import(${JSON.stringify(join(root, "server/tower-session.ts"))});
+    `const { getAccount } = await import(${mod(root, "server/store.ts")});
+     const { towerReveal, towerCashout } = await import(${mod(root, "server/tower-session.ts")});
      const [sessionId, safe] = process.argv.slice(2);
      const a = getAccount("Restarter");
      const r = towerReveal(a, sessionId, Number(safe));
@@ -127,14 +131,14 @@ test("a sign-in token survives a server restart (sessions are persisted, not in 
   // Process A: issue a token the way /api/auth/verify does (store it), then exit.
   writeFileSync(
     scriptA,
-    `const { insertAuthSession } = await import(${JSON.stringify(join(root, "server/store.ts"))});
+    `const { insertAuthSession } = await import(${mod(root, "server/store.ts")});
      insertAuthSession("tok-restart-test", "WalletRestart", Date.now() + 60_000);
      console.log("ok");`,
   );
   // Process B (a "restarted server"): the token must still resolve to the wallet.
   writeFileSync(
     scriptB,
-    `const { pubkeyForToken } = await import(${JSON.stringify(join(root, "server/auth.ts"))});
+    `const { pubkeyForToken } = await import(${mod(root, "server/auth.ts")});
      console.log(JSON.stringify({ pubkey: pubkeyForToken("tok-restart-test"), expired: pubkeyForToken("nope") }));`,
   );
   const env = { ...process.env, VANTA_DATA_DIR: DATA, NODE_NO_WARNINGS: "1" };
