@@ -1,39 +1,50 @@
 /**
- * Chicken — a crash-ladder. The chicken takes steps forward; each step raises
- * the multiplier but has a chance of ending the run ("getting hit"). The player
- * picks how many steps to attempt (their cash-out point) and wins if the chicken
- * survives all of them.
+ * Chicken — a road-crossing crash-ladder with a "death point" model.
  *
- * Each step survives with probability `p` (set by difficulty). The survive/die
- * sequence is provably-fair from the bet's floats. Multiplier after n surviving
- * steps is (1 - houseEdge) / p^n, so the edge is exact.
+ * There are 20 lane positions and k hidden hazards (k set by difficulty). The
+ * positions are shuffled with the bet's provably-fair floats; the first k are
+ * hazards, and the chicken dies on the LOWEST hazard lane (the death point).
+ * So it is Mines laid out on a line: the player can cross up to 20 − k lanes.
+ *
+ * Reaching lane n requires all k hazards to sit beyond n:
+ *   P(survive n) = C(20 − n, k) / C(20, k)
+ *   multiplier   = (1 − houseEdge) / P(survive n)
+ * which makes the edge exact for every cash-out point.
  */
 import { HOUSE_EDGE } from "../config.ts";
 import { floats } from "../fairness/engine.ts";
-import { floor2 } from "./shared.ts";
+import { shuffleIndices } from "./shared.ts";
 import type { BetContext, GameResult } from "./types.ts";
 
 export type ChickenDifficulty = "easy" | "medium" | "hard" | "expert";
 
-/** Per-step survival probability by difficulty (lower = riskier, pays more). */
-export const CHICKEN_SURVIVAL: Record<ChickenDifficulty, number> = {
-  easy: 0.86,
-  medium: 0.7,
-  hard: 0.55,
-  expert: 0.4,
+export const CHICKEN_LANES = 20;
+
+/** Hidden hazards per difficulty (out of CHICKEN_LANES positions). */
+export const CHICKEN_HAZARDS: Record<ChickenDifficulty, number> = {
+  easy: 1,
+  medium: 3,
+  hard: 5,
+  expert: 10,
 };
 
-export const CHICKEN_MAX_STEPS = 24;
+/** Lanes a player can cross at this difficulty (20 − hazards). */
+export function chickenMaxSteps(difficulty: ChickenDifficulty): number {
+  const k = CHICKEN_HAZARDS[difficulty];
+  if (k === undefined) throw new Error("Unknown chicken difficulty");
+  return CHICKEN_LANES - k;
+}
 
 export interface ChickenBet {
   difficulty: ChickenDifficulty;
-  /** Number of steps to attempt before cashing out (>= 1). */
+  /** Number of lanes to cross before cashing out (1 .. maxSteps). */
   steps: number;
 }
 
 export interface ChickenOutcome {
   difficulty: ChickenDifficulty;
   steps: number;
+  deathPoint: number; // lane the chicken would be caught on
   survivedSteps: number;
   bust: boolean;
 }
@@ -44,20 +55,28 @@ export function chickenMultiplier(
   houseEdge = HOUSE_EDGE,
 ): number {
   if (steps <= 0) return 1;
-  const p = CHICKEN_SURVIVAL[difficulty];
-  return floor2((1 / Math.pow(p, steps)) * (1 - houseEdge));
+  const k = CHICKEN_HAZARDS[difficulty];
+  // C(20,k) / C(20-n,k) as a running product, to avoid big numbers.
+  let inverseSurvival = 1;
+  for (let i = 0; i < steps; i++) {
+    inverseSurvival *= (CHICKEN_LANES - i) / (CHICKEN_LANES - i - k);
+  }
+  // Floor to 2dp in "hundredths" space, after rounding away float noise there
+  // (x*100 can land on 112859.99999… for an exact 1128.6).
+  return Math.floor(Math.round(inverseSurvival * (1 - houseEdge) * 1e8) / 1e6) / 100;
 }
 
 export function chickenMaxMultiplier(difficulty: ChickenDifficulty, houseEdge = HOUSE_EDGE): number {
-  return chickenMultiplier(difficulty, CHICKEN_MAX_STEPS, houseEdge);
+  return chickenMultiplier(difficulty, chickenMaxSteps(difficulty), houseEdge);
 }
 
-/** Survive/die for every step, fixed by the seed (true = survive). */
-export function chickenLayout(ctx: BetContext, difficulty: ChickenDifficulty): boolean[] {
-  const p = CHICKEN_SURVIVAL[difficulty];
-  if (p === undefined) throw new Error("Unknown chicken difficulty");
-  const fs = floats(ctx.serverSeed, ctx.clientSeed, ctx.nonce, CHICKEN_MAX_STEPS);
-  return fs.map((f) => f < p);
+/** The lane (1..20) the chicken is caught on, fixed by the seed. */
+export function chickenDeathPoint(ctx: BetContext, difficulty: ChickenDifficulty): number {
+  const k = CHICKEN_HAZARDS[difficulty];
+  if (k === undefined) throw new Error("Unknown chicken difficulty");
+  const fs = floats(ctx.serverSeed, ctx.clientSeed, ctx.nonce, CHICKEN_LANES - 1);
+  const order = shuffleIndices(CHICKEN_LANES, fs);
+  return Math.min(...order.slice(0, k)) + 1;
 }
 
 export function playChicken(
@@ -65,25 +84,21 @@ export function playChicken(
   bet: ChickenBet,
   houseEdge = HOUSE_EDGE,
 ): GameResult<ChickenOutcome> {
-  const p = CHICKEN_SURVIVAL[bet.difficulty];
-  if (p === undefined) throw new Error("Unknown chicken difficulty");
-  if (bet.steps < 1 || bet.steps > CHICKEN_MAX_STEPS) {
-    throw new Error(`Chicken steps must be 1..${CHICKEN_MAX_STEPS}`);
+  const max = chickenMaxSteps(bet.difficulty);
+  if (bet.steps < 1 || bet.steps > max) {
+    throw new Error(`Chicken steps must be 1..${max}`);
   }
-  const survive = chickenLayout(ctx, bet.difficulty);
-  let survivedSteps = 0;
-  let bust = false;
-  for (let i = 0; i < bet.steps; i++) {
-    if (survive[i]) survivedSteps++;
-    else {
-      bust = true;
-      break;
-    }
-  }
-  const win = !bust;
+  const deathPoint = chickenDeathPoint(ctx, bet.difficulty);
+  const win = bet.steps < deathPoint;
   return {
     game: "chicken",
-    outcome: { difficulty: bet.difficulty, steps: bet.steps, survivedSteps, bust },
+    outcome: {
+      difficulty: bet.difficulty,
+      steps: bet.steps,
+      deathPoint,
+      survivedSteps: Math.min(bet.steps, deathPoint - 1),
+      bust: !win,
+    },
     win,
     multiplier: win ? chickenMultiplier(bet.difficulty, bet.steps, houseEdge) : 0,
     houseEdge,

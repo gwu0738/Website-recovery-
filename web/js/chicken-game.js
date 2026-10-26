@@ -1,22 +1,24 @@
 // =============================================================================
-// Chicken — road-crossing crash-ladder. A sidewalk on the left, then lanes;
-// each lane carries the multiplier you lock in by reaching it. Press Go and the
-// chicken hops one lane; get caught and a car comes down the lane. Cash out any
-// time. Presentation only; the app wires onStart/onStep/onCashout.
+// Chicken — road-crossing crash-ladder. A sidewalk on the left, then lanes (the
+// count depends on difficulty); each lane carries the multiplier you lock in by
+// reaching it. Press Go and the chicken leaps onto the next lane's spot; traffic
+// keeps driving through the lanes ahead, crossed lanes get a barrier. Get caught
+// and a car comes down that lane. Cash out any time.
+// Presentation only; the app wires onStart/onStep/onCashout.
 // =============================================================================
-import { CHICKEN_MAX_STEPS, chickenMultiplier, chickenMaxMultiplier } from "./chicken-logic.js";
+import { chickenMaxSteps, chickenMultiplier, chickenMaxMultiplier } from "./chicken-logic.js";
 
 const DIFFS = ["easy", "medium", "hard", "expert"];
 const SIDE = 90; // sidewalk width (px)
 const LANE = 96; // lane width (px)
-const HOP_MS = 360;
+const HOP_MS = 460;
 const CRASH_MS = 380;
 
 const chickSleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const reducedMotion = () =>
   !!window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-// Original artwork (not anyone else's mascot).
+// Original artwork.
 const CHICK_SVG = `<svg viewBox="0 0 64 64" aria-hidden="true">
   <ellipse cx="30" cy="40" rx="18" ry="16" fill="#f5f2ea"/>
   <path d="M14 40 q-8 4 -2 12 q6 -2 9 -8z" fill="#e3ddcf"/>
@@ -27,13 +29,15 @@ const CHICK_SVG = `<svg viewBox="0 0 64 64" aria-hidden="true">
   <path d="M27 55 v6 M35 55 v6" stroke="#ffb02e" stroke-width="3" stroke-linecap="round"/>
 </svg>`;
 
-const CAR_SVG = `<svg viewBox="0 0 56 84" aria-hidden="true">
-  <rect x="4" y="4" width="48" height="76" rx="12" fill="#7c5cff"/>
+const carSvg = (body) => `<svg viewBox="0 0 56 84" aria-hidden="true">
+  <rect x="4" y="4" width="48" height="76" rx="12" fill="${body}"/>
   <rect x="10" y="12" width="36" height="16" rx="4" fill="#0a0b10" opacity=".65"/>
   <rect x="10" y="52" width="36" height="12" rx="4" fill="#0a0b10" opacity=".5"/>
   <rect x="8" y="75" width="11" height="5" rx="2" fill="#ffce54"/>
   <rect x="37" y="75" width="11" height="5" rx="2" fill="#ffce54"/>
 </svg>`;
+
+const TRAFFIC_COLORS = ["#4aa3ff", "#35d07f", "#ffb02e", "#ff7ab6", "#9aa3b8", "#00e0b8"];
 
 const laneX = (step) => (step === 0 ? SIDE / 2 : SIDE + (step - 1) * LANE + LANE / 2);
 
@@ -55,7 +59,7 @@ export function createChickenGame(container, { onStart, onStep, onCashout, amoun
           <input id="ck-amount" type="number" step="0.001" min="0" value="0.001" /></label>
       </div>
       <div class="chicken-board">
-        <div class="chicken-max">MAX PAYOUT <strong id="ck-max">x0</strong></div>
+        <div class="chicken-max">MAX PAYOUT <strong id="ck-max">x0</strong> · <span id="ck-lanes"></span></div>
         <div id="ck-viewport" class="road-viewport">
           <div id="ck-road" class="road"></div>
         </div>
@@ -70,25 +74,35 @@ export function createChickenGame(container, { onStart, onStep, onCashout, amoun
   const goBtn = $("#ck-go");
   const amountEl = $("#ck-amount");
   const statusEl = $("#ck-status");
-  const maxEl = $("#ck-max");
   let chick = null;
 
-  function updateMax() {
-    maxEl.textContent = "x" + chickenMaxMultiplier(difficulty).toLocaleString();
+  function updateHeader() {
+    $("#ck-max").textContent = "x" + chickenMaxMultiplier(difficulty).toLocaleString();
+    $("#ck-lanes").textContent = `${chickenMaxSteps(difficulty)} lanes`;
   }
 
   function buildRoad() {
+    const lanes = chickenMaxSteps(difficulty);
     let html = `<div class="sidewalk"></div>`;
-    for (let i = 1; i <= CHICKEN_MAX_STEPS; i++) {
+    for (let i = 1; i <= lanes; i++) {
+      const color = TRAFFIC_COLORS[i % TRAFFIC_COLORS.length];
+      // Stagger traffic so lanes don't move in lockstep.
+      const dur = (1.6 + ((i * 37) % 9) / 10).toFixed(2);
+      const delay = (-((i * 53) % 17) / 10).toFixed(2);
       html += `<div class="lane" data-step="${i}">
-          <div class="car">${CAR_SVG}</div>
+          <div class="traffic" style="animation-duration:${dur}s;animation-delay:${delay}s">${carSvg(color)}</div>
+          <div class="car">${carSvg("#7c5cff")}</div>
+          <div class="lane-barrier"></div>
           <div class="lane-hole"></div>
           <div class="lane-badge">${chickenMultiplier(difficulty, i)}x</div>
         </div>`;
     }
-    html += `<div class="chick" id="ck-chick"><div class="chick-body">${CHICK_SVG}</div></div>`;
+    html += `<div class="chick" id="ck-chick">
+        <div class="chick-dust"></div>
+        <div class="chick-body">${CHICK_SVG}</div>
+      </div>`;
     road.innerHTML = html;
-    road.style.width = SIDE + CHICKEN_MAX_STEPS * LANE + "px";
+    road.style.width = SIDE + lanes * LANE + "px";
     chick = $("#ck-chick");
     chick.style.left = laneX(0) + "px";
     viewport.scrollLeft = 0;
@@ -105,22 +119,24 @@ export function createChickenGame(container, { onStart, onStep, onCashout, amoun
 
   function follow(step) {
     const left = Math.max(0, laneX(step) - viewport.clientWidth / 2);
-    if (viewport.scrollTo) {
-      viewport.scrollTo({ left, behavior: reducedMotion() ? "auto" : "smooth" });
-    } else {
-      viewport.scrollLeft = left;
-    }
+    if (viewport.scrollTo) viewport.scrollTo({ left, behavior: reducedMotion() ? "auto" : "smooth" });
+    else viewport.scrollLeft = left;
   }
 
-  async function hopTo(step) {
+  // Leap onto the target lane's spot: takeoff stretch, arc, landing squash + dust.
+  async function leapTo(step) {
     chick.style.left = laneX(step) + "px";
     follow(step);
     if (reducedMotion()) return;
     const body = chick.querySelector(".chick-body");
-    body.classList.remove("hop");
-    void body.offsetWidth; // restart the animation
-    body.classList.add("hop");
-    await chickSleep(HOP_MS);
+    const dust = chick.querySelector(".chick-dust");
+    body.classList.remove("leap");
+    dust.classList.remove("puff");
+    void body.offsetWidth; // restart animations
+    body.classList.add("leap");
+    await chickSleep(HOP_MS * 0.85);
+    dust.classList.add("puff");
+    await chickSleep(HOP_MS * 0.15);
   }
 
   function setDiffEnabled(on) {
@@ -141,7 +157,7 @@ export function createChickenGame(container, { onStart, onStep, onCashout, amoun
       difficulty = b.dataset.d;
       container.querySelectorAll(".chicken-diff .toggle-btn").forEach((x) => x.classList.remove("active"));
       b.classList.add("active");
-      updateMax();
+      updateHeader();
       buildRoad();
     });
   });
@@ -150,7 +166,7 @@ export function createChickenGame(container, { onStart, onStep, onCashout, amoun
     if (!session || busy) return;
     busy = true;
     goBtn.disabled = true;
-    actionBtn.disabled = true; // no cash-out mid-hop
+    actionBtn.disabled = true; // no cash-out mid-leap
     try {
       const r = await onStep(session.sessionId);
       if (!r) {
@@ -158,18 +174,19 @@ export function createChickenGame(container, { onStart, onStep, onCashout, amoun
         return;
       }
       if (r.bust) {
-        const lane = r.step + 1;
-        await hopTo(lane);
-        road.querySelector(`.lane[data-step="${lane}"]`)?.classList.add("crash");
+        const lane = road.querySelector(`.lane[data-step="${r.step + 1}"]`);
+        lane?.classList.add("stopped"); // clear ambient traffic from the deadly lane
+        await leapTo(r.step + 1);
+        lane?.classList.add("crash");
         if (!reducedMotion()) await chickSleep(CRASH_MS);
         chick.classList.add("squashed");
-        statusEl.textContent = `💥 Hit on lane ${lane}. Lost.`;
+        statusEl.textContent = `💥 Hit on lane ${r.step + 1}. Lost.`;
         endGame();
         return;
       }
       stepsTaken = r.stepsTaken;
-      markLanes();
-      await hopTo(stepsTaken);
+      markLanes(); // barrier goes up, traffic stops in the landing lane
+      await leapTo(stepsTaken);
       if (r.completed) {
         chick.classList.add("win");
         statusEl.textContent = `🏆 Crossed every lane! ${r.multiplier}x`;
@@ -217,14 +234,14 @@ export function createChickenGame(container, { onStart, onStep, onCashout, amoun
       buildRoad();
       goBtn.disabled = false;
       actionBtn.textContent = "Cash Out";
-      statusEl.textContent = "Press Go to hop a lane. Cash out any time.";
+      statusEl.textContent = "Press Go to leap a lane. Cash out any time.";
     } finally {
       busy = false;
       actionBtn.disabled = false;
     }
   });
 
-  updateMax();
+  updateHeader();
   buildRoad();
   return {};
 }

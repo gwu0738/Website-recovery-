@@ -202,17 +202,37 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
 .lane .car svg { width: 100%; height: 100%; display: block; }
 .lane.crash .car { top: 128px; }
 .lane.crash .lane-badge { background: var(--lose); color: #fff; }
-.chick { position: absolute; bottom: 70px; left: 45px; width: 56px; height: 56px; margin-left: -28px; z-index: 2; transition: left .36s ease; }
-.chick-body { width: 100%; height: 100%; transform-origin: 50% 100%; transition: transform .2s, opacity .2s; }
+/* ambient traffic in lanes not yet crossed */
+.lane .traffic { position: absolute; top: -96px; left: 50%; width: 46px; height: 70px; margin-left: -23px; opacity: .85; animation: ck-traffic 2s linear infinite; }
+.lane .traffic svg { width: 100%; height: 100%; display: block; }
+.lane.passed .traffic, .lane.stopped .traffic, .lane.crash .traffic { display: none; }
+@keyframes ck-traffic { from { top: -96px; } to { top: 270px; } }
+/* barrier that goes up on a crossed lane */
+.lane-barrier { position: absolute; top: 18px; left: 12px; right: 12px; height: 12px; border-radius: 4px; background: repeating-linear-gradient(135deg, #ffce54 0 8px, #2a2f40 8px 16px); opacity: 0; transform: scaleX(.3); transition: opacity .25s, transform .25s; }
+.lane.passed .lane-barrier { opacity: 1; transform: scaleX(1); }
+/* the chicken: stands on the lane spot, leaps lane to lane */
+.chick { position: absolute; bottom: 70px; left: 45px; width: 56px; height: 56px; margin-left: -28px; z-index: 2; transition: left .46s cubic-bezier(.45,0,.4,1); }
+.chick-body { position: relative; width: 100%; height: 100%; transform-origin: 50% 100%; transition: transform .2s, opacity .2s; }
 .chick-body svg { width: 100%; height: 100%; display: block; }
-.chick-body.hop { animation: chick-hop .36s ease; }
+.chick-body.leap { animation: chick-leap .46s ease-in-out; }
+.chick-dust { position: absolute; left: 50%; bottom: -4px; width: 54px; height: 14px; margin-left: -27px; border-radius: 50%; background: radial-gradient(ellipse, rgba(220,215,200,.55), transparent 70%); opacity: 0; transform: scale(.4); }
+.chick-dust.puff { animation: chick-dust .45s ease-out; }
 .chick.squashed .chick-body { transform: scaleY(.3); opacity: .5; }
 .chick.win .chick-body { animation: chick-cheer .6s ease 2; }
-@keyframes chick-hop { 0% { transform: translateY(0); } 45% { transform: translateY(-36px) scale(1.06); } 100% { transform: translateY(0); } }
+@keyframes chick-leap {
+  0%   { transform: translateY(0) scale(1, 1); }
+  12%  { transform: translateY(0) scale(1.12, .82); }      /* crouch */
+  30%  { transform: translateY(-34px) scale(.9, 1.15); }   /* takeoff stretch */
+  55%  { transform: translateY(-56px) scale(1, 1); }       /* top of the arc */
+  85%  { transform: translateY(0) scale(1.15, .8); }       /* landing squash */
+  100% { transform: translateY(0) scale(1, 1); }
+}
+@keyframes chick-dust { 0% { opacity: .9; transform: scale(.4); } 100% { opacity: 0; transform: scale(1.5); } }
 @keyframes chick-cheer { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-14px); } }
 @media (prefers-reduced-motion: reduce) {
-  .chick, .lane .car, .chick-body { transition: none; }
-  .chick-body.hop, .chick.win .chick-body { animation: none; }
+  .chick, .lane .car, .chick-body, .lane-barrier { transition: none; }
+  .chick-body.leap, .chick.win .chick-body, .chick-dust.puff { animation: none; }
+  .lane .traffic { display: none; }
 }
 .chicken-status { text-align: center; font-size: 12px; color: var(--muted); margin-top: 10px; }
 @media (max-width: 620px) { .chicken { grid-template-columns: 1fr; } }

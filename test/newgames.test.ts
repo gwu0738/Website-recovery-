@@ -45,8 +45,21 @@ test("hilo multiplier matches the probability of the chosen side", () => {
   }
 });
 
-test("chicken multiplier matches p^n and RTP is ~0.99 over many bets", () => {
-  assert.equal(chickenMultiplier("easy", 1), 1.15); // (1/0.86)*0.99 floored
+test("chicken death-point ladder reproduces the reference values at a 2% edge", () => {
+  // medium = 3 hazards in 20 lanes -> 17 crossable lanes. The reference rounds
+  // to 2dp while we floor (we never overpay), so compare the exact endpoints and
+  // allow 0.01 elsewhere.
+  assert.equal(chickenMultiplier("medium", 1, 0.02), 1.15);
+  assert.equal(chickenMultiplier("medium", 17, 0.02), 1117.2);
+  const reference = { 2: 1.37, 3: 1.64, 4: 2.0, 10: 9.31 } as Record<number, number>;
+  for (const [n, v] of Object.entries(reference)) {
+    const ours = chickenMultiplier("medium", Number(n), 0.02);
+    assert.ok(Math.abs(ours - v) <= 0.011, `lane ${n}: ours ${ours} vs ${v}`);
+  }
+});
+
+test("chicken multiplier at our 1% edge and RTP is ~0.99 over many bets", () => {
+  assert.equal(chickenMultiplier("easy", 1), 1.04); // floor2(0.99 * 20/19)
   const serverSeed = generateServerSeed();
   const n = 100000;
   let returned = 0;

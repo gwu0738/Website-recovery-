@@ -1,18 +1,17 @@
 /**
- * Chicken game sessions — a crash-ladder played step by step. Advance to raise
- * the multiplier; cash out before a step kills the chicken. Like Tower, the
- * survive/die outcome for every step is fixed at start by the committed seed,
- * so it needs server-side state.
+ * Chicken game sessions — cross lanes one at a time; cash out before you're
+ * caught. The death point (the lane you'd be caught on) is fixed at start by
+ * the committed seed, so the game needs server-side state.
  *
  * In-memory sessions (see tower-session.ts note) — persist before real money.
  */
 import { randomBytes } from "node:crypto";
 import {
-  chickenLayout,
+  chickenDeathPoint,
   chickenMultiplier,
   chickenMaxMultiplier,
-  CHICKEN_MAX_STEPS,
-  CHICKEN_SURVIVAL,
+  chickenMaxSteps,
+  CHICKEN_HAZARDS,
   type ChickenDifficulty,
 } from "../src/games/chicken.ts";
 import { BET } from "./config.ts";
@@ -23,7 +22,7 @@ interface ChickenSession {
   pubkey: string;
   difficulty: ChickenDifficulty;
   stakeLamports: number;
-  survive: boolean[];
+  deathPoint: number;
   stepsTaken: number;
   active: boolean;
   nonceUsed: number;
@@ -34,14 +33,14 @@ const sessions = new Map<string, ChickenSession>();
 export class ChickenError extends Error {}
 
 export function chickenStart(acct: Account, difficulty: ChickenDifficulty, stakeLamports: number) {
-  if (CHICKEN_SURVIVAL[difficulty] === undefined) throw new ChickenError("Unknown difficulty");
+  if (CHICKEN_HAZARDS[difficulty] === undefined) throw new ChickenError("Unknown difficulty");
   if (!Number.isFinite(stakeLamports) || stakeLamports <= 0) throw new ChickenError("Invalid stake");
   if (stakeLamports < BET.minStakeLamports || stakeLamports > BET.maxStakeLamports) {
     throw new ChickenError("Stake out of allowed range");
   }
   if (stakeLamports > acct.balanceLamports) throw new ChickenError("Insufficient balance");
 
-  const survive = chickenLayout(
+  const deathPoint = chickenDeathPoint(
     { serverSeed: acct.serverSeed, clientSeed: acct.clientSeed, nonce: acct.nonce },
     difficulty,
   );
@@ -57,7 +56,7 @@ export function chickenStart(acct: Account, difficulty: ChickenDifficulty, stake
     pubkey: acct.pubkey,
     difficulty,
     stakeLamports,
-    survive,
+    deathPoint,
     stepsTaken: 0,
     active: true,
     nonceUsed,
@@ -66,7 +65,7 @@ export function chickenStart(acct: Account, difficulty: ChickenDifficulty, stake
   return {
     sessionId: id,
     difficulty,
-    maxSteps: CHICKEN_MAX_STEPS,
+    maxSteps: chickenMaxSteps(difficulty),
     maxMultiplier: chickenMaxMultiplier(difficulty),
     currentMultiplier: 1,
     balanceLamports: acct.balanceLamports,
@@ -85,23 +84,23 @@ function owned(acct: Account, sessionId: string): ChickenSession {
 
 export function chickenStep(acct: Account, sessionId: string) {
   const s = owned(acct, sessionId);
-  const survived = s.survive[s.stepsTaken];
+  const lane = s.stepsTaken + 1;
 
-  if (!survived) {
+  if (lane === s.deathPoint) {
     s.active = false;
     return {
       survived: false,
       bust: true,
-      step: s.stepsTaken,
+      step: s.stepsTaken, // zero-based index of the lane that caught the chicken
       multiplier: 0,
       stepsTaken: s.stepsTaken,
       balanceLamports: acct.balanceLamports,
     };
   }
 
-  s.stepsTaken += 1;
+  s.stepsTaken = lane;
   const multiplier = chickenMultiplier(s.difficulty, s.stepsTaken);
-  const completed = s.stepsTaken >= CHICKEN_MAX_STEPS;
+  const completed = s.stepsTaken >= chickenMaxSteps(s.difficulty);
   let payoutLamports = 0;
   if (completed) {
     payoutLamports = Math.floor(s.stakeLamports * multiplier);

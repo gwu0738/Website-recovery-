@@ -11,7 +11,7 @@ import { createDiceGame } from "./dice-game.js";
 import { createTowerGame } from "./tower-game.js";
 import { towerLayout, towerMultiplier, TOWER_ROWS } from "./tower-logic.js";
 import { createChickenGame } from "./chicken-game.js";
-import { chickenLayout, chickenMultiplier, CHICKEN_MAX_STEPS } from "./chicken-logic.js";
+import { chickenDeathPoint, chickenMultiplier, chickenMaxSteps } from "./chicken-logic.js";
 import { Chat } from "./chat.js";
 
 const $ = (sel) => document.querySelector(sel);
@@ -416,8 +416,8 @@ async function chickenOnStart({ difficulty, amount }) {
       return s;
     } catch (e) { logResult("error: " + e.message); return null; }
   }
-  const survive = await chickenLayout({ serverSeed, clientSeed, nonce }, difficulty);
-  demoChicken = { survive, difficulty, stepsTaken: 0 };
+  const deathPoint = await chickenDeathPoint({ serverSeed, clientSeed, nonce }, difficulty);
+  demoChicken = { deathPoint, difficulty, stepsTaken: 0 };
   nonce++;
   await refreshSeeds();
   logResult(`🐔 Chicken (${difficulty}) started (demo)`);
@@ -435,14 +435,14 @@ async function chickenOnStep(sessionId) {
     } catch (e) { logResult("error: " + e.message); return null; }
   }
   const t = demoChicken;
-  if (!t.survive[t.stepsTaken]) {
+  if (t.stepsTaken + 1 === t.deathPoint) {
     const step = t.stepsTaken;
-    logResult(`💥 Chicken caught on step ${step + 1} (demo)`);
+    logResult(`💥 Chicken caught on lane ${step + 1} (demo)`);
     return { survived: false, bust: true, step, multiplier: 0, stepsTaken: step };
   }
   t.stepsTaken++;
   const multiplier = chickenMultiplier(t.difficulty, t.stepsTaken);
-  const completed = t.stepsTaken >= CHICKEN_MAX_STEPS;
+  const completed = t.stepsTaken >= chickenMaxSteps(t.difficulty);
   if (completed) logResult(`🏆 Chicken made it! x${multiplier} (demo)`);
   return { survived: true, bust: false, step: t.stepsTaken - 1, multiplier, stepsTaken: t.stepsTaken, completed };
 }

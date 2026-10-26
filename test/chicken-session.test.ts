@@ -1,5 +1,5 @@
 // Chicken stateful-session tests: start -> step -> cashout, matching the
-// seed-fixed survive/die layout.
+// seed-fixed death point.
 import { test, before } from "node:test";
 import assert from "node:assert/strict";
 import { mkdtempSync } from "node:fs";
@@ -10,7 +10,7 @@ process.env.VANTA_DATA_DIR = mkdtempSync(join(tmpdir(), "vanta-chk-"));
 
 const { getOrCreateAccount, save, getAccount } = await import("../server/store.ts");
 const { chickenStart, chickenStep, chickenCashout } = await import("../server/chicken-session.ts");
-const { chickenLayout, chickenMultiplier } = await import("../src/games/chicken.ts");
+const { chickenDeathPoint, chickenMultiplier } = await import("../src/games/chicken.ts");
 
 const PK = "ChickenTester1";
 
@@ -34,15 +34,16 @@ test("a step matches the seed-fixed layout; cashout pays when survived", () => {
   const stake = 2_000_000;
   const startBal = a.balanceLamports;
   const s = chickenStart(a, "easy", stake);
-  const survive = chickenLayout(
+  const deathPoint = chickenDeathPoint(
     { serverSeed: a.serverSeed, clientSeed: a.clientSeed, nonce: s.nonceUsed },
     "easy",
   );
+  const survivesLane1 = deathPoint > 1;
 
   const r = chickenStep(a, s.sessionId);
-  assert.equal(r.survived, survive[0]);
+  assert.equal(r.survived, survivesLane1);
 
-  if (survive[0]) {
+  if (survivesLane1) {
     assert.equal(r.multiplier, chickenMultiplier("easy", 1));
     const c = chickenCashout(a, s.sessionId);
     assert.equal(c.payoutLamports, Math.floor(stake * chickenMultiplier("easy", 1)));
