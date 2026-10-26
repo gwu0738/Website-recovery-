@@ -376,6 +376,205 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
 .wp-recover input { font-size: 12px; }
 .wp-pending { font-size: 12px; color: #ffce54; margin-top: 6px; }
 
+/* ---- Shared bits for the game UIs ---------------------------------------- */
+.game-two-col, .cf, .lb, .cr, .wh, .pk, .hl, .dt, .sn, .kn, .mn { display: grid; grid-template-columns: 220px 1fr; gap: 18px; margin-bottom: 16px; }
+.cf-controls, .lb-controls, .cr-controls, .wh-controls, .pk-controls, .hl-controls, .dt-controls, .sn-controls, .kn-controls, .mn-controls { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.cf .field, .lb .field, .cr .field, .wh .field, .pk .field, .hl .field, .dt .field, .sn .field, .kn .field, .mn .field { display: flex; flex-direction: column; gap: 4px; }
+.cf .k, .lb .k, .cr .k, .wh .k, .pk .k, .hl .k, .dt .k, .sn .k, .kn .k, .mn .k, .die-readout .k { font-size: 10px; text-transform: uppercase; letter-spacing: .5px; color: var(--muted); }
+.cf input, .lb input, .cr input, .wh input, .pk input, .pk select, .hl input, .dt input, .sn input, .kn input, .mn input[type=number] { width: 100%; padding: 10px; background: var(--bg-2); border: 1px solid var(--border); border-radius: 8px; color: var(--text); font: inherit; }
+.cf-stats, .lb-stats, .cr-stats, .hl-stats, .kn-stats, .mn-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.cf-stats > div, .lb-stats > div, .cr-stats > div, .hl-stats > div, .kn-stats > div, .mn-stats > div { background: var(--bg-2); border: 1px solid var(--border); border-radius: 10px; padding: 8px 10px; display: flex; flex-direction: column; }
+.cf-stats strong, .lb-stats strong, .cr-stats strong, .hl-stats strong, .kn-stats strong, .mn-stats strong { font-size: 16px; color: var(--accent-2); }
+.cf-stage, .lb-stage, .cr-stage, .wh-stage, .pk-stage, .hl-stage, .dt-stage, .sn-stage, .kn-stage, .mn-board { background: var(--bg-2); border: 1px solid var(--border); border-radius: 12px; padding: 14px; min-width: 0; position: relative; }
+.cf-status, .lb-status, .cr-status, .wh-status, .pk-status, .hl-status, .dt-status, .sn-status, .kn-status, .mn-status { text-align: center; font-size: 12px; color: var(--muted); margin-top: 10px; }
+.cf-hist, .lb-hist, .cr-hist, .wh-hist, .pk-hist, .dt-hist, .sn-hist, .kn-hist, .hl-history { display: flex; flex-wrap: wrap; gap: 4px; justify-content: center; margin-top: 8px; }
+.cf-hist span, .lb-hist span, .cr-hist span, .wh-hist span, .pk-hist span, .dt-hist span, .sn-hist span, .kn-hist span, .hl-history span { font-size: 11px; font-weight: 700; padding: 2px 7px; border-radius: 999px; background: var(--panel-2); border: 1px solid var(--border); color: var(--muted); }
+.cf-hist span.win, .lb-hist span.win, .cr-hist span.win, .wh-hist span.win, .pk-hist span.win, .dt-hist span.win, .sn-hist span.win, .kn-hist span.win, .hl-history span.win { color: var(--win); border-color: #1d4b44; }
+.cf-hist span.lose, .lb-hist span.lose, .cr-hist span.lose, .wh-hist span.lose, .pk-hist span.lose, .dt-hist span.lose, .sn-hist span.lose, .kn-hist span.lose, .hl-history span.lose { color: var(--lose); border-color: #6a2030; }
+.wh-legend, .dt-odds, .sn-odds { display: flex; flex-wrap: wrap; gap: 6px; font-size: 11px; }
+.wh-legend span, .dt-odds span, .sn-odds span { display: inline-flex; align-items: center; gap: 5px; background: var(--bg-2); border: 1px solid var(--border); border-radius: 999px; padding: 3px 8px; font-weight: 700; }
+.wh-legend i, .dt-odds i { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+.wh-legend small, .dt-odds small, .sn-odds small { color: var(--muted); font-weight: 500; }
+@media (max-width: 720px) { .cf, .lb, .cr, .wh, .pk, .hl, .dt, .sn, .kn, .mn { grid-template-columns: 1fr; } }
+
+/* ---- Dice: the die ---------------------------------------------------------- */
+.die-stage { display: flex; align-items: center; justify-content: center; gap: 28px; padding: 18px 0 6px; }
+.die-scene { width: 84px; height: 84px; perspective: 520px; }
+.die-cube { width: 100%; height: 100%; position: relative; transform-style: preserve-3d; transform: rotateX(-20deg) rotateY(25deg); transition: transform .6s cubic-bezier(.2,.9,.3,1.2); }
+.die-cube.rolling { animation: die-tumble .7s linear infinite; transition: none; }
+.die-cube.settled { transform: rotateX(0deg) rotateY(0deg); }
+@keyframes die-tumble { from { transform: rotateX(0) rotateY(0) rotateZ(0); } to { transform: rotateX(720deg) rotateY(540deg) rotateZ(180deg); } }
+.die-face { position: absolute; inset: 0; background: linear-gradient(145deg, #f7f7fb, #cfd2e0); border-radius: 14px; border: 1px solid #a9adbf; box-shadow: inset 0 0 12px rgba(0,0,0,.15); display: flex; align-items: center; justify-content: center; }
+.die-face i { position: absolute; width: 13px; height: 13px; border-radius: 50%; background: #1a1d2a; transform: translate(-50%, -50%); }
+.die-face.front { transform: translateZ(42px); }
+.die-face.back { transform: rotateY(180deg) translateZ(42px); }
+.die-face.right { transform: rotateY(90deg) translateZ(42px); }
+.die-face.left { transform: rotateY(-90deg) translateZ(42px); }
+.die-face.top { transform: rotateX(90deg) translateZ(42px); }
+.die-face.bottom { transform: rotateX(-90deg) translateZ(42px); }
+.die-roll { display: none; font-weight: 800; font-size: 20px; color: #1a1d2a; }
+.die-cube.settled .die-face.front i { display: none; }
+.die-cube.settled .die-face.front .die-roll { display: block; }
+.die-cube.win .die-face.front { background: linear-gradient(145deg, #c8ffe3, #35d07f); border-color: var(--win); box-shadow: 0 0 22px rgba(53,208,127,.6); }
+.die-cube.lose .die-face.front { background: linear-gradient(145deg, #ffd3dc, #ff5c7a); border-color: var(--lose); box-shadow: 0 0 22px rgba(255,92,122,.6); }
+.die-readout { display: flex; flex-direction: column; }
+.die-readout strong { font-size: 30px; line-height: 1.1; }
+.die-readout.win strong { color: var(--win); } .die-readout.lose strong { color: var(--lose); }
+@media (prefers-reduced-motion: reduce) { .die-cube { transition: none; } .die-cube.rolling { animation: none; } }
+
+/* ---- Coinflip --------------------------------------------------------------- */
+.cf-call { width: 100%; } .cf-call .toggle-btn { flex: 1; }
+.cf-stage { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 280px; }
+.coin-scene { perspective: 800px; width: 150px; height: 170px; position: relative; }
+.coin { position: relative; width: 150px; height: 150px; transform-style: preserve-3d; transform: rotateY(0deg); }
+.coin.air { animation: coin-hop 2.2s ease-in-out; }
+@keyframes coin-hop { 0%, 100% { margin-top: 0; } 45% { margin-top: -70px; } }
+.coin-face { position: absolute; inset: 0; border-radius: 50%; backface-visibility: hidden; display: flex; align-items: center; justify-content: center; font-size: 56px; font-weight: 900; color: #3a2a06; box-shadow: inset 0 0 0 8px rgba(0,0,0,.12), 0 8px 22px rgba(0,0,0,.5); }
+.coin-face.heads { background: radial-gradient(circle at 35% 30%, #ffe9a6, #d9a83c 60%, #8a6a26); }
+.coin-face.tails { background: radial-gradient(circle at 35% 30%, #e8eaf2, #9aa3b8 60%, #5a6075); transform: rotateY(180deg); color: #1a1d2a; }
+.coin-face span { border: 4px solid rgba(0,0,0,.18); border-radius: 50%; width: 92px; height: 92px; display: flex; align-items: center; justify-content: center; }
+.coin-shadow { position: absolute; left: 50%; bottom: 0; width: 120px; height: 16px; margin-left: -60px; border-radius: 50%; background: radial-gradient(ellipse, rgba(0,0,0,.6), transparent 70%); }
+.coin.win .coin-face { box-shadow: inset 0 0 0 8px rgba(0,0,0,.12), 0 0 30px rgba(53,208,127,.7); }
+.coin.lose .coin-face { box-shadow: inset 0 0 0 8px rgba(0,0,0,.12), 0 0 30px rgba(255,92,122,.6); }
+.cf-hist-chip { width: 24px; height: 24px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 800; color: #3a2a06; }
+.cf-hist-chip.heads { background: #d9a83c; } .cf-hist-chip.tails { background: #9aa3b8; color: #1a1d2a; }
+@media (prefers-reduced-motion: reduce) { .coin.air { animation: none; } }
+
+/* ---- Limbo ------------------------------------------------------------------ */
+.lb-stage { min-height: 300px; overflow: hidden; background: linear-gradient(180deg, #0a0b16, #151a33 70%, #1b2140); }
+.lb-stars { position: absolute; inset: 0; background-image: radial-gradient(1px 1px at 20% 30%, #fff8, transparent), radial-gradient(1px 1px at 70% 20%, #fff6, transparent), radial-gradient(1.5px 1.5px at 40% 70%, #fff5, transparent), radial-gradient(1px 1px at 85% 60%, #fff7, transparent), radial-gradient(1px 1px at 10% 85%, #fff5, transparent); pointer-events: none; }
+.lb-target-line { position: absolute; left: 0; right: 0; border-top: 1px dashed #ffce54; transition: bottom .2s; }
+.lb-target-line span { position: absolute; right: 8px; top: -18px; font-size: 11px; color: #ffce54; }
+.lb-rocket { position: absolute; left: 50%; bottom: 4%; width: 44px; height: 88px; margin-left: -22px; transition: bottom .1s linear; }
+.lb-rocket svg { width: 100%; height: 100%; display: block; }
+.lb-rocket .flame { opacity: 0; transform-origin: 50% 0; }
+.lb-rocket.flying .flame, .lb-rocket.won .flame { opacity: 1; animation: flame .12s alternate infinite; }
+@keyframes flame { from { transform: scaleY(.7); } to { transform: scaleY(1.3); } }
+.lb-rocket.fizzled { filter: grayscale(1) brightness(.7); animation: fizzle .5s ease-in forwards; }
+@keyframes fizzle { to { transform: rotate(25deg) translateY(30px); opacity: .5; } }
+.lb-counter { position: absolute; top: 16px; left: 0; right: 0; text-align: center; font-size: 44px; font-weight: 800; letter-spacing: -1px; }
+.lb-counter.win { color: var(--win); text-shadow: 0 0 24px rgba(53,208,127,.6); }
+.lb-counter.lose { color: var(--lose); }
+.lb-stage.win { box-shadow: inset 0 0 0 1px var(--win); } .lb-stage.lose { box-shadow: inset 0 0 0 1px var(--lose); }
+.lb-hist { position: absolute; left: 10px; right: 10px; bottom: 8px; margin: 0; }
+@media (prefers-reduced-motion: reduce) { .lb-rocket.flying .flame { animation: none; } }
+
+/* ---- Crash ------------------------------------------------------------------ */
+.cr-stage { min-height: 300px; }
+.cr-svg { width: 100%; height: 260px; display: block; border-radius: 8px; background: #0c0d16; }
+.cr-grid line { stroke: #272c40; stroke-width: 1; } .cr-grid text { fill: var(--muted); font-size: 11px; }
+.cr-line { stroke: #ffce54; stroke-dasharray: 6 5; stroke-width: 1.5; }
+.cr-path { fill: none; stroke: var(--accent); stroke-width: 3; stroke-linecap: round; }
+.cr-area { fill: url(#cr-fill); }
+.cr-dot { fill: #fff; filter: drop-shadow(0 0 6px var(--accent)); }
+.cr-stage.bust .cr-path { stroke: var(--lose); } .cr-stage.bust .cr-dot { fill: var(--lose); }
+.cr-stage.win .cr-path { stroke: var(--win); }
+.cr-cash circle { fill: var(--win); stroke: #fff; stroke-width: 2; } .cr-cash text { fill: var(--win); font-size: 12px; font-weight: 700; text-anchor: middle; }
+.cr-readout { position: absolute; top: 20px; right: 24px; font-size: 40px; font-weight: 800; }
+.cr-readout.cashed { color: var(--win); } .cr-readout.bust { color: var(--lose); }
+.cr-readout.cashed.bust { color: var(--win); }
+
+/* ---- Wheel ------------------------------------------------------------------ */
+.wh-risk { width: 100%; } .wh-risk .toggle-btn { flex: 1; padding: 8px 4px; font-size: 13px; }
+.wh-wrap { position: relative; width: min(320px, 100%); aspect-ratio: 1; margin: 0 auto; }
+.wh-rotor { position: absolute; inset: 0; transform-origin: 50% 50%; will-change: transform; }
+.wh-svg { width: 100%; height: 100%; display: block; filter: drop-shadow(0 8px 24px rgba(0,0,0,.6)); }
+.wh-lbl { fill: #fff; font-size: 15px; font-weight: 800; text-anchor: middle; dominant-baseline: middle; font-family: var(--font); }
+.wh-svg path.hit { stroke: #fff; stroke-width: 3; filter: brightness(1.3); }
+.wh-pointer { position: absolute; top: -6px; left: 50%; transform: translateX(-50%); border-left: 11px solid transparent; border-right: 11px solid transparent; border-top: 20px solid var(--accent-2); filter: drop-shadow(0 0 6px var(--accent-2)); z-index: 2; }
+.wh-center { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); font-size: 30px; font-weight: 800; }
+.wh-center.win { color: var(--win); } .wh-center.lose { color: var(--lose); }
+
+/* ---- Plinko ----------------------------------------------------------------- */
+.pk-risk { width: 100%; } .pk-risk .toggle-btn { flex: 1; padding: 8px 4px; font-size: 13px; }
+.pk-svg { width: 100%; height: auto; display: block; }
+.pk-peg { fill: #c9ccdb; filter: drop-shadow(0 0 3px rgba(255,255,255,.5)); }
+.pk-bucket text { fill: #0a0b10; font-size: 11px; font-weight: 800; text-anchor: middle; }
+.pk-bucket.hit rect { stroke: #fff; stroke-width: 2.5; filter: brightness(1.25); }
+.pk-ball { fill: #ff5c7a; stroke: #fff; stroke-width: 1.5; filter: drop-shadow(0 0 6px rgba(255,92,122,.8)); }
+
+/* ---- HiLo ------------------------------------------------------------------- */
+.hl-guess { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 10px; font-size: 14px; }
+.hl-guess small { font-size: 11px; color: var(--muted); font-weight: 500; }
+.hl-guess:disabled { opacity: .45; cursor: default; }
+.hl-stage { min-height: 300px; display: flex; flex-direction: column; justify-content: center; }
+.hl-table { display: flex; align-items: center; justify-content: center; gap: 22px; }
+.hl-arrow { color: var(--muted); font-size: 28px; }
+.hl-slot { width: 110px; height: 156px; perspective: 700px; }
+.card { position: relative; width: 100%; height: 100%; transform-style: preserve-3d; transition: transform .6s cubic-bezier(.3,.8,.3,1); }
+.card.up { transform: rotateY(180deg); }
+.card-back, .card-front { position: absolute; inset: 0; border-radius: 12px; backface-visibility: hidden; border: 1px solid var(--border); }
+.card-back { background: repeating-linear-gradient(45deg, #2a2f52 0 8px, #1f2342 8px 16px); box-shadow: inset 0 0 0 6px #e8eaf2; }
+.card-front { background: #f4f5fa; color: #1a1d2a; transform: rotateY(180deg); display: flex; flex-direction: column; align-items: center; justify-content: center; }
+.card-front.red { color: #c8243e; }
+.card-rank { font-size: 46px; font-weight: 800; line-height: 1; }
+.card-suit { font-size: 30px; line-height: 1.2; }
+@media (prefers-reduced-motion: reduce) { .card { transition: none; } }
+
+/* ---- Darts ------------------------------------------------------------------ */
+.dt-diff { width: 100%; flex-wrap: wrap; } .dt-diff .toggle-btn { flex: 1 1 45%; padding: 8px 4px; font-size: 12px; }
+.dt-board-wrap { position: relative; width: min(320px, 100%); aspect-ratio: 1; margin: 0 auto; }
+.dt-board { width: 100%; height: 100%; display: block; filter: drop-shadow(0 8px 24px rgba(0,0,0,.6)); }
+.dt-board.hit { animation: board-wobble .35s ease-out; }
+@keyframes board-wobble { 0% { transform: scale(1); } 30% { transform: scale(.985) rotate(.6deg); } 100% { transform: scale(1); } }
+.dt-wires line { stroke: #0a0b10; stroke-width: 1.5; opacity: .7; }
+.dt-lbl { fill: #fff; font-size: 12px; font-weight: 800; text-anchor: middle; font-family: var(--font); pointer-events: none; }
+.dt-board [data-band].lit { stroke: #fff; stroke-width: 3; filter: brightness(1.3); }
+.dart { position: absolute; left: 0; top: 0; width: 120px; height: 24px; margin: -12px 0 0 0; transform-origin: 0 50%; pointer-events: none; z-index: 2; filter: drop-shadow(0 4px 6px rgba(0,0,0,.6)); }
+.dart svg { width: 100%; height: 100%; display: block; }
+.dart.stuck { filter: drop-shadow(0 2px 3px rgba(0,0,0,.8)); }
+
+/* ---- Snakes ----------------------------------------------------------------- */
+.sn-odds span.snake { color: var(--lose); }
+.sn-board { position: relative; display: grid; grid-template-columns: repeat(5, 1fr); grid-template-rows: repeat(4, 64px); gap: 4px; }
+.sn-sq { position: relative; border-radius: 8px; border: 1px solid var(--border); background: var(--panel-2); display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 14px; }
+.sn-sq.mult { background: #10261e; border-color: #1d4b44; color: var(--win); }
+.sn-sq.snake { background: #2a1116; border-color: #6a2030; }
+.sn-sq svg { width: 34px; height: 34px; }
+.sn-n { position: absolute; top: 3px; left: 6px; font-size: 10px; color: var(--muted); font-weight: 600; }
+.sn-sq.hit { outline: 2px solid var(--accent-2); box-shadow: 0 0 14px rgba(0,224,184,.5); }
+.sn-piece { position: absolute; width: 36px; height: 36px; left: -40px; top: 0; z-index: 2; filter: drop-shadow(0 3px 6px rgba(0,0,0,.6)); }
+.sn-piece svg { width: 100%; height: 100%; display: block; }
+.sn-piece.hop { animation: sn-hop .11s ease-out; }
+@keyframes sn-hop { 50% { transform: translateY(-10px) scale(1.08); } }
+.sn-piece.bitten { animation: sn-bitten .5s ease-in forwards; }
+@keyframes sn-bitten { to { transform: scale(.4) rotate(180deg); opacity: .3; } }
+.sn-piece.bitten + *, .sn-board .sn-piece.bitten { transition: none; }
+
+/* ---- Keno ------------------------------------------------------------------- */
+.kn-row { display: flex; gap: 6px; } .kn-row .btn { flex: 1; padding: 8px 0; }
+.kn-board { display: grid; grid-template-columns: repeat(8, 1fr); gap: 5px; }
+.kn-cell { aspect-ratio: 1; border-radius: 8px; border: 1px solid var(--border); background: var(--panel-2); color: var(--text); font-weight: 700; font-size: 14px; cursor: pointer; transition: transform .05s, background .15s; }
+.kn-cell:hover { border-color: var(--accent); }
+.kn-cell.picked { background: var(--accent); border-color: var(--accent); color: #fff; }
+.kn-cell.drawn.miss { background: #2a2e40; color: var(--muted); border-color: #3a3f55; }
+.kn-cell.drawn.hit { background: linear-gradient(135deg, #1b6b4a, var(--win)); border-color: var(--win); color: #fff; box-shadow: 0 0 14px rgba(53,208,127,.6); animation: kn-pop .3s ease-out; }
+@keyframes kn-pop { 50% { transform: scale(1.15); } }
+.kn-balls { display: flex; flex-wrap: wrap; gap: 5px; justify-content: center; min-height: 30px; margin-top: 10px; }
+.kn-ball { width: 28px; height: 28px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 800; background: radial-gradient(circle at 35% 30%, #fff, #c7c9d6 60%, #7d8093); color: #1a1d2a; animation: kn-drop .3s ease-out; }
+.kn-ball.hit { background: radial-gradient(circle at 35% 30%, #c8ffe3, #35d07f 60%, #1b6b4a); }
+@keyframes kn-drop { from { transform: translateY(-16px); opacity: 0; } }
+.kn-paytable { display: flex; flex-wrap: wrap; gap: 4px; justify-content: center; margin-top: 10px; }
+.kn-paytable span { display: inline-flex; flex-direction: column; align-items: center; min-width: 46px; padding: 4px 6px; border-radius: 8px; background: var(--panel-2); border: 1px solid var(--border); font-size: 12px; font-weight: 700; }
+.kn-paytable span small { font-size: 9px; color: var(--muted); font-weight: 500; }
+.kn-paytable span.zero { opacity: .5; }
+.kn-paytable span.hit { border-color: var(--accent-2); color: var(--accent-2); box-shadow: 0 0 10px rgba(0,224,184,.4); }
+
+/* ---- Mines ------------------------------------------------------------------ */
+.mn input[type=range] { width: 100%; accent-color: var(--accent); }
+.mn-max { text-align: center; font-size: 11px; letter-spacing: .5px; color: var(--muted); text-transform: uppercase; margin-bottom: 10px; }
+.mn-max strong { color: var(--accent-2); }
+.mn-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; }
+.mn-tile { aspect-ratio: 1; border-radius: 10px; border: 1px solid var(--border); background: linear-gradient(160deg, #262b40, #1b1f30); cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 14%; transition: transform .08s, background .2s, border-color .2s; }
+.mn-tile:not(:disabled):hover { border-color: var(--accent-2); transform: translateY(-2px); }
+.mn-tile:disabled { cursor: default; }
+.mn-tile.flip { animation: mn-flip .35s ease-in-out; }
+@keyframes mn-flip { 50% { transform: rotateY(90deg); } }
+.mn-tile.gem { background: #10261e; border-color: #1d4b44; box-shadow: 0 0 14px rgba(0,224,184,.35); }
+.mn-tile.bomb { background: #2a1116; border-color: #6a2030; }
+.mn-tile.bomb.hit { background: linear-gradient(135deg, #6a2030, var(--lose)); border-color: var(--lose); box-shadow: 0 0 18px rgba(255,92,122,.6); }
+.mn-tile svg { width: 100%; height: 100%; }
+
 </style>
   </head>
   <body>
@@ -424,7 +623,6 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
 
           <div id="account-row" class="account-row hidden">
             <div class="bal"><span class="k">balance</span><strong id="balance-val">—</strong><span class="unit">SOL</span></div>
-            <label class="stake" id="stake-field"><span class="k">stake</span><input id="stake-input" type="number" step="0.001" min="0" value="0.001" /></label>
             <button id="faucet-btn" class="btn btn-ghost">Claim free faucet</button>
             <button id="wallet-open" class="btn btn-ghost" type="button" aria-expanded="false" aria-controls="wallet-panel">Wallet</button>
           </div>
@@ -439,7 +637,6 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
           <div id="game-view"></div>
 
           <div id="bet-controls" class="bet-controls" data-game="dice">
-            <button id="bet-btn" class="btn btn-primary big">Place demo bet</button>
             <button id="new-seed" class="btn btn-ghost">Rotate seed</button>
           </div>
 
@@ -504,8 +701,10 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
     </footer>
 
     <script type="module">
+let BRAND, SOCIALS, HOUSE_EDGE, API_BASE, LAMPORTS_PER_SOL, toSol, CLUSTER, RPC_ENDPOINTS, setActiveCluster, getActiveCluster, rpcUrl, ICONS, hashServerSeed, floats, randomHex, verifyCommitment, PLINKO_MIN_ROWS, PLINKO_MAX_ROWS, plinkoRtp, plinkoTable, plinkoDrop, payoutFor, pickSequential, playDice, resultMultiplier, playLimbo, playCrash, playCoinflip, WHEEL_SEGMENTS, playWheel, playPlinko, HILO_RANKS, hiloChance, playHiLo, hiloBaseCard, DARTS_MULTIPLIERS, DARTS_WEIGHTS, playDarts, SNAKES_OUTCOMES, playSnakes, KENO_POOL, KENO_DRAW, KENO_MAX_PICKS, KENO_PAYTABLE, playKeno, MINES_GRID, minesMultiplier, minesLayout, GAME_CATALOG, WEB3_BUNDLE_URL, BUFFER_POLYFILL_URL, loadWeb3, getProvider, activeAddress, connect, disconnect, getBalanceSol, sendDeposit, explorerTxUrl, clusterLabel, BACKEND_ENABLED, base58Encode, api, rememberDeposit, createWalletPanel, createDiceGame, TOWER_COLS, TOWER_ROWS, TOWER_TRAPS, towerMultiplier, towerMaxMultiplier, towerLayout, createTowerGame, CHICKEN_LANES, CHICKEN_HAZARDS, chickenMaxSteps, chickenMultiplier, chickenMaxMultiplier, chickenDeathPoint, createChickenGame, WHEEL_ORDER, ROULETTE_MAX_CHIPS, pocketColor, roulettePayoutMultiplier, rouletteBetWins, rouletteBetLabel, rouletteSettle, roulettePocket, createRouletteGame, createCoinflipGame, createLimboGame, createCrashGame, createWheelGame, createPlinkoGame, createHiLoGame, createDartsGame, createSnakesGame, createKenoGame, createMinesGame, Chat;
 
 // ===== js/config.js =====
+({ BRAND, SOCIALS, HOUSE_EDGE, API_BASE, LAMPORTS_PER_SOL, toSol, CLUSTER, RPC_ENDPOINTS, setActiveCluster, getActiveCluster, rpcUrl } = (() => {
 // =============================================================================
 // Vanta — front-end config. Everything you'd customize lives here.
 // Change brand, socials, and the Solana cluster in ONE place.
@@ -572,8 +771,11 @@ function rpcUrl() {
   return RPC_ENDPOINTS[activeCluster] ?? RPC_ENDPOINTS.devnet;
 }
 
+return { BRAND, SOCIALS, HOUSE_EDGE, API_BASE, LAMPORTS_PER_SOL, toSol, CLUSTER, RPC_ENDPOINTS, setActiveCluster, getActiveCluster, rpcUrl };
+})());
 
 // ===== js/icons.js =====
+({ ICONS } = (() => {
 // =============================================================================
 // Game logos — inline SVG so they render everywhere (normal site AND the
 // sandboxed single-file preview, which can't fetch external .svg files).
@@ -654,10 +856,39 @@ const ICONS = {
      <rect x="13" y="32" width="9" height="9" rx="1.5" fill="GRAD" opacity="0.25" stroke="GRAD" stroke-width="2"/>
      <rect x="26" y="32" width="9" height="9" rx="1.5" stroke="GRAD" stroke-width="2"/>`,
   ),
+  hilo: S(
+    "hilo",
+    `<rect x="10" y="8" width="20" height="28" rx="3" stroke="GRAD" stroke-width="2.2" transform="rotate(-8 20 22)"/>
+     <rect x="20" y="12" width="20" height="28" rx="3" stroke="GRAD" stroke-width="2.2" fill="#11131c" transform="rotate(8 30 26)"/>
+     <path d="M30 20 l4 6 h-8z" fill="GRAD"/>`,
+  ),
+  darts: S(
+    "darts",
+    `<circle cx="24" cy="24" r="16" stroke="GRAD" stroke-width="2.2"/>
+     <circle cx="24" cy="24" r="10" stroke="GRAD" stroke-width="1.6"/>
+     <circle cx="24" cy="24" r="3.5" fill="GRAD"/>
+     <path d="M24 24 L40 8 M36 8 h4 v4" stroke="GRAD" stroke-width="2.2" stroke-linecap="round"/>`,
+  ),
+  snakes: S(
+    "snakes",
+    `<path d="M12 36 c0 -8 8 -8 8 -14 s-8 -6 -8 -12" stroke="GRAD" stroke-width="3" stroke-linecap="round"/>
+     <path d="M26 10 h12 M26 18 h12 M26 26 h12 M26 34 h12 M28 8 v30 M36 8 v30" stroke="GRAD" stroke-width="2" stroke-linecap="round"/>
+     <circle cx="12" cy="9" r="3" fill="GRAD"/>`,
+  ),
+  keno: S(
+    "keno",
+    `<circle cx="16" cy="16" r="6" stroke="GRAD" stroke-width="2.2"/>
+     <circle cx="32" cy="16" r="6" fill="GRAD"/>
+     <circle cx="16" cy="32" r="6" fill="GRAD"/>
+     <circle cx="32" cy="32" r="6" stroke="GRAD" stroke-width="2.2"/>`,
+  ),
 };
 
+return { ICONS };
+})());
 
 // ===== js/fairness.js =====
+({ hashServerSeed, floats, randomHex, verifyCommitment } = (() => {
 // =============================================================================
 // Browser fairness engine — the same provably-fair scheme as the Node engine,
 // implemented with the Web Crypto API so it runs client-side with no deps.
@@ -725,70 +956,278 @@ async function verifyCommitment(serverSeed, serverSeedHash) {
   return (await hashServerSeed(serverSeed)) === serverSeedHash;
 }
 
+return { hashServerSeed, floats, randomHex, verifyCommitment };
+})());
+
+// ===== js/plinko-logic.js =====
+({ PLINKO_MIN_ROWS, PLINKO_MAX_ROWS, plinkoRtp, plinkoTable, plinkoDrop } = (() => {
+// =============================================================================
+// Browser Plinko logic — mirrors src/games/plinko.ts (same generated paytables,
+// same path rule) for DEMO mode and for drawing the bucket multipliers.
+// =============================================================================
+
+
+
+const PLINKO_MIN_ROWS = 8;
+const PLINKO_MAX_ROWS = 16;
+const SHAPE = {
+  low: { centre: 0.5, edge8: 5.6, edge16: 16 },
+  medium: { centre: 0.4, edge8: 13, edge16: 110 },
+  high: { centre: 0.2, edge8: 29, edge16: 1000 },
+};
+const floor2Safe = (x) => Math.floor(Math.round(x * 1e8) / 1e6) / 100;
+function tidyFloor(v) {
+  if (v >= 100) return Math.floor(v);
+  if (v >= 10) return Math.floor(Math.round(v * 1e7) / 1e6) / 10;
+  return floor2Safe(v);
+}
+function binomialProbs(rows) {
+  let p = [1];
+  for (let r = 0; r < rows; r++) {
+    const next = Array(p.length + 1).fill(0);
+    p.forEach((v, k) => { next[k] += v / 2; next[k + 1] += v / 2; });
+    p = next;
+  }
+  return p;
+}
+function plinkoRtp(table, rows) {
+  const p = binomialProbs(rows);
+  return table.reduce((acc, m, k) => acc + p[k] * m, 0);
+}
+const cache = new Map();
+function plinkoTable(rows, risk, houseEdge = HOUSE_EDGE) {
+  const k = `${rows}:${risk}:${houseEdge}`;
+  if (cache.has(k)) return cache.get(k);
+  const { centre, edge8, edge16 } = SHAPE[risk];
+  const edge = edge8 * Math.pow(edge16 / edge8, (rows - 8) / 8);
+  const xs = Array.from({ length: rows + 1 }, (_, i) => Math.abs(2 * i - rows) / rows);
+  const table = (g) => xs.map((x) => tidyFloor(centre * Math.pow(edge / centre, Math.pow(x, g))));
+  const target = 1 - houseEdge;
+  let lo = Math.log(0.05);
+  let hi = Math.log(50);
+  for (let i = 0; i < 100; i++) {
+    const mid = (lo + hi) / 2;
+    if (plinkoRtp(table(Math.exp(mid)), rows) > target) lo = mid;
+    else hi = mid;
+  }
+  const out = table(Math.exp(hi));
+  cache.set(k, out);
+  return out;
+}
+
+/** One float per row: 0 = left, 1 = right. Bucket = number of rights. Async. */
+async function plinkoDrop(ctx, rows) {
+  const fs = await floats(ctx.serverSeed, ctx.clientSeed, ctx.nonce, rows);
+  const path = fs.map((f) => (Math.floor(f * 2) === 0 ? "L" : "R"));
+  return { path, bucket: path.filter((d) => d === "R").length };
+}
+
+return { PLINKO_MIN_ROWS, PLINKO_MAX_ROWS, plinkoRtp, plinkoTable, plinkoDrop };
+})());
 
 // ===== js/games.js =====
+({ payoutFor, pickSequential, playDice, resultMultiplier, playLimbo, playCrash, playCoinflip, WHEEL_SEGMENTS, playWheel, playPlinko, HILO_RANKS, hiloChance, playHiLo, hiloBaseCard, DARTS_MULTIPLIERS, DARTS_WEIGHTS, playDarts, SNAKES_OUTCOMES, playSnakes, KENO_POOL, KENO_DRAW, KENO_MAX_PICKS, KENO_PAYTABLE, playKeno, MINES_GRID, minesMultiplier, minesLayout, GAME_CATALOG } = (() => {
 // =============================================================================
-// Browser game logic — mirrors src/games/* using the browser fairness engine.
-// Playable in-browser: Dice, Limbo, Coinflip, Wheel. (Crash/Mines/Plinko/
-// Roulette share the same math and are wired on the server engine too.)
+// Browser game logic — mirrors src/games/* using the browser fairness engine,
+// for DEMO mode (no backend). Every play function returns the same shape the
+// server returns for a bet: { game, outcome, win, multiplier }, so the UIs and
+// the result log don't care which mode they're in.
 // =============================================================================
+
 
 
 
 
 const floor2 = (x) => Math.floor(x * 100) / 100;
-const payoutFor = (p, edge) => (p <= 0 ? 0 : floor2((1 / p) * (1 - edge)));
+const floor2Safe = (x) => Math.floor(Math.round(x * 1e8) / 1e6) / 100;
+const payoutFor = (p, edge = HOUSE_EDGE) => (p <= 0 ? 0 : floor2((1 / p) * (1 - edge)));
 
+// Pick `count` items one at a time from a pool (same as shared.ts pickSequential).
+function pickSequential(pool, count, fs) {
+  const remaining = [...pool];
+  const picks = [];
+  for (let i = 0; i < count; i++) picks.push(remaining.splice(Math.floor(fs[i] * remaining.length), 1)[0]);
+  return picks;
+}
+
+// ---- Dice -------------------------------------------------------------------
 async function playDice(ctx, { target, direction }, edge = HOUSE_EDGE) {
   const [f] = await floats(ctx.serverSeed, ctx.clientSeed, ctx.nonce, 1);
   const roll = Math.floor(f * 10001) / 100;
   const win = direction === "under" ? roll < target : roll > target;
   const chance = direction === "under" ? target / 100 : (100 - target) / 100;
-  return { game: "dice", roll, win, multiplier: win ? payoutFor(chance, edge) : 0 };
+  return { game: "dice", outcome: { roll, target, direction }, win, multiplier: win ? payoutFor(chance, edge) : 0 };
 }
 
+// ---- Limbo / Crash (shared result formula, 10^8 space) -----------------------
+function resultMultiplier(u, edge = HOUSE_EDGE) {
+  const n = Math.floor(u * 1e8) + 1;
+  return floor2Safe(Math.max((1e8 / n) * (1 - edge), 1));
+}
 async function playLimbo(ctx, { target }, edge = HOUSE_EDGE) {
   const [u] = await floats(ctx.serverSeed, ctx.clientSeed, ctx.nonce, 1);
-  // n = floor(u * 1e8) + 1; result = (1e8 / n) * (1 - edge), at least 1, floored
-  // to 2dp (same as src/games/limbo.ts resultMultiplier).
-  const n = Math.floor(u * 1e8) + 1;
-  const raw = Math.max((1e8 / n) * (1 - edge), 1);
-  const result = Math.floor(Math.round(raw * 1e8) / 1e6) / 100;
+  const result = resultMultiplier(u, edge);
   const win = result >= target;
-  return { game: "limbo", result, win, multiplier: win ? target : 0 };
+  return { game: "limbo", outcome: { result, target }, win, multiplier: win ? target : 0 };
+}
+async function playCrash(ctx, { cashOut }, edge = HOUSE_EDGE) {
+  const [u] = await floats(ctx.serverSeed, ctx.clientSeed, ctx.nonce, 1);
+  const bustAt = resultMultiplier(u, edge);
+  const win = bustAt >= cashOut;
+  return { game: "crash", outcome: { bustAt, cashOut }, win, multiplier: win ? cashOut : 0 };
 }
 
+// ---- Coinflip ---------------------------------------------------------------
 async function playCoinflip(ctx, { call }, edge = HOUSE_EDGE) {
   const [u] = await floats(ctx.serverSeed, ctx.clientSeed, ctx.nonce, 1);
   const flip = u < 0.5 ? "heads" : "tails";
   const win = flip === call;
-  return { game: "coinflip", flip, win, multiplier: win ? payoutFor(0.5, edge) : 0 };
+  return { game: "coinflip", outcome: { flip, call }, win, multiplier: win ? payoutFor(0.5, edge) : 0 };
 }
 
-const WHEEL = [0, 1.9, 0, 1.5, 0, 2, 0, 1.5, 0, 3, 0, 1.9];
-async function playWheel(ctx) {
+// ---- Wheel ------------------------------------------------------------------
+const WHEEL_SEGMENTS = {
+  low: [1.5, 1.2, 1.5, 0, 1.5, 1.2, 1.5, 0, 1.5, 1.2, 1.5, 0],
+  medium: [0, 1.9, 0, 1.5, 0, 2, 0, 1.5, 0, 3, 0, 1.9],
+  high: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 48],
+};
+async function playWheel(ctx, { risk }) {
+  const segments = WHEEL_SEGMENTS[risk];
   const [u] = await floats(ctx.serverSeed, ctx.clientSeed, ctx.nonce, 1);
-  const segment = Math.floor(u * WHEEL.length);
-  const multiplier = WHEEL[segment];
-  return { game: "wheel", segment, multiplier, win: multiplier >= 1 };
+  const segment = Math.floor(u * segments.length);
+  const multiplier = segments[segment];
+  return { game: "wheel", outcome: { segment, multiplier, risk }, win: multiplier >= 1, multiplier };
 }
 
-// Catalogue used to render the games grid. Playable ones have a `play` fn.
+// ---- Plinko -----------------------------------------------------------------
+async function playPlinko(ctx, { rows, risk }) {
+  const table = plinkoTable(rows, risk);
+  const fs = await floats(ctx.serverSeed, ctx.clientSeed, ctx.nonce, rows);
+  const path = fs.map((f) => (Math.floor(f * 2) === 0 ? "L" : "R"));
+  const bucket = path.filter((d) => d === "R").length;
+  const multiplier = table[bucket];
+  return { game: "plinko", outcome: { path, bucket, rows, risk }, win: multiplier >= 1, multiplier };
+}
+
+// ---- HiLo (ranks 0..12, 0 = 2 … 12 = Ace) ------------------------------------
+const HILO_RANKS = 13;
+const hiloChance = (base, guess) =>
+  guess === "higherOrSame" ? (HILO_RANKS - base) / HILO_RANKS : (base + 1) / HILO_RANKS;
+async function playHiLo(ctx, { guess }, edge = HOUSE_EDGE) {
+  const [f0, f1] = await floats(ctx.serverSeed, ctx.clientSeed, ctx.nonce, 2);
+  const base = Math.floor(f0 * HILO_RANKS);
+  const next = Math.floor(f1 * HILO_RANKS);
+  const win = guess === "higherOrSame" ? next >= base : next <= base;
+  const multiplier = win ? floor2((1 / hiloChance(base, guess)) * (1 - edge)) : 0;
+  return { game: "hilo", outcome: { base, next, guess }, win, multiplier };
+}
+/** The base card is drawn from the SAME floats as the bet, so the UI can show it first. */
+async function hiloBaseCard(ctx) {
+  const [f0] = await floats(ctx.serverSeed, ctx.clientSeed, ctx.nonce, 1);
+  return Math.floor(f0 * HILO_RANKS);
+}
+
+// ---- Darts ------------------------------------------------------------------
+const DARTS_MULTIPLIERS = [0.5, 0.8, 1.2, 1.5, 2.7, 8.5];
+const DARTS_WEIGHTS = {
+  easy: [0.38, 0.3, 0.18, 0.08, 0.05, 0.01],
+  medium: [0.45, 0.26, 0.15, 0.08, 0.05, 0.01],
+  hard: [0.52, 0.22, 0.13, 0.07, 0.05, 0.01],
+  expert: [0.58, 0.19, 0.11, 0.06, 0.05, 0.01],
+};
+function weightedIndex(u, weights) {
+  let acc = 0;
+  for (let i = 0; i < weights.length; i++) {
+    acc += weights[i];
+    if (u < acc) return i;
+  }
+  return weights.length - 1;
+}
+async function playDarts(ctx, { difficulty }) {
+  const [u] = await floats(ctx.serverSeed, ctx.clientSeed, ctx.nonce, 1);
+  const band = weightedIndex(u, DARTS_WEIGHTS[difficulty]);
+  const multiplier = DARTS_MULTIPLIERS[band];
+  return { game: "darts", outcome: { difficulty, band, multiplier }, win: multiplier >= 1, multiplier };
+}
+
+// ---- Snakes -----------------------------------------------------------------
+const SNAKES_OUTCOMES = [
+  { multiplier: 0, weight: 0.275 },
+  { multiplier: 1.11, weight: 0.48 },
+  { multiplier: 1.4, weight: 0.18 },
+  { multiplier: 2.5, weight: 0.05 },
+  { multiplier: 4.0, weight: 0.015 },
+];
+async function playSnakes(ctx) {
+  const [u] = await floats(ctx.serverSeed, ctx.clientSeed, ctx.nonce, 1);
+  const index = weightedIndex(u, SNAKES_OUTCOMES.map((o) => o.weight));
+  const multiplier = SNAKES_OUTCOMES[index].multiplier;
+  return { game: "snakes", outcome: { index, multiplier }, win: multiplier >= 1, multiplier };
+}
+
+// ---- Keno -------------------------------------------------------------------
+const KENO_POOL = 40;
+const KENO_DRAW = 10;
+const KENO_MAX_PICKS = 10;
+const KENO_PAYTABLE = {
+  1: [0, 3.9],
+  2: [0, 1.9, 4.5],
+  3: [0, 1, 3.1, 10.4],
+  4: [0, 0.8, 1.8, 5, 22.5],
+  5: [0, 0.3, 1.5, 4, 13, 48],
+  6: [0, 0, 1, 3.5, 7, 15, 100],
+  7: [0, 0, 0.5, 2, 6, 12, 50, 180],
+  8: [0, 0, 0.3, 1.5, 4, 9, 25, 100, 500],
+  9: [0, 0, 0.2, 1.3, 3, 6, 15, 60, 250, 1000],
+  10: [0, 0, 0, 1.2, 2.5, 5, 12, 45, 150, 600, 2500],
+};
+async function playKeno(ctx, { picks }) {
+  const fs = await floats(ctx.serverSeed, ctx.clientSeed, ctx.nonce, KENO_DRAW);
+  const pool = Array.from({ length: KENO_POOL }, (_, i) => i + 1);
+  const drawn = pickSequential(pool, KENO_DRAW, fs); // draw order kept for the animation
+  const hits = picks.filter((n) => drawn.includes(n)).length;
+  const multiplier = KENO_PAYTABLE[picks.length]?.[hits] ?? 0;
+  return { game: "keno", outcome: { picks, drawn, hits }, win: multiplier >= 1, multiplier };
+}
+
+// ---- Mines (demo layout; the real game runs as a server session) ------------
+const MINES_GRID = 25;
+function minesMultiplier(mines, k, edge = HOUSE_EDGE) {
+  if (k <= 0) return 1;
+  const safe = MINES_GRID - mines;
+  let p = 1;
+  for (let i = 0; i < k; i++) p *= (safe - i) / (MINES_GRID - i);
+  return floor2Safe((1 / p) * (1 - edge));
+}
+async function minesLayout(ctx, mines) {
+  const fs = await floats(ctx.serverSeed, ctx.clientSeed, ctx.nonce, mines);
+  const tiles = Array.from({ length: MINES_GRID }, (_, i) => i);
+  return pickSequential(tiles, mines, fs).sort((a, b) => a - b);
+}
+
+// Catalogue used to render the games grid.
 const GAME_CATALOG = [
   { id: "dice", name: "Dice", blurb: "Roll under or over your target.", playable: true, icon: ICONS.dice },
+  { id: "mines", name: "Mines", blurb: "Reveal gems, dodge the bombs.", playable: true, icon: ICONS.mines },
+  { id: "plinko", name: "Plinko", blurb: "Drop a ball through the pegs.", playable: true, icon: ICONS.plinko },
   { id: "limbo", name: "Limbo", blurb: "Beat the multiplier.", playable: true, icon: ICONS.limbo },
-  { id: "coinflip", name: "Coinflip", blurb: "Heads or tails, ~2x.", playable: true, icon: ICONS.coinflip },
-  { id: "wheel", name: "Wheel", blurb: "Spin for a multiplier.", playable: true, icon: ICONS.wheel },
-  { id: "tower", name: "Tower", blurb: "Climb, dodge the traps.", playable: true, icon: ICONS.tower },
-  { id: "chicken", name: "Chicken", blurb: "Cross the road, cash out.", playable: true, icon: ICONS.chicken },
-  { id: "crash", name: "Crash", blurb: "Cash out before the bust.", playable: false, icon: ICONS.crash },
-  { id: "mines", name: "Mines", blurb: "Dodge the hidden bombs.", playable: false, icon: ICONS.mines },
-  { id: "plinko", name: "Plinko", blurb: "Drop into a payout bucket.", playable: false, icon: ICONS.plinko },
+  { id: "crash", name: "Crash", blurb: "Cash out before the bust.", playable: true, icon: ICONS.crash },
   { id: "roulette", name: "Roulette", blurb: "Real wheel, real table, single zero.", playable: true, icon: ICONS.roulette },
+  { id: "tower", name: "Tower", blurb: "Climb, dodge the traps.", playable: true, icon: ICONS.tower },
+  { id: "hilo", name: "HiLo", blurb: "Higher or lower than the card?", playable: true, icon: ICONS.hilo },
+  { id: "keno", name: "Keno", blurb: "Pick numbers, watch the draw.", playable: true, icon: ICONS.keno },
+  { id: "chicken", name: "Chicken", blurb: "Cross the road, cash out.", playable: true, icon: ICONS.chicken },
+  { id: "darts", name: "Darts", blurb: "Throw for the bullseye.", playable: true, icon: ICONS.darts },
+  { id: "snakes", name: "Snakes", blurb: "Climb the board, mind the snakes.", playable: true, icon: ICONS.snakes },
+  { id: "wheel", name: "Wheel", blurb: "Spin for a multiplier.", playable: true, icon: ICONS.wheel },
+  { id: "coinflip", name: "Coinflip", blurb: "Heads or tails, ~2x.", playable: true, icon: ICONS.coinflip },
 ];
 
+return { payoutFor, pickSequential, playDice, resultMultiplier, playLimbo, playCrash, playCoinflip, WHEEL_SEGMENTS, playWheel, playPlinko, HILO_RANKS, hiloChance, playHiLo, hiloBaseCard, DARTS_MULTIPLIERS, DARTS_WEIGHTS, playDarts, SNAKES_OUTCOMES, playSnakes, KENO_POOL, KENO_DRAW, KENO_MAX_PICKS, KENO_PAYTABLE, playKeno, MINES_GRID, minesMultiplier, minesLayout, GAME_CATALOG };
+})());
 
 // ===== js/wallet.js =====
+({ WEB3_BUNDLE_URL, BUFFER_POLYFILL_URL, loadWeb3, getProvider, activeAddress, connect, disconnect, getBalanceSol, sendDeposit, explorerTxUrl, clusterLabel } = (() => {
 // =============================================================================
 // Phantom wallet + Solana in the browser.
 //
@@ -904,8 +1343,11 @@ function clusterLabel() {
   return getActiveCluster();
 }
 
+return { WEB3_BUNDLE_URL, BUFFER_POLYFILL_URL, loadWeb3, getProvider, activeAddress, connect, disconnect, getBalanceSol, sendDeposit, explorerTxUrl, clusterLabel };
+})());
 
 // ===== js/api.js =====
+({ BACKEND_ENABLED, base58Encode, api } = (() => {
 // =============================================================================
 // Backend API client. Talks to the Vanta server (server/) for wallet sign-in,
 // faucet, balance, and real (server-tracked) bets.
@@ -1004,6 +1446,21 @@ const api = {
     cashout: (sessionId) =>
       req("/api/tower/cashout", { method: "POST", auth: true, body: { sessionId } }),
   },
+  mines: {
+    start: (mines, stake) =>
+      req("/api/mines/start", { method: "POST", auth: true, body: { mines, stake } }),
+    reveal: (sessionId, tile) =>
+      req("/api/mines/reveal", { method: "POST", auth: true, body: { sessionId, tile } }),
+    cashout: (sessionId) =>
+      req("/api/mines/cashout", { method: "POST", auth: true, body: { sessionId } }),
+  },
+  hilo: {
+    start: (stake) => req("/api/hilo/start", { method: "POST", auth: true, body: { stake } }),
+    guess: (sessionId, guess) =>
+      req("/api/hilo/guess", { method: "POST", auth: true, body: { sessionId, guess } }),
+    cashout: (sessionId) =>
+      req("/api/hilo/cashout", { method: "POST", auth: true, body: { sessionId } }),
+  },
   chicken: {
     start: (difficulty, stake) =>
       req("/api/chicken/start", { method: "POST", auth: true, body: { difficulty, stake } }),
@@ -1033,8 +1490,11 @@ const api = {
   },
 };
 
+return { BACKEND_ENABLED, base58Encode, api };
+})());
 
 // ===== js/wallet-panel.js =====
+({ rememberDeposit, createWalletPanel } = (() => {
 // =============================================================================
 // Wallet panel (BACKEND mode): real-SOL deposits and withdrawals.
 //
@@ -1302,8 +1762,11 @@ function createWalletPanel(container, { getProvider, getAddress, onBalance, log 
   return { refresh, retryPending };
 }
 
+return { rememberDeposit, createWalletPanel };
+})());
 
 // ===== js/dice-game.js =====
+({ createDiceGame } = (() => {
 // =============================================================================
 // Dice — a real interactive game UI (Stake-style), not a stub.
 //
@@ -1325,8 +1788,24 @@ function createDiceGame(container, { onRoll, amountLabel = "Bet" }) {
   let target = 50;
   let direction = "under"; // "under" | "over"
 
+  const pips = {
+    1: [[50, 50]], 2: [[25, 25], [75, 75]], 3: [[25, 25], [50, 50], [75, 75]],
+    4: [[25, 25], [75, 25], [25, 75], [75, 75]], 5: [[25, 25], [75, 25], [50, 50], [25, 75], [75, 75]],
+    6: [[25, 25], [75, 25], [25, 50], [75, 50], [25, 75], [75, 75]],
+  };
+  const face = (n, cls) =>
+    `<div class="die-face ${cls}" data-n="${n}">${pips[n].map(([x, y]) => `<i style="left:${x}%;top:${y}%"></i>`).join("")}<span class="die-roll"></span></div>`;
+
   container.innerHTML = `
     <div class="dice">
+      <div class="die-stage">
+        <div class="die-scene">
+          <div class="die-cube" id="die-cube">
+            ${face(1, "front")}${face(6, "back")}${face(3, "right")}${face(4, "left")}${face(2, "top")}${face(5, "bottom")}
+          </div>
+        </div>
+        <div class="die-readout" id="die-readout"><span class="k">Last roll</span><strong id="die-last">—</strong></div>
+      </div>
       <div class="dice-track" id="dice-track">
         <div class="dice-zone-win" id="dice-zone"></div>
         <div class="dice-ticks"><span>0</span><span>25</span><span>50</span><span>75</span><span>100</span></div>
@@ -1365,6 +1844,8 @@ function createDiceGame(container, { onRoll, amountLabel = "Bet" }) {
   const amountEl = $("#dice-amount");
   const targetEl = $("#dice-target");
   const rollBtn = $("#dice-roll");
+  const cube = $("#die-cube");
+  const reducedMotion = () => !!window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
   function winChance() {
     return direction === "under" ? target : 100 - target;
@@ -1425,7 +1906,23 @@ function createDiceGame(container, { onRoll, amountLabel = "Bet" }) {
     render();
   });
 
+  // The die tumbles while the bet is in flight, then settles face-up showing
+  // the exact roll (0.00–100.00) in the colour of the verdict.
+  function startTumble() {
+    cube.classList.remove("settled", "win", "lose");
+    cube.querySelector(".die-face.front .die-roll").textContent = "";
+    if (!reducedMotion()) cube.classList.add("rolling");
+  }
+  function settleDie(roll, win) {
+    cube.classList.remove("rolling");
+    cube.querySelector(".die-face.front .die-roll").textContent = roll.toFixed(2);
+    cube.classList.add("settled", win ? "win" : "lose");
+    $("#die-last").textContent = roll.toFixed(2);
+    $("#die-readout").className = "die-readout " + (win ? "win" : "lose");
+  }
+
   function animateTo(roll, win) {
+    settleDie(roll, win);
     marker.hidden = false;
     marker.style.left = diceClamp(roll, 0, 100) + "%";
     markerVal.textContent = roll.toFixed(2);
@@ -1438,10 +1935,17 @@ function createDiceGame(container, { onRoll, amountLabel = "Bet" }) {
   rollBtn.addEventListener("click", async () => {
     rollBtn.disabled = true;
     rollBtn.textContent = "Rolling…";
+    startTumble();
     try {
       const amount = parseFloat(amountEl.value) || 0;
+      const started = performance.now();
       const res = await onRoll({ target, direction, amount });
+      // Let the die tumble for at least a moment even when the server is instant.
+      const left = 900 - (performance.now() - started);
+      if (res && left > 0 && !reducedMotion()) await new Promise((r) => setTimeout(r, left));
       if (res) animateTo(res.roll, res.win);
+      else cube.classList.remove("rolling");
+      res?.afterReveal?.();
     } finally {
       rollBtn.disabled = false;
       rollBtn.textContent = "Roll Dice";
@@ -1452,8 +1956,11 @@ function createDiceGame(container, { onRoll, amountLabel = "Bet" }) {
   return { render };
 }
 
+return { createDiceGame };
+})());
 
 // ===== js/tower-logic.js =====
+({ TOWER_COLS, TOWER_ROWS, TOWER_TRAPS, towerMultiplier, towerMaxMultiplier, towerLayout } = (() => {
 // =============================================================================
 // Browser Tower logic — mirrors src/games/tower.ts for DEMO mode (no backend).
 // 4 columns per row; difficulty sets trap count. Uses the browser fairness
@@ -1504,8 +2011,11 @@ async function towerLayout(ctx, difficulty) {
   return rows;
 }
 
+return { TOWER_COLS, TOWER_ROWS, TOWER_TRAPS, towerMultiplier, towerMaxMultiplier, towerLayout };
+})());
 
 // ===== js/tower-game.js =====
+({ createTowerGame } = (() => {
 // =============================================================================
 // Tower — interactive game UI (two-column layout, like nuts.gg).
 //   Left:  difficulty tabs, PLAY / CASH OUT button, bet amount.
@@ -1707,8 +2217,11 @@ function createTowerGame(container, { onStart, onReveal, onCashout, amountLabel 
   return { restore };
 }
 
+return { createTowerGame };
+})());
 
 // ===== js/chicken-logic.js =====
+({ CHICKEN_LANES, CHICKEN_HAZARDS, chickenMaxSteps, chickenMultiplier, chickenMaxMultiplier, chickenDeathPoint } = (() => {
 // =============================================================================
 // Browser Chicken logic — mirrors src/games/chicken.ts for DEMO mode.
 // Death-point model: 20 lanes, k hidden hazards (by difficulty); the chicken is
@@ -1759,8 +2272,11 @@ async function chickenDeathPoint(ctx, difficulty) {
   return Math.min(...chickenShuffle(lanes, fs).slice(0, k));
 }
 
+return { CHICKEN_LANES, CHICKEN_HAZARDS, chickenMaxSteps, chickenMultiplier, chickenMaxMultiplier, chickenDeathPoint };
+})());
 
 // ===== js/chicken-game.js =====
+({ createChickenGame } = (() => {
 // =============================================================================
 // Chicken — road-crossing crash-ladder. A sidewalk on the left, then lanes (the
 // count depends on difficulty); each lane carries the multiplier you lock in by
@@ -2029,8 +2545,11 @@ function createChickenGame(container, { onStart, onStep, onCashout, amountLabel 
   return { restore };
 }
 
+return { createChickenGame };
+})());
 
 // ===== js/roulette-logic.js =====
+({ WHEEL_ORDER, ROULETTE_MAX_CHIPS, pocketColor, roulettePayoutMultiplier, rouletteBetWins, rouletteBetLabel, rouletteSettle, roulettePocket } = (() => {
 // =============================================================================
 // Browser Roulette logic — mirrors src/games/roulette.ts for DEMO mode and for
 // showing odds in the UI. European single-zero wheel; one float picks the pocket.
@@ -2108,8 +2627,11 @@ async function roulettePocket(ctx) {
   return Math.floor(u * 37);
 }
 
+return { WHEEL_ORDER, ROULETTE_MAX_CHIPS, pocketColor, roulettePayoutMultiplier, rouletteBetWins, rouletteBetLabel, rouletteSettle, roulettePocket };
+})());
 
 // ===== js/roulette-game.js =====
+({ createRouletteGame } = (() => {
 // =============================================================================
 // Roulette — a real table and a real wheel.
 //
@@ -2446,8 +2968,1519 @@ function createRouletteGame(container, { onSpin, amountLabel = "Bet" }) {
   return { place };
 }
 
+return { createRouletteGame };
+})());
+
+// ===== js/coinflip-game.js =====
+({ createCoinflipGame } = (() => {
+// =============================================================================
+// Coinflip — a real coin: call heads or tails, the coin flips in 3D and lands
+// on the side the engine chose. Presentation only; `onPlay({ call }, amount)`
+// returns { outcome: { flip }, win, multiplier, payout, afterReveal }.
+// =============================================================================
+const FLIP_MS = 2200;
+const reducedMotion = () => !!window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+function createCoinflipGame(container, { onPlay, amountLabel = "Bet", multiplier = 1.98 }) {
+  let call = "heads";
+  let busy = false;
+  let turns = 0; // accumulated Y rotation so every flip keeps spinning the same way
+
+  container.innerHTML = `
+    <div class="cf">
+      <div class="cf-controls">
+        <div class="toggle cf-call">
+          <button class="toggle-btn active" data-c="heads">Heads</button>
+          <button class="toggle-btn" data-c="tails">Tails</button>
+        </div>
+        <div class="cf-stats"><div><span class="k">Multiplier</span><strong>${multiplier.toFixed(2)}×</strong></div>
+          <div><span class="k">Win chance</span><strong>50%</strong></div></div>
+        <label class="field"><span class="k">${amountLabel}</span>
+          <input id="cf-amount" type="number" step="0.001" min="0" value="0.001" /></label>
+        <button id="cf-flip" class="btn btn-primary big">Flip</button>
+      </div>
+      <div class="cf-stage">
+        <div class="coin-scene">
+          <div class="coin" id="coin">
+            <div class="coin-face heads"><span>H</span></div>
+            <div class="coin-face tails"><span>T</span></div>
+            <div class="coin-edge"></div>
+          </div>
+          <div class="coin-shadow" id="coin-shadow"></div>
+        </div>
+        <div id="cf-status" class="cf-status">Call it, then flip.</div>
+        <div class="cf-hist" id="cf-hist"></div>
+      </div>
+    </div>`;
+
+  const $ = (s) => container.querySelector(s);
+  const coin = $("#coin");
+  const statusEl = $("#cf-status");
+  const history = [];
+
+  container.querySelectorAll(".cf-call .toggle-btn").forEach((b) =>
+    b.addEventListener("click", () => {
+      if (busy) return;
+      call = b.dataset.c;
+      container.querySelectorAll(".cf-call .toggle-btn").forEach((x) => x.classList.toggle("active", x === b));
+    }));
+
+  function flipTo(side) {
+    // Heads is 0° (mod 360), tails is 180°. Add whole turns so it visibly spins.
+    const want = side === "heads" ? 0 : 180;
+    const cur = ((turns % 360) + 360) % 360;
+    const extra = (want - cur + 360) % 360;
+    turns += 360 * 5 + extra;
+    if (reducedMotion()) {
+      coin.style.transition = "none";
+      coin.style.transform = `rotateY(${turns}deg)`;
+      return Promise.resolve();
+    }
+    coin.style.transition = `transform ${FLIP_MS}ms cubic-bezier(.15,.75,.25,1)`;
+    coin.classList.add("air");
+    coin.style.transform = `rotateY(${turns}deg)`;
+    return new Promise((r) => setTimeout(r, FLIP_MS));
+  }
+
+  $("#cf-flip").addEventListener("click", async () => {
+    if (busy) return;
+    busy = true;
+    const btn = $("#cf-flip");
+    btn.disabled = true;
+    btn.textContent = "Flipping…";
+    coin.classList.remove("win", "lose");
+    try {
+      const amount = parseFloat($("#cf-amount").value) || 0;
+      const res = await onPlay({ call }, amount);
+      if (!res) return;
+      statusEl.textContent = "In the air…";
+      await flipTo(res.outcome.flip);
+      coin.classList.remove("air");
+      coin.classList.add(res.win ? "win" : "lose");
+      statusEl.textContent = res.win
+        ? `🪙 ${res.outcome.flip.toUpperCase()} — you called it! ×${res.multiplier.toFixed(2)}`
+        : `🪙 ${res.outcome.flip.toUpperCase()} — you called ${call}.`;
+      history.unshift(res.outcome.flip);
+      if (history.length > 12) history.pop();
+      $("#cf-hist").innerHTML = history.map((h) => `<span class="cf-hist-chip ${h}">${h[0].toUpperCase()}</span>`).join("");
+      res.afterReveal?.();
+    } finally {
+      busy = false;
+      btn.disabled = false;
+      btn.textContent = "Flip";
+    }
+  });
+  return {};
+}
+
+return { createCoinflipGame };
+})());
+
+// ===== js/limbo-game.js =====
+({ createLimboGame } = (() => {
+// =============================================================================
+// Limbo — pick a target multiplier; a rocket launches and the multiplier
+// counter climbs to the engine's result. Reaches your target = win; falls
+// short = the rocket fizzles. `onPlay({ target }, amount)` returns
+// { outcome: { result }, win, multiplier, afterReveal }.
+// =============================================================================
+
+
+const reducedMotion = () => !!window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+const easeOut = (t) => 1 - Math.pow(1 - t, 2.2);
+const ROCKET_SVG = `<svg viewBox="0 0 40 80" aria-hidden="true">
+  <path d="M20 2 C30 14 32 30 30 54 H10 C8 30 10 14 20 2z" fill="#e8eaf2"/>
+  <path d="M20 2 C26 12 28 24 27 40 H13 C12 24 14 12 20 2z" fill="#c9ccdb"/>
+  <circle cx="20" cy="30" r="5" fill="#00e0b8"/>
+  <path d="M10 44 L2 62 L10 58z M30 44 L38 62 L30 58z" fill="#7c5cff"/>
+  <path d="M14 54 h12 l-2 8 h-8z" fill="#5b3cff"/>
+  <path class="flame" d="M16 62 q4 14 8 0 q-4 8 -8 0z" fill="#ffb02e"/>
+</svg>`;
+
+function createLimboGame(container, { onPlay, amountLabel = "Bet" }) {
+  let target = 2;
+  let busy = false;
+  const history = [];
+
+  container.innerHTML = `
+    <div class="lb">
+      <div class="lb-controls">
+        <label class="field"><span class="k">Target multiplier</span>
+          <input id="lb-target" type="number" step="0.01" min="1.01" value="2.00" /></label>
+        <div class="lb-stats">
+          <div><span class="k">Win chance</span><strong id="lb-chance">49.50%</strong></div>
+          <div><span class="k">Payout on win</span><strong id="lb-payout">—</strong></div>
+        </div>
+        <label class="field"><span class="k">${amountLabel}</span>
+          <input id="lb-amount" type="number" step="0.001" min="0" value="0.001" /></label>
+        <button id="lb-go" class="btn btn-primary big">Launch</button>
+      </div>
+      <div class="lb-stage" id="lb-stage">
+        <div class="lb-stars"></div>
+        <div class="lb-target-line" id="lb-line"><span id="lb-line-label">2.00×</span></div>
+        <div class="lb-rocket" id="lb-rocket">${ROCKET_SVG}</div>
+        <div class="lb-counter" id="lb-counter">1.00×</div>
+        <div class="lb-hist" id="lb-hist"></div>
+      </div>
+    </div>`;
+
+  const $ = (s) => container.querySelector(s);
+  const counter = $("#lb-counter");
+  const rocket = $("#lb-rocket");
+  const line = $("#lb-line");
+
+  // Height on the stage for a multiplier: log scale so 1.00→100× all fit.
+  const heightPct = (m) => Math.min(88, (Math.log10(Math.max(1, m)) / 2.3) * 100);
+
+  function render() {
+    const chance = Math.min(1, (1 - HOUSE_EDGE) / target);
+    $("#lb-chance").textContent = (chance * 100).toFixed(2) + "%";
+    const amt = parseFloat($("#lb-amount").value) || 0;
+    $("#lb-payout").textContent = amt > 0 ? (amt * target).toFixed(4) : "—";
+    line.style.bottom = heightPct(target) + "%";
+    $("#lb-line-label").textContent = target.toFixed(2) + "×";
+  }
+  $("#lb-target").addEventListener("input", () => {
+    target = Math.max(1.01, parseFloat($("#lb-target").value) || 1.01);
+    render();
+  });
+  $("#lb-amount").addEventListener("input", render);
+
+  function climbTo(result, win) {
+    const stage = $("#lb-stage");
+    stage.classList.remove("win", "lose");
+    counter.className = "lb-counter";
+    rocket.className = "lb-rocket flying";
+    rocket.style.bottom = "4%";
+    if (reducedMotion()) {
+      counter.textContent = result.toFixed(2) + "×";
+      rocket.style.bottom = heightPct(result) + "%";
+      return Promise.resolve();
+    }
+    const ms = 900 + Math.min(2200, Math.log10(result) * 1400);
+    return new Promise((resolve) => {
+      const t0 = performance.now();
+      const frame = (now) => {
+        const t = Math.min(1, (now - t0) / ms);
+        const m = 1 + (result - 1) * easeOut(t);
+        counter.textContent = m.toFixed(2) + "×";
+        rocket.style.bottom = heightPct(m) + "%";
+        if (t < 1) requestAnimationFrame(frame);
+        else resolve();
+      };
+      requestAnimationFrame(frame);
+    });
+  }
+
+  $("#lb-go").addEventListener("click", async () => {
+    if (busy) return;
+    busy = true;
+    const btn = $("#lb-go");
+    btn.disabled = true;
+    btn.textContent = "Launching…";
+    try {
+      const amount = parseFloat($("#lb-amount").value) || 0;
+      const res = await onPlay({ target }, amount);
+      if (!res) return;
+      const result = res.outcome.result;
+      await climbTo(result, res.win);
+      const stage = $("#lb-stage");
+      stage.classList.add(res.win ? "win" : "lose");
+      counter.classList.add(res.win ? "win" : "lose");
+      rocket.className = "lb-rocket " + (res.win ? "won" : "fizzled");
+      history.unshift({ result, win: res.win });
+      if (history.length > 10) history.pop();
+      $("#lb-hist").innerHTML = history.map((h) => `<span class="${h.win ? "win" : "lose"}">${h.result.toFixed(2)}×</span>`).join("");
+      res.afterReveal?.();
+    } finally {
+      busy = false;
+      btn.disabled = false;
+      btn.textContent = "Launch";
+    }
+  });
+
+  render();
+  return {};
+}
+
+return { createLimboGame };
+})());
+
+// ===== js/crash-game.js =====
+({ createCrashGame } = (() => {
+// =============================================================================
+// Crash — the multiplier curve climbs from 1.00× in real time and busts at the
+// engine's bust point. Your auto cash-out is a line on the chart: if the curve
+// crosses it before the bust, you're paid that multiplier.
+// `onPlay({ cashOut }, amount)` returns { outcome: { bustAt }, win, afterReveal }.
+// =============================================================================
+const reducedMotion = () => !!window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+const GROWTH = Math.log(2) / 2.6; // 2× after ~2.6 s, like a classic crash curve
+const MAX_RUN_MS = 9000;
+
+function createCrashGame(container, { onPlay, amountLabel = "Bet" }) {
+  let cashOut = 2;
+  let busy = false;
+  const history = [];
+
+  container.innerHTML = `
+    <div class="cr">
+      <div class="cr-controls">
+        <label class="field"><span class="k">Auto cash out at</span>
+          <input id="cr-cashout" type="number" step="0.01" min="1.01" value="2.00" /></label>
+        <div class="cr-stats">
+          <div><span class="k">Payout on win</span><strong id="cr-payout">—</strong></div>
+        </div>
+        <label class="field"><span class="k">${amountLabel}</span>
+          <input id="cr-amount" type="number" step="0.001" min="0" value="0.001" /></label>
+        <button id="cr-go" class="btn btn-primary big">Bet</button>
+      </div>
+      <div class="cr-stage" id="cr-stage">
+        <svg id="cr-svg" class="cr-svg" viewBox="0 0 600 260" preserveAspectRatio="none">
+          <defs><linearGradient id="cr-fill" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="#7c5cff" stop-opacity=".45"/><stop offset="1" stop-color="#7c5cff" stop-opacity="0"/></linearGradient></defs>
+          <g id="cr-grid" class="cr-grid"></g>
+          <line id="cr-line" class="cr-line" x1="0" x2="600" y1="0" y2="0"/>
+          <path id="cr-area" class="cr-area" d=""/>
+          <path id="cr-path" class="cr-path" d=""/>
+          <circle id="cr-dot" class="cr-dot" r="5" cx="0" cy="260"/>
+          <g id="cr-cash" class="cr-cash" style="display:none"><circle r="7"/><text y="-12">cashed out</text></g>
+        </svg>
+        <div class="cr-readout" id="cr-readout">1.00×</div>
+        <div class="cr-status" id="cr-status">Set your auto cash-out and bet.</div>
+        <div class="cr-hist" id="cr-hist"></div>
+      </div>
+    </div>`;
+
+  const $ = (s) => container.querySelector(s);
+  const W = 600, H = 260, PAD = 10;
+  const readout = $("#cr-readout");
+  const path = $("#cr-path");
+  const area = $("#cr-area");
+  const dot = $("#cr-dot");
+  const cashMark = $("#cr-cash");
+
+  // Axes scale with the run: x = time, y = multiplier (linear, rescaled as it grows).
+  let yMax = 2;
+  let tMax = 4000;
+  const xOf = (t) => PAD + (t / tMax) * (W - 2 * PAD);
+  const yOf = (m) => H - PAD - ((m - 1) / (yMax - 1)) * (H - 2 * PAD);
+  const mAt = (t) => Math.exp(GROWTH * (t / 1000));
+
+  function drawGrid() {
+    const g = $("#cr-grid");
+    const steps = yMax <= 3 ? 0.5 : yMax <= 10 ? 1 : yMax <= 30 ? 5 : 10;
+    let html = "";
+    for (let m = 1 + steps; m < yMax; m += steps) {
+      html += `<line x1="0" x2="${W}" y1="${yOf(m)}" y2="${yOf(m)}"/><text x="4" y="${yOf(m) - 3}">${m.toFixed(steps < 1 ? 1 : 0)}×</text>`;
+    }
+    g.innerHTML = html;
+    const line = $("#cr-line");
+    const y = yOf(cashOut);
+    line.setAttribute("y1", y);
+    line.setAttribute("y2", y);
+    line.style.display = cashOut < yMax ? "" : "none";
+  }
+
+  function render() {
+    const amt = parseFloat($("#cr-amount").value) || 0;
+    $("#cr-payout").textContent = amt > 0 ? (amt * cashOut).toFixed(4) : "—";
+    drawGrid();
+  }
+  $("#cr-cashout").addEventListener("input", () => {
+    cashOut = Math.max(1.01, parseFloat($("#cr-cashout").value) || 1.01);
+    render();
+  });
+  $("#cr-amount").addEventListener("input", render);
+
+  function reset() {
+    yMax = Math.max(2, cashOut * 1.15);
+    tMax = 4000;
+    path.setAttribute("d", "");
+    area.setAttribute("d", "");
+    dot.setAttribute("cx", xOf(0));
+    dot.setAttribute("cy", yOf(1));
+    cashMark.style.display = "none";
+    $("#cr-stage").classList.remove("bust", "win");
+    readout.className = "cr-readout";
+    readout.textContent = "1.00×";
+    drawGrid();
+  }
+
+  function run(bustAt, cashedAt) {
+    const busts = Math.log(bustAt) / GROWTH * 1000; // ms until the bust point
+    const speed = Math.max(1, busts / MAX_RUN_MS); // long runs play faster
+    const pts = [];
+    let cashed = false;
+    const finish = () => {
+      const cx = xOf(busts / speed), cy = yOf(bustAt);
+      $("#cr-stage").classList.add(cashed ? "win" : "bust");
+      readout.textContent = bustAt.toFixed(2) + "×";
+      readout.classList.add("bust");
+      dot.setAttribute("cx", cx);
+      dot.setAttribute("cy", cy);
+    };
+    if (reducedMotion()) {
+      yMax = Math.max(yMax, bustAt * 1.1);
+      tMax = Math.max(4000, busts / speed * 1.1);
+      drawGrid();
+      const d = `M${xOf(0)} ${yOf(1)} L${xOf(busts / speed)} ${yOf(bustAt)}`;
+      path.setAttribute("d", d);
+      if (cashedAt) { cashed = true; placeCash(cashedAt, Math.log(cashedAt) / GROWTH * 1000 / speed); }
+      finish();
+      return Promise.resolve();
+    }
+    return new Promise((resolve) => {
+      const t0 = performance.now();
+      const frame = (now) => {
+        const t = Math.min(busts, (now - t0) * speed);
+        const m = Math.min(bustAt, mAt(t));
+        const shownT = t / speed;
+        // Grow the axes smoothly so the curve never leaves the chart.
+        if (m > yMax * 0.85) { yMax = m * 1.3; drawGrid(); }
+        if (shownT > tMax * 0.85) { tMax = shownT * 1.3; drawGrid(); }
+        pts.push([shownT, m]);
+        const d = pts.map(([pt, pm], i) => `${i ? "L" : "M"}${xOf(pt).toFixed(1)} ${yOf(pm).toFixed(1)}`).join(" ");
+        path.setAttribute("d", d);
+        area.setAttribute("d", `${d} L${xOf(shownT).toFixed(1)} ${H - PAD} L${xOf(0)} ${H - PAD} Z`);
+        dot.setAttribute("cx", xOf(shownT));
+        dot.setAttribute("cy", yOf(m));
+        readout.textContent = m.toFixed(2) + "×";
+        if (cashedAt && !cashed && m >= cashedAt) {
+          cashed = true;
+          placeCash(cashedAt, shownT);
+          readout.classList.add("cashed");
+        }
+        if (t < busts) requestAnimationFrame(frame);
+        else { finish(); resolve(); }
+      };
+      requestAnimationFrame(frame);
+    });
+  }
+  function placeCash(m, shownT) {
+    cashMark.style.display = "";
+    cashMark.setAttribute("transform", `translate(${xOf(shownT)} ${yOf(m)})`);
+    cashMark.querySelector("text").textContent = `cashed out ${m.toFixed(2)}×`;
+  }
+
+  $("#cr-go").addEventListener("click", async () => {
+    if (busy) return;
+    busy = true;
+    const btn = $("#cr-go");
+    btn.disabled = true;
+    btn.textContent = "Running…";
+    try {
+      const amount = parseFloat($("#cr-amount").value) || 0;
+      const res = await onPlay({ cashOut }, amount);
+      if (!res) return;
+      reset();
+      $("#cr-status").textContent = `Auto cash-out at ${cashOut.toFixed(2)}×…`;
+      const bustAt = res.outcome.bustAt;
+      await run(bustAt, res.win ? cashOut : null);
+      $("#cr-status").textContent = res.win
+        ? `💥 Busted at ${bustAt.toFixed(2)}× — you cashed out at ${cashOut.toFixed(2)}× first.`
+        : `💥 Busted at ${bustAt.toFixed(2)}× before your ${cashOut.toFixed(2)}×.`;
+      history.unshift({ bustAt, win: res.win });
+      if (history.length > 10) history.pop();
+      $("#cr-hist").innerHTML = history.map((h) => `<span class="${h.win ? "win" : "lose"}">${h.bustAt.toFixed(2)}×</span>`).join("");
+      res.afterReveal?.();
+    } finally {
+      busy = false;
+      btn.disabled = false;
+      btn.textContent = "Bet";
+    }
+  });
+
+  render();
+  reset();
+  return {};
+}
+
+return { createCrashGame };
+})());
+
+// ===== js/wheel-game.js =====
+({ createWheelGame } = (() => {
+// =============================================================================
+// Wheel — a segmented wheel per risk level. It spins and stops with the
+// engine's segment under the pointer. `onPlay({ risk }, amount)` returns
+// { outcome: { segment, multiplier }, win, afterReveal }.
+// =============================================================================
+
+
+const SPIN_MS = 4000;
+const reducedMotion = () => !!window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+const easeOut = (t) => 1 - Math.pow(1 - t, 3);
+const colorFor = (m) => (m === 0 ? "#1e2130" : m < 1.6 ? "#1f9d6b" : m < 4 ? "#7c5cff" : "#d9a83c");
+
+function polar(cx, cy, r, deg) {
+  const a = ((deg - 90) * Math.PI) / 180;
+  return [cx + r * Math.cos(a), cy + r * Math.sin(a)];
+}
+function wedge(cx, cy, r0, r1, a0, a1) {
+  const [x0, y0] = polar(cx, cy, r1, a0), [x1, y1] = polar(cx, cy, r1, a1);
+  const [x2, y2] = polar(cx, cy, r0, a1), [x3, y3] = polar(cx, cy, r0, a0);
+  return `M${x0} ${y0} A${r1} ${r1} 0 0 1 ${x1} ${y1} L${x2} ${y2} A${r0} ${r0} 0 0 0 ${x3} ${y3} Z`;
+}
+
+function createWheelGame(container, { onPlay, amountLabel = "Bet" }) {
+  let risk = "medium";
+  let busy = false;
+  let deg = 0;
+  const history = [];
+
+  container.innerHTML = `
+    <div class="wh">
+      <div class="wh-controls">
+        <div class="toggle wh-risk">
+          <button class="toggle-btn" data-r="low">Low</button>
+          <button class="toggle-btn active" data-r="medium">Medium</button>
+          <button class="toggle-btn" data-r="high">High</button>
+        </div>
+        <div class="wh-legend" id="wh-legend"></div>
+        <label class="field"><span class="k">${amountLabel}</span>
+          <input id="wh-amount" type="number" step="0.001" min="0" value="0.001" /></label>
+        <button id="wh-spin" class="btn btn-primary big">Spin</button>
+      </div>
+      <div class="wh-stage">
+        <div class="wh-wrap">
+          <div class="wh-pointer"></div>
+          <div class="wh-rotor" id="wh-rotor"></div>
+          <div class="wh-center" id="wh-center">—</div>
+        </div>
+        <div class="wh-status" id="wh-status">Pick a risk level and spin.</div>
+        <div class="wh-hist" id="wh-hist"></div>
+      </div>
+    </div>`;
+
+  const $ = (s) => container.querySelector(s);
+  const rotor = $("#wh-rotor");
+
+  function build() {
+    const segs = WHEEL_SEGMENTS[risk];
+    const step = 360 / segs.length;
+    let paths = "", labels = "";
+    segs.forEach((m, i) => {
+      const a0 = i * step, a1 = (i + 1) * step, mid = a0 + step / 2;
+      paths += `<path d="${wedge(200, 200, 110, 190, a0, a1)}" fill="${colorFor(m)}" stroke="#0a0b10" stroke-width="2" data-seg="${i}"/>`;
+      const [lx, ly] = polar(200, 200, 150, mid);
+      labels += `<text x="${lx}" y="${ly}" transform="rotate(${mid} ${lx} ${ly})" class="wh-lbl">${m ? m + "×" : "0"}</text>`;
+    });
+    rotor.innerHTML = `<svg viewBox="0 0 400 400" class="wh-svg"><circle cx="200" cy="200" r="196" fill="#2a2412"/>${paths}${labels}<circle cx="200" cy="200" r="108" fill="#11131c" stroke="#c9a24a" stroke-width="3"/></svg>`;
+    const counts = {};
+    segs.forEach((m) => (counts[m] = (counts[m] || 0) + 1));
+    $("#wh-legend").innerHTML = Object.entries(counts).sort((a, b) => b[0] - a[0])
+      .map(([m, n]) => `<span><i style="background:${colorFor(+m)}"></i>${+m ? m + "×" : "0×"} <small>${n}/${segs.length}</small></span>`).join("");
+  }
+
+  container.querySelectorAll(".wh-risk .toggle-btn").forEach((b) =>
+    b.addEventListener("click", () => {
+      if (busy) return;
+      risk = b.dataset.r;
+      container.querySelectorAll(".wh-risk .toggle-btn").forEach((x) => x.classList.toggle("active", x === b));
+      build();
+    }));
+
+  function spinTo(segment) {
+    const segs = WHEEL_SEGMENTS[risk];
+    const step = 360 / segs.length;
+    const target = (360 - (segment + 0.5) * step) % 360;
+    const cur = ((deg % 360) + 360) % 360;
+    const end = deg + 5 * 360 + ((target - cur + 360) % 360);
+    const start = deg;
+    if (reducedMotion()) {
+      deg = end;
+      rotor.style.transform = `rotate(${deg}deg)`;
+      return Promise.resolve();
+    }
+    return new Promise((resolve) => {
+      const t0 = performance.now();
+      const frame = (now) => {
+        const t = Math.min(1, (now - t0) / SPIN_MS);
+        deg = start + (end - start) * easeOut(t);
+        rotor.style.transform = `rotate(${deg}deg)`;
+        if (t < 1) requestAnimationFrame(frame);
+        else resolve();
+      };
+      requestAnimationFrame(frame);
+    });
+  }
+
+  $("#wh-spin").addEventListener("click", async () => {
+    if (busy) return;
+    busy = true;
+    const btn = $("#wh-spin");
+    btn.disabled = true;
+    btn.textContent = "Spinning…";
+    $("#wh-center").className = "wh-center";
+    try {
+      const amount = parseFloat($("#wh-amount").value) || 0;
+      const res = await onPlay({ risk }, amount);
+      if (!res) return;
+      $("#wh-status").textContent = "Spinning…";
+      await spinTo(res.outcome.segment);
+      const m = res.outcome.multiplier;
+      $("#wh-center").textContent = m ? m + "×" : "0×";
+      $("#wh-center").className = "wh-center " + (res.win ? "win" : "lose");
+      rotor.querySelectorAll("[data-seg]").forEach((p) => p.classList.toggle("hit", +p.dataset.seg === res.outcome.segment));
+      $("#wh-status").textContent = res.win ? `🎡 Landed on ${m}× — win!` : "🎡 Landed on 0× — no win.";
+      history.unshift({ m, win: res.win });
+      if (history.length > 12) history.pop();
+      $("#wh-hist").innerHTML = history.map((h) => `<span class="${h.win ? "win" : "lose"}">${h.m}×</span>`).join("");
+      res.afterReveal?.();
+    } finally {
+      busy = false;
+      btn.disabled = false;
+      btn.textContent = "Spin";
+    }
+  });
+
+  build();
+  return {};
+}
+
+return { createWheelGame };
+})());
+
+// ===== js/plinko-game.js =====
+({ createPlinkoGame } = (() => {
+// =============================================================================
+// Plinko — a peg board (8–16 rows) with payout buckets. The ball drops and
+// bounces left/right exactly along the engine's path, then lands in its
+// bucket. `onPlay({ rows, risk }, amount)` returns { outcome: { path, bucket,
+// rows, risk }, win, multiplier, afterReveal }.
+// =============================================================================
+
+
+const reducedMotion = () => !!window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+const ROW_OPTIONS = [8, 10, 12, 14, 16];
+const STEP_MS = 170;
+
+function bucketColor(m, max) {
+  // red (lowest) → yellow → green (highest), on a log scale
+  const t = Math.min(1, Math.log(Math.max(m, 0.2) / 0.2) / Math.log(Math.max(max, 1) / 0.2));
+  const h = Math.round(t * 120);
+  return `hsl(${h} 70% 48%)`;
+}
+
+function createPlinkoGame(container, { onPlay, amountLabel = "Bet" }) {
+  let rows = 12;
+  let risk = "medium";
+  let busy = false;
+  const history = [];
+
+  container.innerHTML = `
+    <div class="pk">
+      <div class="pk-controls">
+        <div class="toggle pk-risk">
+          <button class="toggle-btn" data-r="low">Low</button>
+          <button class="toggle-btn active" data-r="medium">Medium</button>
+          <button class="toggle-btn" data-r="high">High</button>
+        </div>
+        <label class="field"><span class="k">Rows</span>
+          <select id="pk-rows">${ROW_OPTIONS.map((r) => `<option value="${r}"${r === 12 ? " selected" : ""}>${r}</option>`).join("")}</select></label>
+        <label class="field"><span class="k">${amountLabel}</span>
+          <input id="pk-amount" type="number" step="0.001" min="0" value="0.001" /></label>
+        <button id="pk-drop" class="btn btn-primary big">Drop ball</button>
+        <div class="pk-hist" id="pk-hist"></div>
+      </div>
+      <div class="pk-stage">
+        <svg id="pk-svg" class="pk-svg" viewBox="0 0 600 520"></svg>
+        <div id="pk-status" class="pk-status">Choose rows and risk, then drop.</div>
+      </div>
+    </div>`;
+
+  const $ = (s) => container.querySelector(s);
+  const svg = $("#pk-svg");
+  const W = 600, TOP = 40, BOTTOM = 470;
+  let geom = null;
+
+  function build() {
+    const table = plinkoTable(rows, risk);
+    const max = Math.max(...table);
+    const spacing = Math.min(44, (W - 40) / (rows + 3));
+    const rowGap = (BOTTOM - TOP - 60) / rows;
+    const cx = W / 2;
+    geom = { spacing, rowGap, cx };
+    let pegs = "", buckets = "";
+    for (let r = 0; r < rows; r++) {
+      const n = r + 3;
+      for (let i = 0; i < n; i++) {
+        const x = cx + (i - (n - 1) / 2) * spacing;
+        pegs += `<circle cx="${x}" cy="${TOP + r * rowGap}" r="4" class="pk-peg"/>`;
+      }
+    }
+    const by = TOP + rows * rowGap + 8;
+    const bw = spacing - 4;
+    table.forEach((m, k) => {
+      const x = cx + (k - rows / 2) * spacing;
+      buckets += `<g class="pk-bucket" data-k="${k}"><rect x="${x - bw / 2}" y="${by}" width="${bw}" height="30" rx="5" fill="${bucketColor(m, max)}"/>
+        <text x="${x}" y="${by + 20}">${m >= 100 ? Math.round(m) : m}${bw > 30 ? "×" : ""}</text></g>`;
+    });
+    svg.innerHTML = `<g>${pegs}</g><g>${buckets}</g><circle id="pk-ball" class="pk-ball" r="7" cx="${cx}" cy="${TOP - 24}" hidden/>`;
+  }
+
+  container.querySelectorAll(".pk-risk .toggle-btn").forEach((b) =>
+    b.addEventListener("click", () => {
+      if (busy) return;
+      risk = b.dataset.r;
+      container.querySelectorAll(".pk-risk .toggle-btn").forEach((x) => x.classList.toggle("active", x === b));
+      build();
+    }));
+  $("#pk-rows").addEventListener("change", () => {
+    if (busy) return;
+    rows = Number($("#pk-rows").value);
+    build();
+  });
+
+  // Walk the ball peg to peg: at row r it sits above the peg it hits, then
+  // hops half a spacing left or right with a little arc.
+  function drop(path) {
+    const ball = svg.querySelector("#pk-ball");
+    const { spacing, rowGap, cx } = geom;
+    ball.hidden = false;
+    let p = 0; // horizontal position in half-spacings
+    const points = [[cx, TOP - 24]];
+    path.forEach((d, r) => {
+      points.push([cx + p * spacing, TOP + r * rowGap - 9]); // on the peg
+      p += d === "R" ? 0.5 : -0.5;
+    });
+    points.push([cx + p * spacing, TOP + rows * rowGap + 14]); // into the bucket
+    if (reducedMotion()) {
+      const [x, y] = points[points.length - 1];
+      ball.setAttribute("cx", x);
+      ball.setAttribute("cy", y);
+      return Promise.resolve();
+    }
+    return new Promise((resolve) => {
+      let i = 0;
+      let t0 = performance.now();
+      const frame = (now) => {
+        const t = Math.min(1, (now - t0) / STEP_MS);
+        const [x0, y0] = points[i], [x1, y1] = points[i + 1];
+        const arc = Math.sin(t * Math.PI) * 10; // small bounce between pegs
+        ball.setAttribute("cx", x0 + (x1 - x0) * t);
+        ball.setAttribute("cy", y0 + (y1 - y0) * (t * t) - arc);
+        if (t < 1) return requestAnimationFrame(frame);
+        i++;
+        t0 = now;
+        if (i < points.length - 1) requestAnimationFrame(frame);
+        else resolve();
+      };
+      requestAnimationFrame(frame);
+    });
+  }
+
+  $("#pk-drop").addEventListener("click", async () => {
+    if (busy) return;
+    busy = true;
+    const btn = $("#pk-drop");
+    btn.disabled = true;
+    btn.textContent = "Dropping…";
+    svg.querySelectorAll(".pk-bucket.hit").forEach((b) => b.classList.remove("hit"));
+    try {
+      const amount = parseFloat($("#pk-amount").value) || 0;
+      const res = await onPlay({ rows, risk }, amount);
+      if (!res) return;
+      $("#pk-status").textContent = "Bouncing…";
+      await drop(res.outcome.path);
+      const bucket = svg.querySelector(`.pk-bucket[data-k="${res.outcome.bucket}"]`);
+      bucket?.classList.add("hit");
+      $("#pk-status").textContent = `${res.multiplier}× — bucket ${res.outcome.bucket + 1} of ${rows + 1}${res.win ? " · win" : ""}`;
+      history.unshift({ m: res.multiplier, win: res.win });
+      if (history.length > 10) history.pop();
+      $("#pk-hist").innerHTML = history.map((h) => `<span class="${h.win ? "win" : "lose"}">${h.m}×</span>`).join("");
+      res.afterReveal?.();
+    } finally {
+      busy = false;
+      btn.disabled = false;
+      btn.textContent = "Drop ball";
+    }
+  });
+
+  build();
+  return {};
+}
+
+return { createPlinkoGame };
+})());
+
+// ===== js/hilo-game.js =====
+({ createHiLoGame } = (() => {
+// =============================================================================
+// HiLo — a card is dealt face up; call the next one Higher-or-same or
+// Lower-or-same. Each right call multiplies your stake; the revealed card
+// becomes the new base; cash out whenever you like. A wrong call loses the
+// stake. Session game: onStart({ amount }) -> { sessionId, base }
+//   onGuess(sessionId, guess) -> { card, win, bust, multiplier, nextBase }
+//   onCashout(sessionId) -> { multiplier }
+// =============================================================================
+
+
+
+const RANK_LABEL = ["2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K", "A"];
+const SUITS = ["♠", "♥", "♦", "♣"];
+const reducedMotion = () => !!window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+const floor2 = (x) => Math.floor(x * 100) / 100;
+const multFor = (base, guess) => floor2((1 / hiloChance(base, guess)) * (1 - HOUSE_EDGE));
+
+function cardHtml(card, faceUp) {
+  const red = card && (card.suit === 1 || card.suit === 2);
+  return `<div class="card ${faceUp ? "up" : ""}">
+    <div class="card-back"></div>
+    <div class="card-front ${red ? "red" : ""}">${card ? `<span class="card-rank">${RANK_LABEL[card.rank]}</span><span class="card-suit">${SUITS[card.suit]}</span>` : ""}</div>
+  </div>`;
+}
+
+function createHiLoGame(container, { onStart, onGuess, onCashout, amountLabel = "Bet" }) {
+  let session = null;
+  let base = null; // { rank, suit }
+  let multiplier = 1;
+  let busy = false;
+  let streak = [];
+
+  container.innerHTML = `
+    <div class="hl">
+      <div class="hl-controls">
+        <button id="hl-higher" class="btn hl-guess" disabled>Higher or same<small id="hl-hi-odds"></small></button>
+        <button id="hl-lower" class="btn hl-guess" disabled>Lower or same<small id="hl-lo-odds"></small></button>
+        <div class="hl-stats"><div><span class="k">Current</span><strong id="hl-mult">1.00×</strong></div>
+          <div><span class="k">Right calls</span><strong id="hl-streak">0</strong></div></div>
+        <label class="field"><span class="k">${amountLabel}</span>
+          <input id="hl-amount" type="number" step="0.001" min="0" value="0.001" /></label>
+        <button id="hl-action" class="btn btn-primary big">Deal</button>
+      </div>
+      <div class="hl-stage">
+        <div class="hl-table">
+          <div class="hl-slot" id="hl-base">${cardHtml(null, false)}</div>
+          <div class="hl-arrow">→</div>
+          <div class="hl-slot" id="hl-next">${cardHtml(null, false)}</div>
+        </div>
+        <div class="hl-history" id="hl-history"></div>
+        <div class="hl-status" id="hl-status">Deal a card to start.</div>
+      </div>
+    </div>`;
+
+  const $ = (s) => container.querySelector(s);
+  const actionBtn = $("#hl-action");
+  const hi = $("#hl-higher"), lo = $("#hl-lower");
+
+  function renderOdds() {
+    if (!base) { hi.disabled = lo.disabled = true; return; }
+    const pH = hiloChance(base.rank, "higherOrSame"), pL = hiloChance(base.rank, "lowerOrSame");
+    $("#hl-hi-odds").textContent = `${(pH * 100).toFixed(1)}% · ×${multFor(base.rank, "higherOrSame").toFixed(2)}`;
+    $("#hl-lo-odds").textContent = `${(pL * 100).toFixed(1)}% · ×${multFor(base.rank, "lowerOrSame").toFixed(2)}`;
+    hi.disabled = lo.disabled = busy || !session;
+    $("#hl-mult").textContent = multiplier.toFixed(2) + "×";
+    $("#hl-streak").textContent = streak.filter((x) => x.win).length;
+  }
+
+  function setBase(card) {
+    base = card;
+    $("#hl-base").innerHTML = cardHtml(card, true);
+    $("#hl-next").innerHTML = cardHtml(null, false);
+  }
+
+  async function revealNext(card) {
+    const slot = $("#hl-next");
+    slot.innerHTML = cardHtml(card, false);
+    await new Promise((r) => setTimeout(r, 30));
+    slot.querySelector(".card").classList.add("up");
+    if (!reducedMotion()) await new Promise((r) => setTimeout(r, 650));
+  }
+
+  async function guess(g) {
+    if (!session || busy) return;
+    busy = true;
+    renderOdds();
+    try {
+      const r = await onGuess(session.sessionId, g);
+      if (!r) return;
+      await revealNext(r.card);
+      streak.push({ from: base, to: r.card, win: !r.bust });
+      $("#hl-history").innerHTML = streak.slice(-8).map((s) =>
+        `<span class="${s.win ? "win" : "lose"}">${RANK_LABEL[s.from.rank]}→${RANK_LABEL[s.to.rank]}</span>`).join("");
+      if (r.bust) {
+        $("#hl-status").textContent = `✗ ${RANK_LABEL[r.card.rank]} — wrong call. Lost.`;
+        endGame();
+        return;
+      }
+      multiplier = r.multiplier;
+      $("#hl-status").textContent = `✓ ${RANK_LABEL[r.card.rank]} — right! ×${multiplier.toFixed(2)}. Call again or cash out.`;
+      actionBtn.textContent = `Cash Out ×${multiplier.toFixed(2)}`;
+      if (!reducedMotion()) await new Promise((r2) => setTimeout(r2, 350));
+      setBase(r.card);
+    } finally {
+      busy = false;
+      renderOdds();
+    }
+  }
+  hi.addEventListener("click", () => guess("higherOrSame"));
+  lo.addEventListener("click", () => guess("lowerOrSame"));
+
+  function endGame() {
+    session = null;
+    multiplier = 1;
+    actionBtn.textContent = "Deal";
+    renderOdds();
+    hi.disabled = lo.disabled = true;
+  }
+
+  actionBtn.addEventListener("click", async () => {
+    if (busy) return;
+    if (session) {
+      if (streak.length === 0) { $("#hl-status").textContent = "Make at least one call before cashing out."; return; }
+      busy = true;
+      try {
+        const r = await onCashout(session.sessionId);
+        if (r) $("#hl-status").textContent = `💰 Cashed out ×${r.multiplier.toFixed(2)}.`;
+        endGame();
+      } finally { busy = false; }
+      return;
+    }
+    busy = true;
+    actionBtn.disabled = true;
+    try {
+      const amount = parseFloat($("#hl-amount").value) || 0;
+      const s = await onStart({ amount });
+      if (!s) return;
+      session = s;
+      streak = [];
+      multiplier = 1;
+      $("#hl-history").innerHTML = "";
+      setBase(s.base);
+      actionBtn.textContent = "Cash Out";
+      $("#hl-status").textContent = `Base card ${RANK_LABEL[s.base.rank]}. Higher or lower?`;
+    } finally {
+      busy = false;
+      actionBtn.disabled = false;
+      renderOdds();
+    }
+  });
+
+  /** Resume an unfinished game: the current base card and multiplier. */
+  function restore({ sessionId, base: b, multiplier: m, correct }) {
+    session = { sessionId };
+    streak = Array.from({ length: correct }, () => ({ from: b, to: b, win: true }));
+    multiplier = m;
+    setBase(b);
+    actionBtn.textContent = m > 1 ? `Cash Out ×${m.toFixed(2)}` : "Cash Out";
+    $("#hl-status").textContent = `Resumed at ×${m.toFixed(2)}. Base card ${RANK_LABEL[b.rank]} — higher or lower?`;
+    renderOdds();
+  }
+
+  renderOdds();
+  return { restore };
+}
+
+return { createHiLoGame };
+})());
+
+// ===== js/darts-game.js =====
+({ createDartsGame } = (() => {
+// =============================================================================
+// Darts — a dartboard of six scoring rings (0.5× outer rim … 8.5× bull). The
+// dart flies in and sticks in the ring the engine picked; the angle inside the
+// ring is cosmetic. `onPlay({ difficulty }, amount)` returns
+// { outcome: { band, multiplier }, win, afterReveal }.
+// =============================================================================
+
+
+const DIFFS = ["easy", "medium", "hard", "expert"];
+// Ring outer radii for bands 0..5 (band 0 is the widest, outermost ring).
+const RINGS = [150, 118, 90, 64, 40, 16];
+const RING_FILL = ["#1e2130", "#2b3147", "#1f9d6b", "#2f6fd1", "#7c5cff", "#d9a83c"];
+const reducedMotion = () => !!window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+const FLIGHT_MS = 750;
+
+const DART_SVG = `<svg viewBox="0 0 120 24" aria-hidden="true">
+  <path d="M0 12 L22 8 L22 16z" fill="#e8eaf2"/>
+  <rect x="22" y="9" width="40" height="6" rx="3" fill="#c9a24a"/>
+  <rect x="62" y="10" width="34" height="4" fill="#8b90a6"/>
+  <path d="M96 12 L120 2 L112 12 L120 22z" fill="#ff5c7a"/>
+</svg>`;
+
+function createDartsGame(container, { onPlay, amountLabel = "Bet" }) {
+  let difficulty = "medium";
+  let busy = false;
+  const history = [];
+
+  const rings = RINGS.map((r, i) => `<circle cx="160" cy="160" r="${r}" fill="${RING_FILL[i]}" stroke="#0a0b10" stroke-width="2" data-band="${i}"/>`).join("");
+  const labels = RINGS.map((r, i) => {
+    const y = 160 - (i < 5 ? (r + RINGS[i + 1]) / 2 : 0);
+    return `<text x="160" y="${y + 4}" class="dt-lbl">${DARTS_MULTIPLIERS[i]}×</text>`;
+  }).join("");
+  container.innerHTML = `
+    <div class="dt">
+      <div class="dt-controls">
+        <div class="toggle dt-diff">${DIFFS.map((d) => `<button class="toggle-btn${d === "medium" ? " active" : ""}" data-d="${d}">${d[0].toUpperCase() + d.slice(1)}</button>`).join("")}</div>
+        <div class="dt-odds" id="dt-odds"></div>
+        <label class="field"><span class="k">${amountLabel}</span>
+          <input id="dt-amount" type="number" step="0.001" min="0" value="0.001" /></label>
+        <button id="dt-throw" class="btn btn-primary big">Throw</button>
+      </div>
+      <div class="dt-stage">
+        <div class="dt-board-wrap" id="dt-wrap">
+          <svg viewBox="0 0 320 320" class="dt-board" id="dt-board">
+            <circle cx="160" cy="160" r="156" fill="#3a2f12"/>
+            ${rings}
+            <g class="dt-wires">${[0, 45, 90, 135].map((a) => `<line x1="160" y1="10" x2="160" y2="310" transform="rotate(${a} 160 160)"/>`).join("")}</g>
+            ${labels}
+          </svg>
+          <div class="dart" id="dart" hidden>${DART_SVG}</div>
+        </div>
+        <div class="dt-status" id="dt-status">Pick a difficulty and throw.</div>
+        <div class="dt-hist" id="dt-hist"></div>
+      </div>
+    </div>`;
+
+  const $ = (s) => container.querySelector(s);
+  const dart = $("#dart");
+
+  function renderOdds() {
+    const w = DARTS_WEIGHTS[difficulty];
+    $("#dt-odds").innerHTML = DARTS_MULTIPLIERS.map((m, i) =>
+      `<span><i style="background:${RING_FILL[i]}"></i>${m}× <small>${(w[i] * 100).toFixed(0)}%</small></span>`).join("");
+  }
+  container.querySelectorAll(".dt-diff .toggle-btn").forEach((b) =>
+    b.addEventListener("click", () => {
+      if (busy) return;
+      difficulty = b.dataset.d;
+      container.querySelectorAll(".dt-diff .toggle-btn").forEach((x) => x.classList.toggle("active", x === b));
+      renderOdds();
+    }));
+
+  // Fly the dart in to a point inside the band's ring (angle is cosmetic).
+  function throwTo(band) {
+    const wrap = $("#dt-wrap");
+    const size = wrap.clientWidth || 320;
+    const scale = size / 320;
+    const outer = RINGS[band], inner = band < 5 ? RINGS[band + 1] : 0;
+    const r = (inner + (outer - inner) * (0.25 + Math.random() * 0.5)) * scale;
+    const a = Math.random() * Math.PI * 2;
+    const x = size / 2 + r * Math.cos(a), y = size / 2 + r * Math.sin(a);
+    dart.hidden = false;
+    dart.classList.remove("stuck");
+    $("#dt-board").classList.remove("hit");
+    if (reducedMotion()) {
+      dart.style.transition = "none";
+      dart.style.transform = `translate(${x}px, ${y}px) scale(1) rotate(-20deg)`;
+      dart.classList.add("stuck");
+      return Promise.resolve();
+    }
+    dart.style.transition = "none";
+    dart.style.transform = `translate(${size * 0.9}px, ${size * 0.95}px) scale(2.6) rotate(-40deg)`;
+    dart.style.opacity = "0";
+    void dart.offsetWidth;
+    dart.style.transition = `transform ${FLIGHT_MS}ms cubic-bezier(.2,.8,.3,1), opacity .2s`;
+    dart.style.opacity = "1";
+    dart.style.transform = `translate(${x}px, ${y}px) scale(1) rotate(-20deg)`;
+    return new Promise((resolve) => setTimeout(() => {
+      dart.classList.add("stuck");
+      $("#dt-board").classList.add("hit");
+      resolve();
+    }, FLIGHT_MS));
+  }
+
+  $("#dt-throw").addEventListener("click", async () => {
+    if (busy) return;
+    busy = true;
+    const btn = $("#dt-throw");
+    btn.disabled = true;
+    btn.textContent = "Throwing…";
+    $("#dt-board").querySelectorAll("[data-band]").forEach((c) => c.classList.remove("lit"));
+    try {
+      const amount = parseFloat($("#dt-amount").value) || 0;
+      const res = await onPlay({ difficulty }, amount);
+      if (!res) return;
+      $("#dt-status").textContent = "…";
+      await throwTo(res.outcome.band);
+      $("#dt-board").querySelector(`[data-band="${res.outcome.band}"]`)?.classList.add("lit");
+      const m = res.outcome.multiplier;
+      $("#dt-status").textContent = res.outcome.band === 5 ? `🎯 BULLSEYE! ${m}×` : `🎯 Ring ${6 - res.outcome.band} — ${m}×${res.win ? " · win" : ""}`;
+      history.unshift({ m, win: res.win });
+      if (history.length > 10) history.pop();
+      $("#dt-hist").innerHTML = history.map((h) => `<span class="${h.win ? "win" : "lose"}">${h.m}×</span>`).join("");
+      res.afterReveal?.();
+    } finally {
+      busy = false;
+      btn.disabled = false;
+      btn.textContent = "Throw";
+    }
+  });
+
+  renderOdds();
+  return {};
+}
+
+return { createDartsGame };
+})());
+
+// ===== js/snakes-game.js =====
+({ createSnakesGame } = (() => {
+// =============================================================================
+// Snakes — a snakes-and-ladders board of 20 squares. Your piece climbs the
+// board and stops on the square the engine's tier says: a multiplier square
+// pays it, a snake square bites (0×). Which square of that tier it stops on is
+// cosmetic; the tier is the provably-fair result.
+// `onPlay({}, amount)` returns { outcome: { index, multiplier }, win, afterReveal }.
+// =============================================================================
+
+
+const COLS = 5, ROWS = 4;
+// Square 1 bottom-left, boustrophedon upward. Values: 0 = snake, else multiplier.
+const BOARD = [1.11, 0, 1.11, 0, 1.11, 1.4, 0, 1.11, 2.5, 0, 1.11, 1.4, 0, 1.11, 1.11, 2.5, 1.11, 1.4, 1.11, 4.0];
+const HOP_MS = 110;
+const reducedMotion = () => !!window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+const SNAKE_SVG = `<svg viewBox="0 0 40 40" aria-hidden="true"><path d="M8 32 c0 -8 10 -8 10 -14 s-10 -6 -10 -12" stroke="#35d07f" stroke-width="4" fill="none" stroke-linecap="round"/><circle cx="8" cy="6" r="3.5" fill="#35d07f"/><circle cx="7" cy="5" r="1" fill="#0a0b10"/></svg>`;
+const PIECE_SVG = `<svg viewBox="0 0 40 40" aria-hidden="true"><circle cx="20" cy="20" r="15" fill="#7c5cff" stroke="#e8eaf2" stroke-width="3"/><circle cx="20" cy="20" r="6" fill="#00e0b8"/></svg>`;
+
+// Grid position (row from top, col) of square n (1..20).
+function pos(n) {
+  const i = n - 1;
+  const rowFromBottom = Math.floor(i / COLS);
+  const colL = i % COLS;
+  const col = rowFromBottom % 2 === 0 ? colL : COLS - 1 - colL;
+  return { row: ROWS - 1 - rowFromBottom, col };
+}
+
+function createSnakesGame(container, { onPlay, amountLabel = "Bet" }) {
+  let busy = false;
+  let current = 0;
+  const history = [];
+
+  const squares = Array.from({ length: COLS * ROWS }, (_, i) => {
+    const n = i + 1;
+    const { row, col } = pos(n);
+    const v = BOARD[i];
+    return `<div class="sn-sq ${v ? "mult" : "snake"}" data-n="${n}" style="grid-row:${row + 1};grid-column:${col + 1}">
+      <span class="sn-n">${n}</span>${v ? `<span class="sn-v">${v}×</span>` : SNAKE_SVG}</div>`;
+  }).join("");
+
+  container.innerHTML = `
+    <div class="sn">
+      <div class="sn-controls">
+        <div class="sn-odds" id="sn-odds"></div>
+        <label class="field"><span class="k">${amountLabel}</span>
+          <input id="sn-amount" type="number" step="0.001" min="0" value="0.001" /></label>
+        <button id="sn-go" class="btn btn-primary big">Roll &amp; climb</button>
+        <div class="sn-hist" id="sn-hist"></div>
+      </div>
+      <div class="sn-stage">
+        <div class="sn-board" id="sn-board">${squares}<div class="sn-piece" id="sn-piece">${PIECE_SVG}</div></div>
+        <div class="sn-status" id="sn-status">Climb the board; snakes bite.</div>
+      </div>
+    </div>`;
+
+  const $ = (s) => container.querySelector(s);
+  const board = $("#sn-board");
+  const piece = $("#sn-piece");
+
+  $("#sn-odds").innerHTML = SNAKES_OUTCOMES.map((o) =>
+    `<span class="${o.multiplier ? "" : "snake"}">${o.multiplier ? o.multiplier + "×" : "🐍 0×"} <small>${(o.weight * 100).toFixed(1)}%</small></span>`).join("");
+
+  function placeAt(n, instant = false) {
+    const sq = board.querySelector(`.sn-sq[data-n="${n}"]`);
+    if (!sq) { piece.style.left = "-40px"; piece.style.top = board.clientHeight - 44 + "px"; return; }
+    piece.style.transition = instant ? "none" : `left ${HOP_MS}ms ease-out, top ${HOP_MS}ms ease-out`;
+    piece.style.left = sq.offsetLeft + sq.offsetWidth / 2 - 18 + "px";
+    piece.style.top = sq.offsetTop + sq.offsetHeight / 2 - 18 + "px";
+  }
+
+  async function climbTo(target) {
+    if (reducedMotion()) { placeAt(target, true); current = target; return; }
+    const from = target <= current ? 0 : current; // a new lap starts from the bottom
+    if (from === 0) placeAt(0, true);
+    for (let n = from + 1; n <= target; n++) {
+      piece.classList.add("hop");
+      placeAt(n);
+      await new Promise((r) => setTimeout(r, HOP_MS));
+      piece.classList.remove("hop");
+    }
+    current = target;
+  }
+
+  $("#sn-go").addEventListener("click", async () => {
+    if (busy) return;
+    busy = true;
+    const btn = $("#sn-go");
+    btn.disabled = true;
+    btn.textContent = "Climbing…";
+    board.querySelectorAll(".sn-sq.hit").forEach((s) => s.classList.remove("hit"));
+    piece.classList.remove("bitten");
+    try {
+      const amount = parseFloat($("#sn-amount").value) || 0;
+      const res = await onPlay({}, amount);
+      if (!res) return;
+      const m = res.outcome.multiplier;
+      // Choose a square of the result's tier, ahead of the piece if possible.
+      const candidates = BOARD.map((v, i) => (v === m ? i + 1 : 0)).filter(Boolean);
+      const ahead = candidates.filter((n) => n > current);
+      const pool = ahead.length ? ahead : candidates;
+      const target = pool[Math.floor(Math.random() * pool.length)];
+      $("#sn-status").textContent = "Climbing…";
+      await climbTo(target);
+      board.querySelector(`.sn-sq[data-n="${target}"]`)?.classList.add("hit");
+      if (m === 0) {
+        piece.classList.add("bitten");
+        $("#sn-status").textContent = `🐍 Bitten on square ${target}! Lost.`;
+        if (!reducedMotion()) await new Promise((r) => setTimeout(r, 500));
+        current = 0;
+        placeAt(0);
+      } else {
+        $("#sn-status").textContent = `Square ${target}: ${m}×${res.win ? " · win" : ""}`;
+      }
+      history.unshift({ m, win: res.win });
+      if (history.length > 10) history.pop();
+      $("#sn-hist").innerHTML = history.map((h) => `<span class="${h.win ? "win" : "lose"}">${h.m ? h.m + "×" : "🐍"}</span>`).join("");
+      res.afterReveal?.();
+    } finally {
+      busy = false;
+      btn.disabled = false;
+      btn.innerHTML = "Roll &amp; climb";
+    }
+  });
+
+  requestAnimationFrame(() => placeAt(0, true));
+  return {};
+}
+
+return { createSnakesGame };
+})());
+
+// ===== js/keno-game.js =====
+({ createKenoGame } = (() => {
+// =============================================================================
+// Keno — pick 1–10 numbers on a 40-number board. Ten balls are drawn one by
+// one (in the engine's draw order); your hits light up and the paytable row
+// shows what the hit count pays. `onPlay({ picks }, amount)` returns
+// { outcome: { picks, drawn, hits }, multiplier, win, afterReveal }.
+// =============================================================================
+
+
+const DRAW_MS = 260;
+const reducedMotion = () => !!window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+function createKenoGame(container, { onPlay, amountLabel = "Bet" }) {
+  const picks = new Set();
+  let busy = false;
+  const history = [];
+
+  container.innerHTML = `
+    <div class="kn">
+      <div class="kn-controls">
+        <div class="kn-row">
+          <button id="kn-quick" class="btn btn-ghost" type="button">Quick pick</button>
+          <button id="kn-clear" class="btn btn-ghost" type="button">Clear</button>
+        </div>
+        <div class="kn-stats"><div><span class="k">Picked</span><strong id="kn-count">0 / ${KENO_MAX_PICKS}</strong></div>
+          <div><span class="k">Hits</span><strong id="kn-hits">—</strong></div></div>
+        <label class="field"><span class="k">${amountLabel}</span>
+          <input id="kn-amount" type="number" step="0.001" min="0" value="0.001" /></label>
+        <button id="kn-draw" class="btn btn-primary big" disabled>Draw</button>
+        <div class="kn-hist" id="kn-hist"></div>
+      </div>
+      <div class="kn-stage">
+        <div class="kn-board" id="kn-board">${Array.from({ length: KENO_POOL }, (_, i) =>
+          `<button type="button" class="kn-cell" data-n="${i + 1}">${i + 1}</button>`).join("")}</div>
+        <div class="kn-balls" id="kn-balls"></div>
+        <div class="kn-paytable" id="kn-paytable"></div>
+        <div class="kn-status" id="kn-status">Pick up to 10 numbers.</div>
+      </div>
+    </div>`;
+
+  const $ = (s) => container.querySelector(s);
+  const board = $("#kn-board");
+
+  function renderPaytable(hits = null) {
+    const row = KENO_PAYTABLE[picks.size];
+    $("#kn-paytable").innerHTML = row
+      ? row.map((m, h) => `<span class="${hits === h ? "hit" : ""}${m ? "" : " zero"}"><small>${h} hit${h === 1 ? "" : "s"}</small>${m}×</span>`).join("")
+      : `<span class="muted">Pick numbers to see the paytable.</span>`;
+  }
+  function renderPicks(hits = null) {
+    board.querySelectorAll(".kn-cell").forEach((c) => c.classList.toggle("picked", picks.has(+c.dataset.n)));
+    $("#kn-count").textContent = `${picks.size} / ${KENO_MAX_PICKS}`;
+    $("#kn-draw").disabled = busy || picks.size === 0;
+    renderPaytable(hits);
+  }
+  function clearDraw() {
+    board.querySelectorAll(".kn-cell").forEach((c) => c.classList.remove("drawn", "hit", "miss"));
+    $("#kn-balls").innerHTML = "";
+    $("#kn-hits").textContent = "—";
+  }
+
+  board.addEventListener("click", (e) => {
+    const cell = e.target.closest(".kn-cell");
+    if (!cell || busy) return;
+    const n = +cell.dataset.n;
+    if (picks.has(n)) picks.delete(n);
+    else if (picks.size < KENO_MAX_PICKS) picks.add(n);
+    else { $("#kn-status").textContent = `At most ${KENO_MAX_PICKS} numbers.`; return; }
+    clearDraw();
+    renderPicks();
+  });
+  $("#kn-quick").addEventListener("click", () => {
+    if (busy) return;
+    picks.clear();
+    while (picks.size < 10) picks.add(1 + Math.floor(Math.random() * KENO_POOL));
+    clearDraw();
+    renderPicks();
+  });
+  $("#kn-clear").addEventListener("click", () => {
+    if (busy) return;
+    picks.clear();
+    clearDraw();
+    renderPicks();
+  });
+
+  async function animateDraw(drawn) {
+    let hits = 0;
+    for (const n of drawn) {
+      const cell = board.querySelector(`.kn-cell[data-n="${n}"]`);
+      const hit = picks.has(n);
+      if (hit) hits++;
+      cell.classList.add("drawn", hit ? "hit" : "miss");
+      const ball = document.createElement("span");
+      ball.className = "kn-ball " + (hit ? "hit" : "");
+      ball.textContent = n;
+      $("#kn-balls").appendChild(ball);
+      $("#kn-hits").textContent = `${hits}`;
+      if (!reducedMotion()) await new Promise((r) => setTimeout(r, DRAW_MS));
+    }
+    return hits;
+  }
+
+  $("#kn-draw").addEventListener("click", async () => {
+    if (busy || !picks.size) return;
+    busy = true;
+    const btn = $("#kn-draw");
+    btn.disabled = true;
+    btn.textContent = "Drawing…";
+    clearDraw();
+    let lastHits = null;
+    try {
+      const amount = parseFloat($("#kn-amount").value) || 0;
+      const res = await onPlay({ picks: [...picks].sort((a, b) => a - b) }, amount);
+      if (!res) return;
+      $("#kn-status").textContent = "Drawing 10 balls…";
+      await animateDraw(res.outcome.drawn);
+      lastHits = res.outcome.hits;
+      $("#kn-status").textContent = `${res.outcome.hits} of ${picks.size} hit — ${res.multiplier}×${res.win ? " · win" : ""}`;
+      history.unshift({ m: res.multiplier, win: res.win });
+      if (history.length > 10) history.pop();
+      $("#kn-hist").innerHTML = history.map((h) => `<span class="${h.win ? "win" : "lose"}">${h.m}×</span>`).join("");
+      res.afterReveal?.();
+    } finally {
+      busy = false;
+      btn.textContent = "Draw";
+      renderPicks(lastHits);
+    }
+  });
+
+  renderPicks();
+  return {};
+}
+
+return { createKenoGame };
+})());
+
+// ===== js/mines-game.js =====
+({ createMinesGame } = (() => {
+// =============================================================================
+// Mines — a 5×5 field. Choose how many mines are buried, then reveal tiles one
+// by one: a gem raises the multiplier, a mine ends it. Cash out any time.
+// Session game: onStart({ mines, amount }) -> { sessionId }
+//   onReveal(sessionId, tile) -> { safe, bust, revealed, multiplier, nextMultiplier, completed, minePositions? }
+//   onCashout(sessionId) -> { multiplier, minePositions }
+// =============================================================================
+
+
+const reducedMotion = () => !!window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+const GEM = `<svg viewBox="0 0 40 40" aria-hidden="true"><path d="M12 8 h16 l8 10 -16 16 -16 -16z" fill="#00e0b8"/><path d="M12 8 l8 10 8 -10 M4 18 h32 M20 18 v16" stroke="#0a3b33" stroke-width="1.5" fill="none"/></svg>`;
+const BOMB = `<svg viewBox="0 0 40 40" aria-hidden="true"><circle cx="18" cy="24" r="12" fill="#11131c" stroke="#ff5c7a" stroke-width="2"/><path d="M24 14 l6 -6 M30 8 l3 -1 M31 11 l2 2" stroke="#ffb02e" stroke-width="2.5" stroke-linecap="round"/><circle cx="14" cy="20" r="3" fill="#2a2e40"/></svg>`;
+
+function createMinesGame(container, { onStart, onReveal, onCashout, amountLabel = "Bet" }) {
+  let mines = 3;
+  let session = null;
+  let revealed = [];
+  let busy = false;
+
+  container.innerHTML = `
+    <div class="mn">
+      <div class="mn-controls">
+        <label class="field"><span class="k">Mines <strong id="mn-mines-val">3</strong></span>
+          <input id="mn-mines" type="range" min="1" max="24" value="3" /></label>
+        <div class="mn-stats">
+          <div><span class="k">Current</span><strong id="mn-mult">1.00×</strong></div>
+          <div><span class="k">Next gem</span><strong id="mn-next">—</strong></div>
+        </div>
+        <label class="field"><span class="k">${amountLabel}</span>
+          <input id="mn-amount" type="number" step="0.001" min="0" value="0.001" /></label>
+        <button id="mn-action" class="btn btn-primary big">Bet</button>
+        <button id="mn-random" class="btn btn-ghost" type="button" disabled>Random pick</button>
+      </div>
+      <div class="mn-board">
+        <div class="mn-max">MAX PAYOUT <strong id="mn-max">×0</strong> · <span id="mn-gems"></span></div>
+        <div id="mn-grid" class="mn-grid">${Array.from({ length: MINES_GRID }, (_, i) => `<button type="button" class="mn-tile" data-t="${i}" disabled></button>`).join("")}</div>
+        <div id="mn-status" class="mn-status">Set the mine count and press Bet.</div>
+      </div>
+    </div>`;
+
+  const $ = (s) => container.querySelector(s);
+  const grid = $("#mn-grid");
+  const actionBtn = $("#mn-action");
+  const randomBtn = $("#mn-random");
+  const tiles = [...grid.querySelectorAll(".mn-tile")];
+
+  function header() {
+    $("#mn-mines-val").textContent = mines;
+    $("#mn-max").textContent = "×" + minesMultiplier(mines, MINES_GRID - mines).toLocaleString();
+    $("#mn-gems").textContent = `${MINES_GRID - mines} gems`;
+  }
+  function stats() {
+    const k = revealed.length;
+    $("#mn-mult").textContent = minesMultiplier(mines, k).toFixed(2) + "×";
+    $("#mn-next").textContent = session && k < MINES_GRID - mines ? minesMultiplier(mines, k + 1).toFixed(2) + "×" : "—";
+  }
+  function setTiles() {
+    tiles.forEach((t) => (t.disabled = !session || busy || t.classList.contains("gem") || t.classList.contains("bomb")));
+    randomBtn.disabled = !session || busy;
+  }
+  function resetGrid() {
+    tiles.forEach((t) => { t.className = "mn-tile"; t.innerHTML = ""; });
+  }
+  function showMines(positions, hit) {
+    positions.forEach((p) => {
+      const t = tiles[p];
+      if (!t.classList.contains("gem")) {
+        t.classList.add("bomb");
+        if (p === hit) t.classList.add("hit");
+        t.innerHTML = BOMB;
+      }
+    });
+  }
+
+  $("#mn-mines").addEventListener("input", () => {
+    if (session) return;
+    mines = Number($("#mn-mines").value);
+    header();
+  });
+
+  async function reveal(tile) {
+    if (!session || busy) return;
+    const t = tiles[tile];
+    if (t.classList.contains("gem") || t.classList.contains("bomb")) return;
+    busy = true;
+    setTiles();
+    t.classList.add("flip");
+    try {
+      const r = await onReveal(session.sessionId, tile);
+      if (!r) return;
+      if (!reducedMotion()) await new Promise((res) => setTimeout(res, 180));
+      if (r.bust) {
+        t.classList.add("bomb", "hit");
+        t.innerHTML = BOMB;
+        showMines(r.minePositions ?? [], tile);
+        $("#mn-status").textContent = "💥 Mine! Lost the stake.";
+        endGame();
+        return;
+      }
+      t.classList.add("gem");
+      t.innerHTML = GEM;
+      revealed = r.revealed;
+      stats();
+      if (r.completed) {
+        showMines(r.minePositions ?? [], null);
+        $("#mn-status").textContent = `🏆 Every gem found! ×${r.multiplier}`;
+        endGame();
+      } else {
+        actionBtn.textContent = `Cash Out ×${r.multiplier.toFixed(2)}`;
+        $("#mn-status").textContent = `💎 Gem · ×${r.multiplier.toFixed(2)} — next gem ×${r.nextMultiplier.toFixed(2)}`;
+      }
+    } finally {
+      t.classList.remove("flip");
+      busy = false;
+      setTiles();
+    }
+  }
+  tiles.forEach((t) => t.addEventListener("click", () => reveal(+t.dataset.t)));
+  randomBtn.addEventListener("click", () => {
+    const open = tiles.filter((t) => !t.classList.contains("gem") && !t.classList.contains("bomb"));
+    if (open.length) reveal(+open[Math.floor(Math.random() * open.length)].dataset.t);
+  });
+
+  function endGame() {
+    session = null;
+    revealed = [];
+    actionBtn.textContent = "Bet";
+    $("#mn-mines").disabled = false;
+    setTiles();
+    stats();
+  }
+
+  actionBtn.addEventListener("click", async () => {
+    if (busy) return;
+    if (session) {
+      if (!revealed.length) { $("#mn-status").textContent = "Reveal at least one tile before cashing out."; return; }
+      busy = true;
+      try {
+        const r = await onCashout(session.sessionId);
+        if (r) {
+          showMines(r.minePositions ?? [], null);
+          $("#mn-status").textContent = `💰 Cashed out ×${r.multiplier.toFixed(2)}.`;
+        }
+        endGame();
+      } finally { busy = false; setTiles(); }
+      return;
+    }
+    busy = true;
+    actionBtn.disabled = true;
+    try {
+      const amount = parseFloat($("#mn-amount").value) || 0;
+      const s = await onStart({ mines, amount });
+      if (!s) return;
+      session = s;
+      revealed = [];
+      resetGrid();
+      $("#mn-mines").disabled = true;
+      actionBtn.textContent = "Cash Out";
+      $("#mn-status").textContent = "Pick a tile.";
+      stats();
+    } finally {
+      busy = false;
+      actionBtn.disabled = false;
+      setTiles();
+    }
+  });
+
+  /** Resume an unfinished game: the gems already found stay revealed. */
+  function restore({ sessionId, mines: m, revealed: rv, multiplier }) {
+    mines = m;
+    $("#mn-mines").value = m;
+    $("#mn-mines").disabled = true;
+    header();
+    session = { sessionId };
+    revealed = rv;
+    resetGrid();
+    rv.forEach((p) => { tiles[p].classList.add("gem"); tiles[p].innerHTML = GEM; });
+    actionBtn.textContent = rv.length ? `Cash Out ×${multiplier.toFixed(2)}` : "Cash Out";
+    $("#mn-status").textContent = rv.length ? `Resumed · ${rv.length} gem${rv.length > 1 ? "s" : ""} · ×${multiplier.toFixed(2)}` : "Resumed. Pick a tile.";
+    stats();
+    setTiles();
+  }
+
+  header();
+  stats();
+  setTiles();
+  return { restore };
+}
+
+return { createMinesGame };
+})());
 
 // ===== js/chat.js =====
+({ Chat } = (() => {
 // =============================================================================
 // Live chat UI — front-end only, exactly as you asked.
 //
@@ -2569,12 +4602,26 @@ function escapeHtml(s) {
   }[c]));
 }
 
+return { Chat };
+})());
 
 // ===== js/app.js =====
+(() => {
 // =============================================================================
 // App bootstrap — wires branding, socials, games grid, the playable bet panel,
 // wallet connect, and the live chat together.
 // =============================================================================
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -2595,13 +4642,6 @@ const $ = (sel) => document.querySelector(sel);
 // In BACKEND mode, holds the signed-in account; null until sign-in.
 let account = null;
 const SOL = 1_000_000_000;
-const defaultBet = (game) =>
-  ({
-    dice: { target: 50, direction: "under" },
-    limbo: { target: 2 },
-    coinflip: { call: "heads" },
-    wheel: {},
-  })[game] ?? {};
 
 // ---- Branding + socials -----------------------------------------------------
 document.title = BRAND.name;
@@ -2638,7 +4678,6 @@ walletBtn.addEventListener("click", async () => {
       $("#account-row").classList.add("hidden");
       $("#wallet-panel").classList.add("hidden");
       $("#wallet-open").setAttribute("aria-expanded", "false");
-      $("#bet-btn").textContent = "Place demo bet";
       await refreshSeeds();
       return;
     }
@@ -2656,7 +4695,6 @@ walletBtn.addEventListener("click", async () => {
       walletInfo.textContent = "signing in…";
       account = await api.signIn(provider, addr);
       $("#account-row").classList.remove("hidden");
-      $("#bet-btn").textContent = "Place bet";
       await afterSignIn();
       walletInfo.textContent = `signed in (${getActiveCluster()})`;
       updateBalance(account.balanceLamports);
@@ -2701,7 +4739,6 @@ getProvider()?.on?.("accountChanged", async (pk) => {
   walletBtn.textContent = "Connect Wallet";
   $("#account-row").classList.add("hidden");
   $("#wallet-panel").classList.add("hidden");
-  $("#bet-btn").textContent = "Place demo bet";
   walletInfo.textContent = next
     ? "Phantom switched accounts — connect again to sign in with it"
     : "Phantom disconnected";
@@ -2747,12 +4784,12 @@ async function showUnfinishedGames() {
   const s = sessions[0];
   const name = GAME_CATALOG.find((g) => g.id === s.game)?.name ?? s.game;
   const p = s.progress;
-  const progressText = s.game === "tower"
-    ? `${p.rowsClimbed} row${p.rowsClimbed === 1 ? "" : "s"} climbed`
-    : `${p.stepsTaken} lane${p.stepsTaken === 1 ? "" : "s"} crossed`;
-  const progress = s.game === "tower" ? p.rowsClimbed : p.stepsTaken;
+  const progress = { tower: p.rowsClimbed, chicken: p.stepsTaken, mines: p.revealed?.length, hilo: p.correct }[s.game] ?? 0;
+  const unit = { tower: "row|rows climbed", chicken: "lane|lanes crossed", mines: "gem|gems found", hilo: "right call|right calls" }[s.game];
+  const [one, many] = unit.split("|");
+  const progressText = `${progress} ${progress === 1 ? one : many}`;
   banner.innerHTML =
-    `<span class="grow">You have an unfinished <strong>${name}</strong> game (${p.difficulty}) with ` +
+    `<span class="grow">You have an unfinished <strong>${name}</strong> game${p.difficulty ? ` (${p.difficulty})` : p.mines ? ` (${p.mines} mines)` : ""} with ` +
     `<strong>${toSol(s.stakeLamports)} SOL</strong> staked · ${progressText} · x${p.multiplier}` +
     (sessions.length > 1 ? ` (+${sessions.length - 1} more)` : "") + `</span>` +
     `<button class="btn btn-primary" id="resume-go">Resume</button>` +
@@ -2766,7 +4803,7 @@ async function showUnfinishedGames() {
   });
   banner.querySelector("#resume-cashout")?.addEventListener("click", async () => {
     try {
-      const r = s.game === "tower" ? await api.tower.cashout(s.sessionId) : await api.chicken.cashout(s.sessionId);
+      const r = await api[s.game].cashout(s.sessionId);
       updateBalance(r.balanceLamports);
       logResult(`💰 ${name} cashed out x${r.multiplier} (+${toSol(r.payoutLamports)} SOL)`);
     } catch (e) {
@@ -2818,7 +4855,8 @@ async function refreshSeeds() {
   $("#seed-nonce").textContent = nonce;
 }
 
-const RICH_GAMES = new Set(["dice", "tower", "chicken", "roulette"]); // games with a full interactive UI
+// Every game has its own interactive UI; the app just wires each to the engine.
+const RICH_GAMES = new Set(GAME_CATALOG.map((g) => g.id));
 let currentGameUi = null;
 
 function mountGame(id) {
@@ -2827,7 +4865,19 @@ function mountGame(id) {
   const amountLabel = BACKEND_ENABLED ? "Bet (SOL)" : "Bet";
   currentGameUi = null;
   if (id === "dice") currentGameUi = createDiceGame(view, { onRoll: diceOnRoll, amountLabel });
-  else if (id === "tower") {
+  else if (id === "coinflip") currentGameUi = createCoinflipGame(view, { onPlay: singleBet("coinflip", playCoinflip), amountLabel });
+  else if (id === "limbo") currentGameUi = createLimboGame(view, { onPlay: singleBet("limbo", playLimbo), amountLabel });
+  else if (id === "crash") currentGameUi = createCrashGame(view, { onPlay: singleBet("crash", playCrash), amountLabel });
+  else if (id === "wheel") currentGameUi = createWheelGame(view, { onPlay: singleBet("wheel", playWheel), amountLabel });
+  else if (id === "plinko") currentGameUi = createPlinkoGame(view, { onPlay: singleBet("plinko", playPlinko), amountLabel });
+  else if (id === "darts") currentGameUi = createDartsGame(view, { onPlay: singleBet("darts", playDarts), amountLabel });
+  else if (id === "snakes") currentGameUi = createSnakesGame(view, { onPlay: singleBet("snakes", playSnakes), amountLabel });
+  else if (id === "keno") currentGameUi = createKenoGame(view, { onPlay: singleBet("keno", playKeno), amountLabel });
+  else if (id === "mines") {
+    currentGameUi = createMinesGame(view, { onStart: minesOnStart, onReveal: minesOnReveal, onCashout: minesOnCashout, amountLabel });
+  } else if (id === "hilo") {
+    currentGameUi = createHiLoGame(view, { onStart: hiloOnStart, onGuess: hiloOnGuess, onCashout: hiloOnCashout, amountLabel });
+  } else if (id === "tower") {
     currentGameUi = createTowerGame(view, {
       onStart: towerOnStart,
       onReveal: towerOnReveal,
@@ -2851,12 +4901,7 @@ function selectGame(id) {
   grid.querySelectorAll(".game-card").forEach((c) => c.classList.toggle("active", c.dataset.game === id));
   $("#panel-title").textContent = GAME_CATALOG.find((g) => g.id === id).name;
   $("#bet-controls").dataset.game = id;
-  const rich = RICH_GAMES.has(id);
-  $("#game-view").classList.toggle("hidden", !rich);
-  $("#bet-btn").classList.toggle("hidden", rich); // rich games have their own roll button
-  const sf = $("#stake-field");
-  if (sf) sf.classList.toggle("hidden", rich); // rich games have their own amount field
-  if (rich) mountGame(id);
+  mountGame(id);
 }
 
 $("#new-seed").addEventListener("click", async () => {
@@ -2889,72 +4934,73 @@ $("#faucet-btn").addEventListener("click", async () => {
   }
 });
 
-$("#bet-btn").addEventListener("click", async () => {
-  if (BACKEND_ENABLED) {
-    if (!account) {
-      logResult("Connect your wallet to sign in first.");
-      return;
-    }
-    const stakeSol = parseFloat($("#stake-input").value);
-    if (!(stakeSol > 0)) {
-      logResult("Enter a stake amount.");
-      return;
-    }
-    try {
-      const out = await api.bet(currentGame, defaultBet(currentGame), Math.round(stakeSol * SOL));
-      logResult(describeServer(out));
-      updateBalance(out.balanceLamports);
-      account.serverSeedHash = out.serverSeedHash;
-      account.clientSeed = out.clientSeed;
-      account.nonce = out.nonceUsed + 1;
-      await refreshSeeds();
-    } catch (e) {
-      logResult("error: " + e.message);
-    }
-    return;
-  }
-
-  const ctx = { serverSeed, clientSeed, nonce };
-  let res;
-  try {
-    if (currentGame === "dice") {
-      res = await playDice(ctx, { target: 50, direction: "under" });
-      logResult(`🎲 Dice rolled ${res.roll} — ${verdict(res)}`);
-    } else if (currentGame === "limbo") {
-      res = await playLimbo(ctx, { target: 2 });
-      logResult(`🚀 Limbo hit ${res.result}x (target 2x) — ${verdict(res)}`);
-    } else if (currentGame === "coinflip") {
-      res = await playCoinflip(ctx, { call: "heads" });
-      logResult(`🪙 Flip: ${res.flip} (called heads) — ${verdict(res)}`);
-    } else if (currentGame === "wheel") {
-      res = await playWheel(ctx);
-      logResult(`🎡 Wheel segment ${res.segment} → ${res.multiplier}x — ${verdict(res)}`);
-    }
-    nonce++;
-    await refreshSeeds();
-  } catch (e) {
-    logResult("error: " + e.message);
-  }
-});
-
-function verdict(res) {
-  return res.win ? `WIN x${res.multiplier.toFixed(2)}` : "no win";
-}
-
-// Describe a server-side bet result (BACKEND mode).
-function describeServer(out) {
-  const r = out.result;
+// One line describing a settled bet: same wording in demo and backend mode.
+function describeOutcome(r) {
   const o = r.outcome;
-  let detail = r.game;
-  if (r.game === "dice") detail = `🎲 Dice ${o.roll}`;
-  else if (r.game === "limbo") detail = `🚀 Limbo ${o.result}x`;
-  else if (r.game === "coinflip") detail = `🪙 ${o.flip}`;
-  else if (r.game === "wheel") detail = `🎡 seg ${o.segment} (${o.multiplier}x)`;
-  else if (r.game === "roulette") detail = `🎯 Roulette ${o.pocket} ${o.color}`;
+  switch (r.game) {
+    case "dice": return `🎲 Dice rolled ${o.roll} (${o.direction} ${o.target})`;
+    case "limbo": return `🚀 Limbo ${o.result}× (target ${o.target}×)`;
+    case "crash": return `📈 Crash busted at ${o.bustAt}× (cash-out ${o.cashOut}×)`;
+    case "coinflip": return `🪙 Coin: ${o.flip} (called ${o.call})`;
+    case "wheel": return `🎡 Wheel: ${o.multiplier}× segment`;
+    case "plinko": return `🟣 Plinko: bucket ${o.bucket + 1}/${o.rows + 1} → ${r.multiplier}×`;
+    case "roulette": return `🎯 Roulette ${o.pocket} ${o.color}`;
+    case "darts": return `🎯 Darts: ring ${6 - o.band} → ${o.multiplier}×`;
+    case "snakes": return o.multiplier ? `🪜 Snakes: ${o.multiplier}× square` : `🐍 Snakes: bitten`;
+    case "keno": return `🔮 Keno: ${o.hits}/${o.picks.length} hit → ${r.multiplier}×`;
+    default: return r.game;
+  }
+}
+function describeServer(out) {
   const money = out.payoutLamports > 0
     ? `returned ${toSol(out.payoutLamports)} (net ${out.payoutLamports >= out.stakeLamports ? "+" : "−"}${toSol(Math.abs(out.payoutLamports - out.stakeLamports))})`
     : `-${toSol(out.stakeLamports)}`;
-  return `${detail} — ${money} SOL · bal ${toSol(out.balanceLamports)}`;
+  return `${describeOutcome(out.result)} — ${money} SOL · bal ${toSol(out.balanceLamports)}`;
+}
+function describeDemo(r, stake) {
+  const verdict = r.multiplier > 0 ? `returned ${+(stake * r.multiplier).toFixed(6)} on ${stake}` : `lost ${stake}`;
+  return `${describeOutcome(r)} — ${verdict} (demo)`;
+}
+
+// ---- Single-bet games: one handler shape for all of them -------------------
+// `onPlay(bet, amount)` resolves with the settled result; the game animates it
+// and then calls `afterReveal()`, which is when the log line and the balance
+// update appear (so an animation never gives the result away early).
+function singleBet(gameId, demoPlay) {
+  return async (bet, amount) => {
+    if (BACKEND_ENABLED) {
+      if (!account) { logResult("Connect your wallet to sign in first."); return null; }
+      if (!(amount > 0)) { logResult("Enter a bet amount."); return null; }
+      try {
+        const out = await api.bet(gameId, bet, Math.round(amount * SOL));
+        account.serverSeedHash = out.serverSeedHash;
+        account.clientSeed = out.clientSeed;
+        account.nonce = out.nonceUsed + 1;
+        await refreshSeeds();
+        return {
+          outcome: out.result.outcome,
+          win: out.result.win,
+          multiplier: out.result.multiplier,
+          payout: out.payoutLamports / SOL,
+          stake: amount,
+          afterReveal: () => { logResult(describeServer(out)); updateBalance(out.balanceLamports); },
+        };
+      } catch (e) { logResult("error: " + e.message); return null; }
+    }
+    try {
+      const r = await demoPlay({ serverSeed, clientSeed, nonce }, bet);
+      nonce++;
+      await refreshSeeds();
+      return {
+        outcome: r.outcome,
+        win: r.win,
+        multiplier: r.multiplier,
+        payout: amount * r.multiplier,
+        stake: amount,
+        afterReveal: () => logResult(describeDemo(r, amount)),
+      };
+    } catch (e) { logResult("error: " + e.message); return null; }
+  };
 }
 
 function logResult(line) {
@@ -2994,8 +5040,6 @@ async function diceOnRoll({ target, direction, amount }) {
     }
     try {
       const out = await api.bet("dice", { target, direction }, Math.round(amount * SOL));
-      logResult(describeServer(out));
-      updateBalance(out.balanceLamports);
       account.serverSeedHash = out.serverSeedHash;
       account.clientSeed = out.clientSeed;
       account.nonce = out.nonceUsed + 1;
@@ -3004,6 +5048,7 @@ async function diceOnRoll({ target, direction, amount }) {
         roll: out.result.outcome.roll,
         win: out.result.win,
         multiplier: out.result.multiplier,
+        afterReveal: () => { logResult(describeServer(out)); updateBalance(out.balanceLamports); },
       };
     } catch (e) {
       logResult("error: " + e.message);
@@ -3012,12 +5057,9 @@ async function diceOnRoll({ target, direction, amount }) {
   }
   // demo mode
   const res = await playDice({ serverSeed, clientSeed, nonce }, { target, direction });
-  logResult(
-    `🎲 Dice rolled ${res.roll} — ${res.win ? "WIN x" + res.multiplier.toFixed(2) : "no win"}`,
-  );
   nonce++;
   await refreshSeeds();
-  return { roll: res.roll, win: res.win, multiplier: res.multiplier };
+  return { roll: res.outcome.roll, win: res.win, multiplier: res.multiplier, afterReveal: () => logResult(describeDemo(res, amount)) };
 }
 
 // ---- Roulette (rich interactive game: a table of chips on one spin) --------
@@ -3057,6 +5099,126 @@ async function rouletteOnSpin({ chips, total }) {
     payout,
     afterSpin: () => logResult(`🎯 Roulette ${pocket} ${pocketColor(pocket)} — ${payout > 0 ? `returned ${payout} on ${total} staked` : `lost ${total}`}`),
   };
+}
+
+// ---- Mines (session: reveal tile by tile) -----------------------------------
+let demoMines = null;
+
+async function minesOnStart({ mines, amount }) {
+  if (BACKEND_ENABLED) {
+    if (!account) { logResult("Connect your wallet to sign in first."); return null; }
+    if (!(amount > 0)) { logResult("Enter a bet amount."); return null; }
+    try {
+      const s = await api.mines.start(mines, Math.round(amount * SOL));
+      updateBalance(s.balanceLamports);
+      account.nonce = s.nonceUsed + 1;
+      await refreshSeeds();
+      logResult(`💣 Mines (${mines}) started · stake ${amount}`);
+      return s;
+    } catch (e) { logResult("error: " + e.message); return null; }
+  }
+  const layout = await minesLayout({ serverSeed, clientSeed, nonce }, mines);
+  demoMines = { layout, mines, revealed: [] };
+  nonce++;
+  await refreshSeeds();
+  logResult(`💣 Mines (${mines}) started (demo)`);
+  return { sessionId: "demo" };
+}
+async function minesOnReveal(sessionId, tile) {
+  if (BACKEND_ENABLED) {
+    try {
+      const r = await api.mines.reveal(sessionId, tile);
+      if (r.completed || r.bust) updateBalance(r.balanceLamports);
+      if (r.bust) logResult("💥 Mines — hit a mine. Lost.");
+      else if (r.completed) logResult(`🏆 Mines cleared! ×${r.multiplier}`);
+      return r;
+    } catch (e) { logResult("error: " + e.message); return null; }
+  }
+  const m = demoMines;
+  if (m.layout.includes(tile)) {
+    logResult("💥 Mines — hit a mine (demo)");
+    return { safe: false, bust: true, tile, minePositions: m.layout, revealed: m.revealed, multiplier: 0 };
+  }
+  m.revealed.push(tile);
+  const k = m.revealed.length;
+  const completed = k >= 25 - m.mines;
+  if (completed) logResult(`🏆 Mines cleared! ×${minesMultiplier(m.mines, k)} (demo)`);
+  return {
+    safe: true, bust: false, tile, revealed: [...m.revealed], multiplier: minesMultiplier(m.mines, k),
+    nextMultiplier: completed ? null : minesMultiplier(m.mines, k + 1), completed,
+    minePositions: completed ? m.layout : undefined,
+  };
+}
+async function minesOnCashout(sessionId) {
+  if (BACKEND_ENABLED) {
+    try {
+      const r = await api.mines.cashout(sessionId);
+      updateBalance(r.balanceLamports);
+      logResult(`💰 Mines cashed out ×${r.multiplier}`);
+      return r;
+    } catch (e) { logResult("error: " + e.message); return null; }
+  }
+  const mult = minesMultiplier(demoMines.mines, demoMines.revealed.length);
+  logResult(`💰 Mines cashed out ×${mult} (demo)`);
+  return { multiplier: mult, minePositions: demoMines.layout, revealed: demoMines.revealed };
+}
+
+// ---- HiLo (session: a fixed card stream, call by call) ----------------------
+let demoHilo = null;
+const floor2 = (x) => Math.floor(x * 100) / 100;
+const hiloChance = (base, guess) => (guess === "higherOrSame" ? (HILO_RANKS - base) / HILO_RANKS : (base + 1) / HILO_RANKS);
+
+async function hiloOnStart({ amount }) {
+  if (BACKEND_ENABLED) {
+    if (!account) { logResult("Connect your wallet to sign in first."); return null; }
+    if (!(amount > 0)) { logResult("Enter a bet amount."); return null; }
+    try {
+      const s = await api.hilo.start(Math.round(amount * SOL));
+      updateBalance(s.balanceLamports);
+      account.nonce = s.nonceUsed + 1;
+      await refreshSeeds();
+      logResult(`🃏 HiLo dealt · stake ${amount}`);
+      return s;
+    } catch (e) { logResult("error: " + e.message); return null; }
+  }
+  const fs = await floats(serverSeed, clientSeed, nonce, 30);
+  const cards = fs.map((f) => ({ rank: Math.floor(f * HILO_RANKS), suit: Math.floor(f * 52) % 4 }));
+  demoHilo = { cards, dealt: 1, multiplier: 1, calls: 0 };
+  nonce++;
+  await refreshSeeds();
+  logResult("🃏 HiLo dealt (demo)");
+  return { sessionId: "demo", base: cards[0] };
+}
+async function hiloOnGuess(sessionId, guess) {
+  if (BACKEND_ENABLED) {
+    try {
+      const r = await api.hilo.guess(sessionId, guess);
+      if (r.bust || r.completed) updateBalance(r.balanceLamports);
+      if (r.bust) logResult("🃏 HiLo — wrong call. Lost.");
+      return r;
+    } catch (e) { logResult("error: " + e.message); return null; }
+  }
+  const h = demoHilo;
+  const base = h.cards[h.dealt - 1].rank;
+  const card = h.cards[h.dealt];
+  h.dealt++;
+  const win = guess === "higherOrSame" ? card.rank >= base : card.rank <= base;
+  if (!win) { logResult("🃏 HiLo — wrong call (demo)"); return { card, win: false, bust: true, multiplier: 0 }; }
+  h.calls++;
+  h.multiplier = floor2(h.multiplier * floor2((1 / hiloChance(base, guess)) * (1 - HOUSE_EDGE)));
+  return { card, win: true, bust: false, multiplier: h.multiplier, completed: h.dealt >= 30 };
+}
+async function hiloOnCashout(sessionId) {
+  if (BACKEND_ENABLED) {
+    try {
+      const r = await api.hilo.cashout(sessionId);
+      updateBalance(r.balanceLamports);
+      logResult(`💰 HiLo cashed out ×${r.multiplier}`);
+      return r;
+    } catch (e) { logResult("error: " + e.message); return null; }
+  }
+  logResult(`💰 HiLo cashed out ×${demoHilo.multiplier} (demo)`);
+  return { multiplier: demoHilo.multiplier };
 }
 
 // ---- Tower (rich interactive game: stateful reveals) -----------------------
@@ -3205,7 +5367,6 @@ async function init() {
       connected = account.pubkey;
       walletBtn.textContent = account.pubkey.slice(0, 4) + "…" + account.pubkey.slice(-4);
       $("#account-row").classList.remove("hidden");
-      $("#bet-btn").textContent = "Place bet";
       await afterSignIn();
       $("#wallet-info").textContent = `signed in (${getActiveCluster()})`;
       updateBalance(account.balanceLamports);
@@ -3224,6 +5385,7 @@ async function init() {
 }
 init();
 
+})();
 </script>
   </body>
 </html>

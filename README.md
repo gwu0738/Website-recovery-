@@ -78,9 +78,11 @@ web/                   front-end (static, no build step)
   js/
     config.js          brand, socials, Solana cluster/RPC (one place)
     fairness.js        same fairness engine, in-browser (Web Crypto)
-    games.js           playable Dice/Limbo/Coinflip/Wheel
-    roulette-game.js   real spinning wheel + betting table (chips, undo, history)
-    dice-game.js, tower-game.js, chicken-game.js   the other interactive games
+    games.js           in-browser (demo) logic for every game + the catalogue
+    *-game.js          one visual per game: dice die, coin, limbo rocket, crash
+                       curve, wheel, plinko board, roulette wheel + table, hilo
+                       cards, darts board, snakes board, keno draw, mines field,
+                       tower, chicken
     wallet.js          Phantom connect + balance (cluster-aware)
     wallet-panel.js    deposits/withdrawals; remembers deposits until credited
     chat.js            live chat UI: rolling history, auto-scroll, persistence

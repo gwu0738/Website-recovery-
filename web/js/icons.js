@@ -78,4 +78,30 @@ export const ICONS = {
      <rect x="13" y="32" width="9" height="9" rx="1.5" fill="GRAD" opacity="0.25" stroke="GRAD" stroke-width="2"/>
      <rect x="26" y="32" width="9" height="9" rx="1.5" stroke="GRAD" stroke-width="2"/>`,
   ),
+  hilo: S(
+    "hilo",
+    `<rect x="10" y="8" width="20" height="28" rx="3" stroke="GRAD" stroke-width="2.2" transform="rotate(-8 20 22)"/>
+     <rect x="20" y="12" width="20" height="28" rx="3" stroke="GRAD" stroke-width="2.2" fill="#11131c" transform="rotate(8 30 26)"/>
+     <path d="M30 20 l4 6 h-8z" fill="GRAD"/>`,
+  ),
+  darts: S(
+    "darts",
+    `<circle cx="24" cy="24" r="16" stroke="GRAD" stroke-width="2.2"/>
+     <circle cx="24" cy="24" r="10" stroke="GRAD" stroke-width="1.6"/>
+     <circle cx="24" cy="24" r="3.5" fill="GRAD"/>
+     <path d="M24 24 L40 8 M36 8 h4 v4" stroke="GRAD" stroke-width="2.2" stroke-linecap="round"/>`,
+  ),
+  snakes: S(
+    "snakes",
+    `<path d="M12 36 c0 -8 8 -8 8 -14 s-8 -6 -8 -12" stroke="GRAD" stroke-width="3" stroke-linecap="round"/>
+     <path d="M26 10 h12 M26 18 h12 M26 26 h12 M26 34 h12 M28 8 v30 M36 8 v30" stroke="GRAD" stroke-width="2" stroke-linecap="round"/>
+     <circle cx="12" cy="9" r="3" fill="GRAD"/>`,
+  ),
+  keno: S(
+    "keno",
+    `<circle cx="16" cy="16" r="6" stroke="GRAD" stroke-width="2.2"/>
+     <circle cx="32" cy="16" r="6" fill="GRAD"/>
+     <circle cx="16" cy="32" r="6" fill="GRAD"/>
+     <circle cx="32" cy="32" r="6" stroke="GRAD" stroke-width="2.2"/>`,
+  ),
 };

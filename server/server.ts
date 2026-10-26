@@ -27,6 +27,8 @@ import { confirmDeposit, requestWithdrawal, reconcilePendingWithdrawals, WalletE
 import { placeBet, claimFaucet, rotateSeed, setClientSeed, BetError } from "./bets.ts";
 import { towerStart, towerReveal, towerCashout, towerResumeView, TowerError } from "./tower-session.ts";
 import { chickenStart, chickenStep, chickenCashout, chickenResumeView, ChickenError } from "./chicken-session.ts";
+import { minesStart, minesReveal, minesCashout, minesResumeView, MinesError } from "./mines-session.ts";
+import { hiloStart, hiloGuess, hiloCashout, hiloResumeView, HiLoError } from "./hilo-session.ts";
 import { GAMES } from "../src/games/index.ts";
 
 const GAME_SET = new Set<string>(GAMES);
@@ -159,6 +161,8 @@ const server = createServer(async (req, res) => {
         progress:
           s.game === "tower" ? towerResumeView(s)
           : s.game === "chicken" ? chickenResumeView(s)
+          : s.game === "mines" ? minesResumeView(s)
+          : s.game === "hilo" ? hiloResumeView(s)
           : null,
       }));
       return send(res, 200, { sessions });
@@ -287,6 +291,64 @@ const server = createServer(async (req, res) => {
         return send(res, 200, chickenCashout(acct, sessionId));
       } catch (e) {
         if (e instanceof ChickenError) return send(res, 400, { error: e.message });
+        throw e;
+      }
+    }
+
+    // ---- Mines (stateful, tile-by-tile) ----
+    if (path === "/api/mines/start" && method === "POST") {
+      const { mines, stake } = await readBody(req);
+      try {
+        return send(res, 200, minesStart(acct, Number(mines), Number(stake)));
+      } catch (e) {
+        if (e instanceof MinesError) return send(res, 400, { error: e.message });
+        throw e;
+      }
+    }
+    if (path === "/api/mines/reveal" && method === "POST") {
+      const { sessionId, tile } = await readBody(req);
+      try {
+        return send(res, 200, minesReveal(acct, sessionId, Number(tile)));
+      } catch (e) {
+        if (e instanceof MinesError) return send(res, 400, { error: e.message });
+        throw e;
+      }
+    }
+    if (path === "/api/mines/cashout" && method === "POST") {
+      const { sessionId } = await readBody(req);
+      try {
+        return send(res, 200, minesCashout(acct, sessionId));
+      } catch (e) {
+        if (e instanceof MinesError) return send(res, 400, { error: e.message });
+        throw e;
+      }
+    }
+
+    // ---- HiLo (stateful, call-by-call over a fixed card stream) ----
+    if (path === "/api/hilo/start" && method === "POST") {
+      const { stake } = await readBody(req);
+      try {
+        return send(res, 200, hiloStart(acct, Number(stake)));
+      } catch (e) {
+        if (e instanceof HiLoError) return send(res, 400, { error: e.message });
+        throw e;
+      }
+    }
+    if (path === "/api/hilo/guess" && method === "POST") {
+      const { sessionId, guess } = await readBody(req);
+      try {
+        return send(res, 200, hiloGuess(acct, sessionId, guess));
+      } catch (e) {
+        if (e instanceof HiLoError) return send(res, 400, { error: e.message });
+        throw e;
+      }
+    }
+    if (path === "/api/hilo/cashout" && method === "POST") {
+      const { sessionId } = await readBody(req);
+      try {
+        return send(res, 200, hiloCashout(acct, sessionId));
+      } catch (e) {
+        if (e instanceof HiLoError) return send(res, 400, { error: e.message });
         throw e;
       }
     }

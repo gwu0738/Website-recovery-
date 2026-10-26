@@ -19,8 +19,24 @@ export function createDiceGame(container, { onRoll, amountLabel = "Bet" }) {
   let target = 50;
   let direction = "under"; // "under" | "over"
 
+  const pips = {
+    1: [[50, 50]], 2: [[25, 25], [75, 75]], 3: [[25, 25], [50, 50], [75, 75]],
+    4: [[25, 25], [75, 25], [25, 75], [75, 75]], 5: [[25, 25], [75, 25], [50, 50], [25, 75], [75, 75]],
+    6: [[25, 25], [75, 25], [25, 50], [75, 50], [25, 75], [75, 75]],
+  };
+  const face = (n, cls) =>
+    `<div class="die-face ${cls}" data-n="${n}">${pips[n].map(([x, y]) => `<i style="left:${x}%;top:${y}%"></i>`).join("")}<span class="die-roll"></span></div>`;
+
   container.innerHTML = `
     <div class="dice">
+      <div class="die-stage">
+        <div class="die-scene">
+          <div class="die-cube" id="die-cube">
+            ${face(1, "front")}${face(6, "back")}${face(3, "right")}${face(4, "left")}${face(2, "top")}${face(5, "bottom")}
+          </div>
+        </div>
+        <div class="die-readout" id="die-readout"><span class="k">Last roll</span><strong id="die-last">—</strong></div>
+      </div>
       <div class="dice-track" id="dice-track">
         <div class="dice-zone-win" id="dice-zone"></div>
         <div class="dice-ticks"><span>0</span><span>25</span><span>50</span><span>75</span><span>100</span></div>
@@ -59,6 +75,8 @@ export function createDiceGame(container, { onRoll, amountLabel = "Bet" }) {
   const amountEl = $("#dice-amount");
   const targetEl = $("#dice-target");
   const rollBtn = $("#dice-roll");
+  const cube = $("#die-cube");
+  const reducedMotion = () => !!window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
   function winChance() {
     return direction === "under" ? target : 100 - target;
@@ -119,7 +137,23 @@ export function createDiceGame(container, { onRoll, amountLabel = "Bet" }) {
     render();
   });
 
+  // The die tumbles while the bet is in flight, then settles face-up showing
+  // the exact roll (0.00–100.00) in the colour of the verdict.
+  function startTumble() {
+    cube.classList.remove("settled", "win", "lose");
+    cube.querySelector(".die-face.front .die-roll").textContent = "";
+    if (!reducedMotion()) cube.classList.add("rolling");
+  }
+  function settleDie(roll, win) {
+    cube.classList.remove("rolling");
+    cube.querySelector(".die-face.front .die-roll").textContent = roll.toFixed(2);
+    cube.classList.add("settled", win ? "win" : "lose");
+    $("#die-last").textContent = roll.toFixed(2);
+    $("#die-readout").className = "die-readout " + (win ? "win" : "lose");
+  }
+
   function animateTo(roll, win) {
+    settleDie(roll, win);
     marker.hidden = false;
     marker.style.left = diceClamp(roll, 0, 100) + "%";
     markerVal.textContent = roll.toFixed(2);
@@ -132,10 +166,17 @@ export function createDiceGame(container, { onRoll, amountLabel = "Bet" }) {
   rollBtn.addEventListener("click", async () => {
     rollBtn.disabled = true;
     rollBtn.textContent = "Rolling…";
+    startTumble();
     try {
       const amount = parseFloat(amountEl.value) || 0;
+      const started = performance.now();
       const res = await onRoll({ target, direction, amount });
+      // Let the die tumble for at least a moment even when the server is instant.
+      const left = 900 - (performance.now() - started);
+      if (res && left > 0 && !reducedMotion()) await new Promise((r) => setTimeout(r, left));
       if (res) animateTo(res.roll, res.win);
+      else cube.classList.remove("rolling");
+      res?.afterReveal?.();
     } finally {
       rollBtn.disabled = false;
       rollBtn.textContent = "Roll Dice";

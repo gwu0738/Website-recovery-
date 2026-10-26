@@ -4,7 +4,21 @@
 // =============================================================================
 import { BRAND, SOCIALS, HOUSE_EDGE, CLUSTER, toSol, setActiveCluster, getActiveCluster } from "./config.js";
 import { randomHex, hashServerSeed, verifyCommitment } from "./fairness.js";
-import { playDice, playLimbo, playCoinflip, playWheel, GAME_CATALOG } from "./games.js";
+import {
+  playDice, playLimbo, playCrash, playCoinflip, playWheel, playPlinko, playDarts, playSnakes, playKeno,
+  minesLayout, minesMultiplier, HILO_RANKS, GAME_CATALOG,
+} from "./games.js";
+import { floats } from "./fairness.js";
+import { createCoinflipGame } from "./coinflip-game.js";
+import { createLimboGame } from "./limbo-game.js";
+import { createCrashGame } from "./crash-game.js";
+import { createWheelGame } from "./wheel-game.js";
+import { createPlinkoGame } from "./plinko-game.js";
+import { createHiLoGame } from "./hilo-game.js";
+import { createDartsGame } from "./darts-game.js";
+import { createSnakesGame } from "./snakes-game.js";
+import { createKenoGame } from "./keno-game.js";
+import { createMinesGame } from "./mines-game.js";
 import { connect, disconnect, getBalanceSol, getProvider } from "./wallet.js";
 import { roulettePocket, rouletteSettle, pocketColor } from "./roulette-logic.js";
 import { createRouletteGame } from "./roulette-game.js";
@@ -22,13 +36,6 @@ const $ = (sel) => document.querySelector(sel);
 // In BACKEND mode, holds the signed-in account; null until sign-in.
 let account = null;
 const SOL = 1_000_000_000;
-const defaultBet = (game) =>
-  ({
-    dice: { target: 50, direction: "under" },
-    limbo: { target: 2 },
-    coinflip: { call: "heads" },
-    wheel: {},
-  })[game] ?? {};
 
 // ---- Branding + socials -----------------------------------------------------
 document.title = BRAND.name;
@@ -65,7 +72,6 @@ walletBtn.addEventListener("click", async () => {
       $("#account-row").classList.add("hidden");
       $("#wallet-panel").classList.add("hidden");
       $("#wallet-open").setAttribute("aria-expanded", "false");
-      $("#bet-btn").textContent = "Place demo bet";
       await refreshSeeds();
       return;
     }
@@ -83,7 +89,6 @@ walletBtn.addEventListener("click", async () => {
       walletInfo.textContent = "signing in…";
       account = await api.signIn(provider, addr);
       $("#account-row").classList.remove("hidden");
-      $("#bet-btn").textContent = "Place bet";
       await afterSignIn();
       walletInfo.textContent = `signed in (${getActiveCluster()})`;
       updateBalance(account.balanceLamports);
@@ -128,7 +133,6 @@ getProvider()?.on?.("accountChanged", async (pk) => {
   walletBtn.textContent = "Connect Wallet";
   $("#account-row").classList.add("hidden");
   $("#wallet-panel").classList.add("hidden");
-  $("#bet-btn").textContent = "Place demo bet";
   walletInfo.textContent = next
     ? "Phantom switched accounts — connect again to sign in with it"
     : "Phantom disconnected";
@@ -174,12 +178,12 @@ async function showUnfinishedGames() {
   const s = sessions[0];
   const name = GAME_CATALOG.find((g) => g.id === s.game)?.name ?? s.game;
   const p = s.progress;
-  const progressText = s.game === "tower"
-    ? `${p.rowsClimbed} row${p.rowsClimbed === 1 ? "" : "s"} climbed`
-    : `${p.stepsTaken} lane${p.stepsTaken === 1 ? "" : "s"} crossed`;
-  const progress = s.game === "tower" ? p.rowsClimbed : p.stepsTaken;
+  const progress = { tower: p.rowsClimbed, chicken: p.stepsTaken, mines: p.revealed?.length, hilo: p.correct }[s.game] ?? 0;
+  const unit = { tower: "row|rows climbed", chicken: "lane|lanes crossed", mines: "gem|gems found", hilo: "right call|right calls" }[s.game];
+  const [one, many] = unit.split("|");
+  const progressText = `${progress} ${progress === 1 ? one : many}`;
   banner.innerHTML =
-    `<span class="grow">You have an unfinished <strong>${name}</strong> game (${p.difficulty}) with ` +
+    `<span class="grow">You have an unfinished <strong>${name}</strong> game${p.difficulty ? ` (${p.difficulty})` : p.mines ? ` (${p.mines} mines)` : ""} with ` +
     `<strong>${toSol(s.stakeLamports)} SOL</strong> staked · ${progressText} · x${p.multiplier}` +
     (sessions.length > 1 ? ` (+${sessions.length - 1} more)` : "") + `</span>` +
     `<button class="btn btn-primary" id="resume-go">Resume</button>` +
@@ -193,7 +197,7 @@ async function showUnfinishedGames() {
   });
   banner.querySelector("#resume-cashout")?.addEventListener("click", async () => {
     try {
-      const r = s.game === "tower" ? await api.tower.cashout(s.sessionId) : await api.chicken.cashout(s.sessionId);
+      const r = await api[s.game].cashout(s.sessionId);
       updateBalance(r.balanceLamports);
       logResult(`💰 ${name} cashed out x${r.multiplier} (+${toSol(r.payoutLamports)} SOL)`);
     } catch (e) {
@@ -245,7 +249,8 @@ async function refreshSeeds() {
   $("#seed-nonce").textContent = nonce;
 }
 
-const RICH_GAMES = new Set(["dice", "tower", "chicken", "roulette"]); // games with a full interactive UI
+// Every game has its own interactive UI; the app just wires each to the engine.
+const RICH_GAMES = new Set(GAME_CATALOG.map((g) => g.id));
 let currentGameUi = null;
 
 function mountGame(id) {
@@ -254,7 +259,19 @@ function mountGame(id) {
   const amountLabel = BACKEND_ENABLED ? "Bet (SOL)" : "Bet";
   currentGameUi = null;
   if (id === "dice") currentGameUi = createDiceGame(view, { onRoll: diceOnRoll, amountLabel });
-  else if (id === "tower") {
+  else if (id === "coinflip") currentGameUi = createCoinflipGame(view, { onPlay: singleBet("coinflip", playCoinflip), amountLabel });
+  else if (id === "limbo") currentGameUi = createLimboGame(view, { onPlay: singleBet("limbo", playLimbo), amountLabel });
+  else if (id === "crash") currentGameUi = createCrashGame(view, { onPlay: singleBet("crash", playCrash), amountLabel });
+  else if (id === "wheel") currentGameUi = createWheelGame(view, { onPlay: singleBet("wheel", playWheel), amountLabel });
+  else if (id === "plinko") currentGameUi = createPlinkoGame(view, { onPlay: singleBet("plinko", playPlinko), amountLabel });
+  else if (id === "darts") currentGameUi = createDartsGame(view, { onPlay: singleBet("darts", playDarts), amountLabel });
+  else if (id === "snakes") currentGameUi = createSnakesGame(view, { onPlay: singleBet("snakes", playSnakes), amountLabel });
+  else if (id === "keno") currentGameUi = createKenoGame(view, { onPlay: singleBet("keno", playKeno), amountLabel });
+  else if (id === "mines") {
+    currentGameUi = createMinesGame(view, { onStart: minesOnStart, onReveal: minesOnReveal, onCashout: minesOnCashout, amountLabel });
+  } else if (id === "hilo") {
+    currentGameUi = createHiLoGame(view, { onStart: hiloOnStart, onGuess: hiloOnGuess, onCashout: hiloOnCashout, amountLabel });
+  } else if (id === "tower") {
     currentGameUi = createTowerGame(view, {
       onStart: towerOnStart,
       onReveal: towerOnReveal,
@@ -278,12 +295,7 @@ function selectGame(id) {
   grid.querySelectorAll(".game-card").forEach((c) => c.classList.toggle("active", c.dataset.game === id));
   $("#panel-title").textContent = GAME_CATALOG.find((g) => g.id === id).name;
   $("#bet-controls").dataset.game = id;
-  const rich = RICH_GAMES.has(id);
-  $("#game-view").classList.toggle("hidden", !rich);
-  $("#bet-btn").classList.toggle("hidden", rich); // rich games have their own roll button
-  const sf = $("#stake-field");
-  if (sf) sf.classList.toggle("hidden", rich); // rich games have their own amount field
-  if (rich) mountGame(id);
+  mountGame(id);
 }
 
 $("#new-seed").addEventListener("click", async () => {
@@ -316,72 +328,73 @@ $("#faucet-btn").addEventListener("click", async () => {
   }
 });
 
-$("#bet-btn").addEventListener("click", async () => {
-  if (BACKEND_ENABLED) {
-    if (!account) {
-      logResult("Connect your wallet to sign in first.");
-      return;
-    }
-    const stakeSol = parseFloat($("#stake-input").value);
-    if (!(stakeSol > 0)) {
-      logResult("Enter a stake amount.");
-      return;
-    }
-    try {
-      const out = await api.bet(currentGame, defaultBet(currentGame), Math.round(stakeSol * SOL));
-      logResult(describeServer(out));
-      updateBalance(out.balanceLamports);
-      account.serverSeedHash = out.serverSeedHash;
-      account.clientSeed = out.clientSeed;
-      account.nonce = out.nonceUsed + 1;
-      await refreshSeeds();
-    } catch (e) {
-      logResult("error: " + e.message);
-    }
-    return;
-  }
-
-  const ctx = { serverSeed, clientSeed, nonce };
-  let res;
-  try {
-    if (currentGame === "dice") {
-      res = await playDice(ctx, { target: 50, direction: "under" });
-      logResult(`🎲 Dice rolled ${res.roll} — ${verdict(res)}`);
-    } else if (currentGame === "limbo") {
-      res = await playLimbo(ctx, { target: 2 });
-      logResult(`🚀 Limbo hit ${res.result}x (target 2x) — ${verdict(res)}`);
-    } else if (currentGame === "coinflip") {
-      res = await playCoinflip(ctx, { call: "heads" });
-      logResult(`🪙 Flip: ${res.flip} (called heads) — ${verdict(res)}`);
-    } else if (currentGame === "wheel") {
-      res = await playWheel(ctx);
-      logResult(`🎡 Wheel segment ${res.segment} → ${res.multiplier}x — ${verdict(res)}`);
-    }
-    nonce++;
-    await refreshSeeds();
-  } catch (e) {
-    logResult("error: " + e.message);
-  }
-});
-
-function verdict(res) {
-  return res.win ? `WIN x${res.multiplier.toFixed(2)}` : "no win";
-}
-
-// Describe a server-side bet result (BACKEND mode).
-function describeServer(out) {
-  const r = out.result;
+// One line describing a settled bet: same wording in demo and backend mode.
+function describeOutcome(r) {
   const o = r.outcome;
-  let detail = r.game;
-  if (r.game === "dice") detail = `🎲 Dice ${o.roll}`;
-  else if (r.game === "limbo") detail = `🚀 Limbo ${o.result}x`;
-  else if (r.game === "coinflip") detail = `🪙 ${o.flip}`;
-  else if (r.game === "wheel") detail = `🎡 seg ${o.segment} (${o.multiplier}x)`;
-  else if (r.game === "roulette") detail = `🎯 Roulette ${o.pocket} ${o.color}`;
+  switch (r.game) {
+    case "dice": return `🎲 Dice rolled ${o.roll} (${o.direction} ${o.target})`;
+    case "limbo": return `🚀 Limbo ${o.result}× (target ${o.target}×)`;
+    case "crash": return `📈 Crash busted at ${o.bustAt}× (cash-out ${o.cashOut}×)`;
+    case "coinflip": return `🪙 Coin: ${o.flip} (called ${o.call})`;
+    case "wheel": return `🎡 Wheel: ${o.multiplier}× segment`;
+    case "plinko": return `🟣 Plinko: bucket ${o.bucket + 1}/${o.rows + 1} → ${r.multiplier}×`;
+    case "roulette": return `🎯 Roulette ${o.pocket} ${o.color}`;
+    case "darts": return `🎯 Darts: ring ${6 - o.band} → ${o.multiplier}×`;
+    case "snakes": return o.multiplier ? `🪜 Snakes: ${o.multiplier}× square` : `🐍 Snakes: bitten`;
+    case "keno": return `🔮 Keno: ${o.hits}/${o.picks.length} hit → ${r.multiplier}×`;
+    default: return r.game;
+  }
+}
+function describeServer(out) {
   const money = out.payoutLamports > 0
     ? `returned ${toSol(out.payoutLamports)} (net ${out.payoutLamports >= out.stakeLamports ? "+" : "−"}${toSol(Math.abs(out.payoutLamports - out.stakeLamports))})`
     : `-${toSol(out.stakeLamports)}`;
-  return `${detail} — ${money} SOL · bal ${toSol(out.balanceLamports)}`;
+  return `${describeOutcome(out.result)} — ${money} SOL · bal ${toSol(out.balanceLamports)}`;
+}
+function describeDemo(r, stake) {
+  const verdict = r.multiplier > 0 ? `returned ${+(stake * r.multiplier).toFixed(6)} on ${stake}` : `lost ${stake}`;
+  return `${describeOutcome(r)} — ${verdict} (demo)`;
+}
+
+// ---- Single-bet games: one handler shape for all of them -------------------
+// `onPlay(bet, amount)` resolves with the settled result; the game animates it
+// and then calls `afterReveal()`, which is when the log line and the balance
+// update appear (so an animation never gives the result away early).
+function singleBet(gameId, demoPlay) {
+  return async (bet, amount) => {
+    if (BACKEND_ENABLED) {
+      if (!account) { logResult("Connect your wallet to sign in first."); return null; }
+      if (!(amount > 0)) { logResult("Enter a bet amount."); return null; }
+      try {
+        const out = await api.bet(gameId, bet, Math.round(amount * SOL));
+        account.serverSeedHash = out.serverSeedHash;
+        account.clientSeed = out.clientSeed;
+        account.nonce = out.nonceUsed + 1;
+        await refreshSeeds();
+        return {
+          outcome: out.result.outcome,
+          win: out.result.win,
+          multiplier: out.result.multiplier,
+          payout: out.payoutLamports / SOL,
+          stake: amount,
+          afterReveal: () => { logResult(describeServer(out)); updateBalance(out.balanceLamports); },
+        };
+      } catch (e) { logResult("error: " + e.message); return null; }
+    }
+    try {
+      const r = await demoPlay({ serverSeed, clientSeed, nonce }, bet);
+      nonce++;
+      await refreshSeeds();
+      return {
+        outcome: r.outcome,
+        win: r.win,
+        multiplier: r.multiplier,
+        payout: amount * r.multiplier,
+        stake: amount,
+        afterReveal: () => logResult(describeDemo(r, amount)),
+      };
+    } catch (e) { logResult("error: " + e.message); return null; }
+  };
 }
 
 function logResult(line) {
@@ -421,8 +434,6 @@ async function diceOnRoll({ target, direction, amount }) {
     }
     try {
       const out = await api.bet("dice", { target, direction }, Math.round(amount * SOL));
-      logResult(describeServer(out));
-      updateBalance(out.balanceLamports);
       account.serverSeedHash = out.serverSeedHash;
       account.clientSeed = out.clientSeed;
       account.nonce = out.nonceUsed + 1;
@@ -431,6 +442,7 @@ async function diceOnRoll({ target, direction, amount }) {
         roll: out.result.outcome.roll,
         win: out.result.win,
         multiplier: out.result.multiplier,
+        afterReveal: () => { logResult(describeServer(out)); updateBalance(out.balanceLamports); },
       };
     } catch (e) {
       logResult("error: " + e.message);
@@ -439,12 +451,9 @@ async function diceOnRoll({ target, direction, amount }) {
   }
   // demo mode
   const res = await playDice({ serverSeed, clientSeed, nonce }, { target, direction });
-  logResult(
-    `🎲 Dice rolled ${res.roll} — ${res.win ? "WIN x" + res.multiplier.toFixed(2) : "no win"}`,
-  );
   nonce++;
   await refreshSeeds();
-  return { roll: res.roll, win: res.win, multiplier: res.multiplier };
+  return { roll: res.outcome.roll, win: res.win, multiplier: res.multiplier, afterReveal: () => logResult(describeDemo(res, amount)) };
 }
 
 // ---- Roulette (rich interactive game: a table of chips on one spin) --------
@@ -484,6 +493,126 @@ async function rouletteOnSpin({ chips, total }) {
     payout,
     afterSpin: () => logResult(`🎯 Roulette ${pocket} ${pocketColor(pocket)} — ${payout > 0 ? `returned ${payout} on ${total} staked` : `lost ${total}`}`),
   };
+}
+
+// ---- Mines (session: reveal tile by tile) -----------------------------------
+let demoMines = null;
+
+async function minesOnStart({ mines, amount }) {
+  if (BACKEND_ENABLED) {
+    if (!account) { logResult("Connect your wallet to sign in first."); return null; }
+    if (!(amount > 0)) { logResult("Enter a bet amount."); return null; }
+    try {
+      const s = await api.mines.start(mines, Math.round(amount * SOL));
+      updateBalance(s.balanceLamports);
+      account.nonce = s.nonceUsed + 1;
+      await refreshSeeds();
+      logResult(`💣 Mines (${mines}) started · stake ${amount}`);
+      return s;
+    } catch (e) { logResult("error: " + e.message); return null; }
+  }
+  const layout = await minesLayout({ serverSeed, clientSeed, nonce }, mines);
+  demoMines = { layout, mines, revealed: [] };
+  nonce++;
+  await refreshSeeds();
+  logResult(`💣 Mines (${mines}) started (demo)`);
+  return { sessionId: "demo" };
+}
+async function minesOnReveal(sessionId, tile) {
+  if (BACKEND_ENABLED) {
+    try {
+      const r = await api.mines.reveal(sessionId, tile);
+      if (r.completed || r.bust) updateBalance(r.balanceLamports);
+      if (r.bust) logResult("💥 Mines — hit a mine. Lost.");
+      else if (r.completed) logResult(`🏆 Mines cleared! ×${r.multiplier}`);
+      return r;
+    } catch (e) { logResult("error: " + e.message); return null; }
+  }
+  const m = demoMines;
+  if (m.layout.includes(tile)) {
+    logResult("💥 Mines — hit a mine (demo)");
+    return { safe: false, bust: true, tile, minePositions: m.layout, revealed: m.revealed, multiplier: 0 };
+  }
+  m.revealed.push(tile);
+  const k = m.revealed.length;
+  const completed = k >= 25 - m.mines;
+  if (completed) logResult(`🏆 Mines cleared! ×${minesMultiplier(m.mines, k)} (demo)`);
+  return {
+    safe: true, bust: false, tile, revealed: [...m.revealed], multiplier: minesMultiplier(m.mines, k),
+    nextMultiplier: completed ? null : minesMultiplier(m.mines, k + 1), completed,
+    minePositions: completed ? m.layout : undefined,
+  };
+}
+async function minesOnCashout(sessionId) {
+  if (BACKEND_ENABLED) {
+    try {
+      const r = await api.mines.cashout(sessionId);
+      updateBalance(r.balanceLamports);
+      logResult(`💰 Mines cashed out ×${r.multiplier}`);
+      return r;
+    } catch (e) { logResult("error: " + e.message); return null; }
+  }
+  const mult = minesMultiplier(demoMines.mines, demoMines.revealed.length);
+  logResult(`💰 Mines cashed out ×${mult} (demo)`);
+  return { multiplier: mult, minePositions: demoMines.layout, revealed: demoMines.revealed };
+}
+
+// ---- HiLo (session: a fixed card stream, call by call) ----------------------
+let demoHilo = null;
+const floor2 = (x) => Math.floor(x * 100) / 100;
+const hiloChance = (base, guess) => (guess === "higherOrSame" ? (HILO_RANKS - base) / HILO_RANKS : (base + 1) / HILO_RANKS);
+
+async function hiloOnStart({ amount }) {
+  if (BACKEND_ENABLED) {
+    if (!account) { logResult("Connect your wallet to sign in first."); return null; }
+    if (!(amount > 0)) { logResult("Enter a bet amount."); return null; }
+    try {
+      const s = await api.hilo.start(Math.round(amount * SOL));
+      updateBalance(s.balanceLamports);
+      account.nonce = s.nonceUsed + 1;
+      await refreshSeeds();
+      logResult(`🃏 HiLo dealt · stake ${amount}`);
+      return s;
+    } catch (e) { logResult("error: " + e.message); return null; }
+  }
+  const fs = await floats(serverSeed, clientSeed, nonce, 30);
+  const cards = fs.map((f) => ({ rank: Math.floor(f * HILO_RANKS), suit: Math.floor(f * 52) % 4 }));
+  demoHilo = { cards, dealt: 1, multiplier: 1, calls: 0 };
+  nonce++;
+  await refreshSeeds();
+  logResult("🃏 HiLo dealt (demo)");
+  return { sessionId: "demo", base: cards[0] };
+}
+async function hiloOnGuess(sessionId, guess) {
+  if (BACKEND_ENABLED) {
+    try {
+      const r = await api.hilo.guess(sessionId, guess);
+      if (r.bust || r.completed) updateBalance(r.balanceLamports);
+      if (r.bust) logResult("🃏 HiLo — wrong call. Lost.");
+      return r;
+    } catch (e) { logResult("error: " + e.message); return null; }
+  }
+  const h = demoHilo;
+  const base = h.cards[h.dealt - 1].rank;
+  const card = h.cards[h.dealt];
+  h.dealt++;
+  const win = guess === "higherOrSame" ? card.rank >= base : card.rank <= base;
+  if (!win) { logResult("🃏 HiLo — wrong call (demo)"); return { card, win: false, bust: true, multiplier: 0 }; }
+  h.calls++;
+  h.multiplier = floor2(h.multiplier * floor2((1 / hiloChance(base, guess)) * (1 - HOUSE_EDGE)));
+  return { card, win: true, bust: false, multiplier: h.multiplier, completed: h.dealt >= 30 };
+}
+async function hiloOnCashout(sessionId) {
+  if (BACKEND_ENABLED) {
+    try {
+      const r = await api.hilo.cashout(sessionId);
+      updateBalance(r.balanceLamports);
+      logResult(`💰 HiLo cashed out ×${r.multiplier}`);
+      return r;
+    } catch (e) { logResult("error: " + e.message); return null; }
+  }
+  logResult(`💰 HiLo cashed out ×${demoHilo.multiplier} (demo)`);
+  return { multiplier: demoHilo.multiplier };
 }
 
 // ---- Tower (rich interactive game: stateful reveals) -----------------------
@@ -632,7 +761,6 @@ async function init() {
       connected = account.pubkey;
       walletBtn.textContent = account.pubkey.slice(0, 4) + "…" + account.pubkey.slice(-4);
       $("#account-row").classList.remove("hidden");
-      $("#bet-btn").textContent = "Place bet";
       await afterSignIn();
       $("#wallet-info").textContent = `signed in (${getActiveCluster()})`;
       updateBalance(account.balanceLamports);

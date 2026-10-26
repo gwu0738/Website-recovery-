@@ -41,6 +41,22 @@ Legend: ✅ done · 🟡 partial · ⬜ not started
   chips, Undo/Clear, and a results strip. All chips settle on ONE spin as one
   bet (`{ type: "multi" }` in the engine), so the stake is the sum of chips and
   each chip pays its own odds. Demo + backend.
+- ✅ **Every game looks like the game it is** (`web/js/*-game.js`), each playing
+  out the engine's real result: Dice tumbles a die that lands showing the roll;
+  Coinflip flips a 3D coin; Limbo launches a rocket with the multiplier climbing
+  to the result; Crash draws the live curve to the bust point with your
+  cash-out line; Wheel spins to the segment; Plinko bounces the ball down the
+  pegs along the engine's exact path into its bucket; Roulette (wheel + table);
+  HiLo deals cards that flip; Darts throws a dart into the ring the engine
+  picked; Snakes climbs a snakes-and-ladders board (snakes bite); Keno draws ten
+  balls one by one; Mines reveals gems/bombs on the 5×5 field; Tower; Chicken.
+  Every animation finishes before the balance/log update, so nothing is spoiled.
+- ✅ **Mines and HiLo are real sessions** (`server/mines-session.ts`,
+  `server/hilo-session.ts`): tile-by-tile / call-by-call with the stake locked,
+  resumable after a refresh like Tower and Chicken. HiLo runs a streak over the
+  seed's fixed card stream (each right call multiplies by its exact odds).
+- ✅ **All-games browser test**: `node scripts/ui-games-smoke.mjs` plays every
+  game in demo mode and in backend mode (balance always equals the server's).
 - ✅ **Nobody loses a balance** (`server/`, `web/js/`):
   - Sign-in sessions are stored in SQLite, so a server restart or redeploy no
     longer signs everyone out — reload the page and the balance is right there.
@@ -67,31 +83,27 @@ Legend: ✅ done · 🟡 partial · ⬜ not started
 
 | Game | Engine | Interactive UI | Notes (⚠️ = engine to rebuild) |
 |------|:--:|:--:|------|
-| Dice | ✅ | ✅ | published mechanic (matches); slider + animated roll |
-| Limbo | ✅ | 🟡 basic | aligned to published mechanic (10⁸ space) |
-| Crash | ✅ | 🟡 basic | shares Limbo's formula; not in reference set |
-| Mines | ✅ | ⬜ | aligned: mines placed one at a time from free tiles |
-| Plinko | ✅ | ⬜ | 8–16 rows × 3 risks; published path; our generated tables (98.7–99.0% RTP) |
+| Dice | ✅ | ✅ | published mechanic (matches); slider + tumbling die |
+| Limbo | ✅ | ✅ | aligned to published mechanic (10⁸ space); rocket + counter |
+| Crash | ✅ | ✅ | shares Limbo's formula; live curve with cash-out line |
+| Mines | ✅ | ✅ | aligned: mines placed one at a time; server session, gems/bombs grid |
+| Plinko | ✅ | ✅ | 8–16 rows × 3 risks; published path; our generated tables (98.7–99.0% RTP); animated peg board |
 | Roulette | ✅ | ✅ | published mechanic (matches); real wheel + table, multi-chip spins |
-| Wheel | ✅ | 🟡 basic | not in nuts.gg set |
-| Coinflip | ✅ | 🟡 basic | not in nuts.gg set |
+| Wheel | ✅ | ✅ | not in nuts.gg set; spinning segment wheel per risk |
+| Coinflip | ✅ | ✅ | not in nuts.gg set; 3D coin flip |
 | Tower | ✅ | ✅ | aligned: safe tiles placed one at a time; interactive climb, demo + backend |
-| HiLo | ⚠️ | ⬜ | rebuild as streak session over the published card stream |
+| HiLo | ✅ | ✅ | streak session over the seed's card stream (`server/hilo-session.ts`); flipping cards |
 | Chicken | ✅ | ✅ | death-point model (20 lanes, 1/3/5/10 hazards); road scene, leap-to-spot, traffic |
-| Darts | ⚠️ | ⬜ | rebuild on published disc throw; ring radii ours, sized for exact RTP |
-| Snakes | ⚠️ | ⬜ | rebuild: published 5×2 dice; board ours, edge proven exactly |
-| Keno | ✅ | ⬜ | draw aligned to published; paytables per risk still to design from exact odds |
+| Darts | ⚠️ | ✅ | dartboard UI (dart lands in the engine's ring). Engine still to rebuild on the published disc throw |
+| Snakes | ⚠️ | ✅ | snakes-and-ladders board UI (tier from the engine). Engine still to rebuild on published 5×2 dice |
+| Keno | ✅ | ✅ | draw aligned to published; animated 10-ball draw; paytables per risk still to design from exact odds |
 
 ---
 
 ## What's left
 
-### 1. Game UIs (the "real games" work) — biggest chunk
-Build each remaining game to Dice quality, following the nuts.gg layout spec
-below. Suggested order: HiLo → Keno → Darts → Snakes, then
-polish Limbo/Mines/Plinko.
-- [ ] Also add the 6 new games to the front-end catalog (`web/js/games.js`) with
-      icons (currently only the original 8 show in the grid).
+### 1. Game UIs ✅ — every game has its own visual (see "Done")
+Remaining polish ideas: sound, autoplay, bet stepper with MIN/MAX, USD values.
 
 ### 2. Email-verification layer (faucet gate)
 Chosen faucet model = nuts.gg style: claim every 3 min, **requires verified
@@ -179,8 +191,9 @@ Per-game notes:
 ## How to run
 
 ```bash
-npm test          # 58 tests (engine + games + backend + real-balance rules)
-node scripts/ui-smoke.mjs   # browser: roulette spin, balance survives reload/restart, resume
+npm test          # 62 tests (engine + games + backend + real-balance rules)
+node scripts/ui-smoke.mjs         # browser: roulette spin, balance survives reload/restart, resume
+node scripts/ui-games-smoke.mjs   # browser: every game plays in demo + backend mode
 npm run demo      # play one bet of every game + verify, in the terminal
 npm run server    # backend API on :8787
 npm run build:web # regenerate web/dist/standalone.html

@@ -96,6 +96,21 @@ export const api = {
     cashout: (sessionId) =>
       req("/api/tower/cashout", { method: "POST", auth: true, body: { sessionId } }),
   },
+  mines: {
+    start: (mines, stake) =>
+      req("/api/mines/start", { method: "POST", auth: true, body: { mines, stake } }),
+    reveal: (sessionId, tile) =>
+      req("/api/mines/reveal", { method: "POST", auth: true, body: { sessionId, tile } }),
+    cashout: (sessionId) =>
+      req("/api/mines/cashout", { method: "POST", auth: true, body: { sessionId } }),
+  },
+  hilo: {
+    start: (stake) => req("/api/hilo/start", { method: "POST", auth: true, body: { stake } }),
+    guess: (sessionId, guess) =>
+      req("/api/hilo/guess", { method: "POST", auth: true, body: { sessionId, guess } }),
+    cashout: (sessionId) =>
+      req("/api/hilo/cashout", { method: "POST", auth: true, body: { sessionId } }),
+  },
   chicken: {
     start: (difficulty, stake) =>
       req("/api/chicken/start", { method: "POST", auth: true, body: { difficulty, stake } }),

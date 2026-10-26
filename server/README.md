@@ -38,7 +38,10 @@ npm run server      # starts on http://localhost:8787
 | `POST /api/rotate-seed` | ✓ | reveal old server seed, commit a new one |
 | `POST /api/bet` | ✓ | `{ game, bet, stake }` → result + new balance |
 | `POST /api/auth/logout` | ✓ | revoke this token everywhere (balance stays with the wallet) |
-| `GET /api/sessions/active` | ✓ | unfinished Tower/Chicken games (locked stakes) + public progress, to resume |
+| `GET /api/sessions/active` | ✓ | unfinished Tower/Chicken/Mines/HiLo games (locked stakes) + public progress, to resume |
+| `POST /api/{tower,chicken,mines,hilo}/start` | ✓ | lock a stake, fix the hidden layout from the committed seed |
+| `POST /api/tower/reveal`, `/chicken/step`, `/mines/reveal`, `/hilo/guess` | ✓ | one move; safe → multiplier climbs, else the stake is lost |
+| `POST /api/{tower,chicken,mines,hilo}/cashout` | ✓ | pay stake × multiplier, once |
 | `GET /api/wallet` | ✓ | house address, balance, wagering left, deposit/withdrawal history |
 | `POST /api/deposit/confirm` | ✓ | `{ signature }` → verify on-chain, credit once |
 | `POST /api/withdraw` | ✓ | `{ lamports }` → pay out from the house wallet |
