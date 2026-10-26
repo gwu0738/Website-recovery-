@@ -17,7 +17,7 @@
  */
 import { HOUSE_EDGE } from "../config.ts";
 import { floats } from "../fairness/engine.ts";
-import { floor2, shuffleIndices } from "./shared.ts";
+import { floor2Safe, pickSequential } from "./shared.ts";
 import type { BetContext, GameResult } from "./types.ts";
 
 export type TowerDifficulty = "easy" | "medium" | "hard";
@@ -41,7 +41,7 @@ export function towerMultiplier(
   if (rows <= 0) return 1;
   const safe = TOWER_COLS - TOWER_TRAPS[difficulty];
   const survival = Math.pow(safe / TOWER_COLS, rows);
-  return floor2((1 / survival) * (1 - houseEdge));
+  return floor2Safe((1 / survival) * (1 - houseEdge));
 }
 
 /** The theoretical max multiplier (reaching the top). */
@@ -49,17 +49,22 @@ export function towerMaxMultiplier(difficulty: TowerDifficulty, houseEdge = HOUS
   return towerMultiplier(difficulty, TOWER_ROWS, houseEdge);
 }
 
-/** Full trap map: the trap tile indices for each of TOWER_ROWS rows. */
+/**
+ * Full trap map: the trap tile indices for each of TOWER_ROWS rows.
+ * Per row, the safe tiles are placed one at a time from the columns still free
+ * (each consuming the next float); the remaining columns are traps.
+ */
 export function towerLayout(ctx: BetContext, difficulty: TowerDifficulty): number[][] {
   const traps = TOWER_TRAPS[difficulty];
   if (traps === undefined) throw new Error("Unknown tower difficulty");
-  const perRow = TOWER_COLS - 1; // floats needed to shuffle 4 tiles
-  const all = floats(ctx.serverSeed, ctx.clientSeed, ctx.nonce, TOWER_ROWS * perRow);
+  const safePerRow = TOWER_COLS - traps;
+  const all = floats(ctx.serverSeed, ctx.clientSeed, ctx.nonce, TOWER_ROWS * safePerRow);
+  const columns = Array.from({ length: TOWER_COLS }, (_, i) => i);
   const rows: number[][] = [];
   for (let r = 0; r < TOWER_ROWS; r++) {
-    const slice = all.slice(r * perRow, r * perRow + perRow);
-    const order = shuffleIndices(TOWER_COLS, slice);
-    rows.push(order.slice(0, traps).sort((a, b) => a - b));
+    const fs = all.slice(r * safePerRow, (r + 1) * safePerRow);
+    const safe = new Set(pickSequential(columns, safePerRow, fs));
+    rows.push(columns.filter((c) => !safe.has(c)));
   }
   return rows;
 }

@@ -29,11 +29,12 @@ export function chickenMaxMultiplier(difficulty) {
   return chickenMultiplier(difficulty, chickenMaxSteps(difficulty));
 }
 
-// Same Fisher-Yates as src/games/shared.ts shuffleIndices, so results match.
-function chickenShuffle(n, fs) {
-  const arr = Array.from({ length: n }, (_, i) => i);
-  for (let i = n - 1; i > 0; i--) {
-    const j = Math.floor((fs[n - 1 - i] ?? 0) * (i + 1));
+// Top-down Fisher-Yates (same as src/games/shared.ts shuffleTopDown): step i
+// uses float i, swapping position i with floor(f[i] * (i + 1)).
+function chickenShuffle(items, fs) {
+  const arr = [...items];
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(fs[i] * (i + 1));
     [arr[i], arr[j]] = [arr[j], arr[i]];
   }
   return arr;
@@ -42,6 +43,7 @@ function chickenShuffle(n, fs) {
 /** The lane (1..20) the chicken is caught on, fixed by the seed. Async. */
 export async function chickenDeathPoint(ctx, difficulty) {
   const k = CHICKEN_HAZARDS[difficulty];
-  const fs = await floats(ctx.serverSeed, ctx.clientSeed, ctx.nonce, CHICKEN_LANES - 1);
-  return Math.min(...chickenShuffle(CHICKEN_LANES, fs).slice(0, k)) + 1;
+  const fs = await floats(ctx.serverSeed, ctx.clientSeed, ctx.nonce, CHICKEN_LANES);
+  const lanes = Array.from({ length: CHICKEN_LANES }, (_, i) => i + 1);
+  return Math.min(...chickenShuffle(lanes, fs).slice(0, k));
 }

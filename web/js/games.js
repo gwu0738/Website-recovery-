@@ -20,7 +20,11 @@ export async function playDice(ctx, { target, direction }, edge = HOUSE_EDGE) {
 
 export async function playLimbo(ctx, { target }, edge = HOUSE_EDGE) {
   const [u] = await floats(ctx.serverSeed, ctx.clientSeed, ctx.nonce, 1);
-  const result = u >= 1 ? 1e6 : Math.max(1, floor2((1 - edge) / (1 - u)));
+  // n = floor(u * 1e8) + 1; result = (1e8 / n) * (1 - edge), at least 1, floored
+  // to 2dp (same as src/games/limbo.ts resultMultiplier).
+  const n = Math.floor(u * 1e8) + 1;
+  const raw = Math.max((1e8 / n) * (1 - edge), 1);
+  const result = Math.floor(Math.round(raw * 1e8) / 1e6) / 100;
   const win = result >= target;
   return { game: "limbo", result, win, multiplier: win ? target : 0 };
 }

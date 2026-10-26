@@ -2,16 +2,16 @@
  * Mines — a 5x5 grid (25 tiles) with N hidden mines. The player reveals tiles;
  * each safe reveal raises the multiplier. Hitting a mine loses everything.
  *
- * The mine layout is a provably-fair shuffle of the 25 tiles: the first N tiles
- * of the shuffled order are the mines. Because the shuffle is deterministic from
- * the bet context, the layout is fixed before the player clicks anything.
+ * Mines are placed one at a time: each float picks one of the tiles still free.
+ * The placement is deterministic from the bet context, so the layout is fixed
+ * before the player clicks anything.
  *
  * Multiplier after k safe reveals = (1 - houseEdge) / P(k safe picks), where
  * P = product over the k picks of (safe remaining / tiles remaining).
  */
 import { HOUSE_EDGE } from "../config.ts";
 import { floats } from "../fairness/engine.ts";
-import { floor2, shuffleIndices } from "./shared.ts";
+import { floor2Safe, pickSequential } from "./shared.ts";
 import type { BetContext, GameResult } from "./types.ts";
 
 export const GRID_SIZE = 25;
@@ -43,7 +43,7 @@ export function minesMultiplier(
   for (let i = 0; i < k; i++) {
     p *= (safe - i) / (GRID_SIZE - i);
   }
-  return floor2((1 / p) * (1 - houseEdge));
+  return floor2Safe((1 / p) * (1 - houseEdge));
 }
 
 export function playMines(
@@ -54,10 +54,10 @@ export function playMines(
   if (bet.mines < 1 || bet.mines > 24) {
     throw new Error("Mines count must be between 1 and 24");
   }
-  // 24 floats are enough to fully shuffle 25 tiles.
-  const fs = floats(ctx.serverSeed, ctx.clientSeed, ctx.nonce, GRID_SIZE - 1);
-  const order = shuffleIndices(GRID_SIZE, fs);
-  const minePositions = order.slice(0, bet.mines).sort((a, b) => a - b);
+  // Mines are placed one at a time: each float picks among the free tiles.
+  const fs = floats(ctx.serverSeed, ctx.clientSeed, ctx.nonce, bet.mines);
+  const tiles = Array.from({ length: GRID_SIZE }, (_, i) => i);
+  const minePositions = pickSequential(tiles, bet.mines, fs).sort((a, b) => a - b);
   const mineSet = new Set(minePositions);
 
   let safeReveals = 0;

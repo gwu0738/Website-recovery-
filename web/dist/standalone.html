@@ -641,7 +641,11 @@ async function playDice(ctx, { target, direction }, edge = HOUSE_EDGE) {
 
 async function playLimbo(ctx, { target }, edge = HOUSE_EDGE) {
   const [u] = await floats(ctx.serverSeed, ctx.clientSeed, ctx.nonce, 1);
-  const result = u >= 1 ? 1e6 : Math.max(1, floor2((1 - edge) / (1 - u)));
+  // n = floor(u * 1e8) + 1; result = (1e8 / n) * (1 - edge), at least 1, floored
+  // to 2dp (same as src/games/limbo.ts resultMultiplier).
+  const n = Math.floor(u * 1e8) + 1;
+  const raw = Math.max((1e8 / n) * (1 - edge), 1);
+  const result = Math.floor(Math.round(raw * 1e8) / 1e6) / 100;
   const win = result >= target;
   return { game: "limbo", result, win, multiplier: win ? target : 0 };
 }
@@ -1006,7 +1010,8 @@ const TOWER_COLS = 4;
 const TOWER_ROWS = 9;
 const TOWER_TRAPS = { easy: 1, medium: 2, hard: 3 };
 
-const twFloor2 = (x) => Math.floor(x * 100) / 100;
+// floor to 2dp after rounding away float noise (same as shared.ts floor2Safe)
+const twFloor2 = (x) => Math.floor(Math.round(x * 1e8) / 1e6) / 100;
 
 function towerMultiplier(difficulty, rows, edge = HOUSE_EDGE) {
   if (rows <= 0) return 1;
@@ -1019,26 +1024,26 @@ function towerMaxMultiplier(difficulty) {
   return towerMultiplier(difficulty, TOWER_ROWS);
 }
 
-function shuffle(n, fs) {
-  const arr = Array.from({ length: n }, (_, i) => i);
-  for (let i = n - 1; i > 0; i--) {
-    const f = fs[n - 1 - i] ?? 0;
-    const j = Math.floor(f * (i + 1));
-    [arr[i], arr[j]] = [arr[j], arr[i]];
+// Pick `count` items one at a time from those remaining (same as shared.ts
+// pickSequential): the i-th float chooses an index among what's left.
+function pickSequential(pool, count, fs) {
+  const remaining = [...pool];
+  const picks = [];
+  for (let i = 0; i < count; i++) {
+    picks.push(remaining.splice(Math.floor(fs[i] * remaining.length), 1)[0]);
   }
-  return arr;
+  return picks;
 }
 
-/** Full trap map: trap tile indices per row. Async (browser floats). */
+/** Full trap map: per row, safe tiles placed one at a time; the rest are traps. Async. */
 async function towerLayout(ctx, difficulty) {
-  const traps = TOWER_TRAPS[difficulty];
-  const perRow = TOWER_COLS - 1;
-  const all = await floats(ctx.serverSeed, ctx.clientSeed, ctx.nonce, TOWER_ROWS * perRow);
+  const safePerRow = TOWER_COLS - TOWER_TRAPS[difficulty];
+  const all = await floats(ctx.serverSeed, ctx.clientSeed, ctx.nonce, TOWER_ROWS * safePerRow);
+  const columns = Array.from({ length: TOWER_COLS }, (_, i) => i);
   const rows = [];
   for (let r = 0; r < TOWER_ROWS; r++) {
-    const slice = all.slice(r * perRow, r * perRow + perRow);
-    const order = shuffle(TOWER_COLS, slice);
-    rows.push(order.slice(0, traps).sort((a, b) => a - b));
+    const safe = new Set(pickSequential(columns, safePerRow, all.slice(r * safePerRow, (r + 1) * safePerRow)));
+    rows.push(columns.filter((c) => !safe.has(c)));
   }
   return rows;
 }
@@ -1253,11 +1258,12 @@ function chickenMaxMultiplier(difficulty) {
   return chickenMultiplier(difficulty, chickenMaxSteps(difficulty));
 }
 
-// Same Fisher-Yates as src/games/shared.ts shuffleIndices, so results match.
-function chickenShuffle(n, fs) {
-  const arr = Array.from({ length: n }, (_, i) => i);
-  for (let i = n - 1; i > 0; i--) {
-    const j = Math.floor((fs[n - 1 - i] ?? 0) * (i + 1));
+// Top-down Fisher-Yates (same as src/games/shared.ts shuffleTopDown): step i
+// uses float i, swapping position i with floor(f[i] * (i + 1)).
+function chickenShuffle(items, fs) {
+  const arr = [...items];
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(fs[i] * (i + 1));
     [arr[i], arr[j]] = [arr[j], arr[i]];
   }
   return arr;
@@ -1266,8 +1272,9 @@ function chickenShuffle(n, fs) {
 /** The lane (1..20) the chicken is caught on, fixed by the seed. Async. */
 async function chickenDeathPoint(ctx, difficulty) {
   const k = CHICKEN_HAZARDS[difficulty];
-  const fs = await floats(ctx.serverSeed, ctx.clientSeed, ctx.nonce, CHICKEN_LANES - 1);
-  return Math.min(...chickenShuffle(CHICKEN_LANES, fs).slice(0, k)) + 1;
+  const fs = await floats(ctx.serverSeed, ctx.clientSeed, ctx.nonce, CHICKEN_LANES);
+  const lanes = Array.from({ length: CHICKEN_LANES }, (_, i) => i + 1);
+  return Math.min(...chickenShuffle(lanes, fs).slice(0, k));
 }
 
 

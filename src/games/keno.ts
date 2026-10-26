@@ -3,14 +3,15 @@
  * are paid by how many of your picks are hit, per a paytable keyed by how many
  * you picked.
  *
- * The 10 drawn numbers come from a provably-fair shuffle of 1..40 (first 10).
+ * The 10 numbers are drawn one at a time: each float picks one of the numbers
+ * still remaining in 1..40.
  *
  * KENO_PAYTABLE below is illustrative "classic risk" and should be RTP-tuned
  * against the hypergeometric odds before real-money use. The mechanics (draw and
  * hit-count) are exact and tested; only the payout numbers are tunable config.
  */
 import { floats } from "../fairness/engine.ts";
-import { shuffleIndices } from "./shared.ts";
+import { pickSequential } from "./shared.ts";
 import type { BetContext, GameResult } from "./types.ts";
 
 export const KENO_POOL = 40;
@@ -51,10 +52,10 @@ export function playKeno(ctx: BetContext, bet: KenoBet): GameResult<KenoOutcome>
     throw new Error(`Keno numbers must be 1..${KENO_POOL}`);
   }
 
-  // Shuffle 0..39, take first 10, map to 1..40.
-  const fs = floats(ctx.serverSeed, ctx.clientSeed, ctx.nonce, KENO_POOL - 1);
-  const order = shuffleIndices(KENO_POOL, fs);
-  const drawn = order.slice(0, KENO_DRAW).map((i) => i + 1);
+  // 10 numbers drawn one at a time from those remaining (1..40).
+  const fs = floats(ctx.serverSeed, ctx.clientSeed, ctx.nonce, KENO_DRAW);
+  const pool = Array.from({ length: KENO_POOL }, (_, i) => i + 1);
+  const drawn = pickSequential(pool, KENO_DRAW, fs);
   const drawnSet = new Set(drawn);
 
   const hits = picks.filter((n) => drawnSet.has(n)).length;

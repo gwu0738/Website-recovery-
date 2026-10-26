@@ -2,26 +2,30 @@
  * Limbo — a random multiplier is generated; the player picks a target multiplier
  * and wins (at that target) if the random one lands at or above it.
  *
- * The result multiplier m is derived from one uniform float u in [0, 1):
- *
- *   m = (1 - houseEdge) / (1 - u)
- *
- * With u uniform, P(m >= x) = (1 - houseEdge) / x, so a bet cashing out at x has
- * expected return exactly (1 - houseEdge). This same formula powers Crash.
+ * The result comes from one float u in [0, 1): n = floor(u * 10^8) + 1, and
+ * result = (10^8 / n) * (1 - houseEdge), at least 1, floored to 2dp. Then
+ * P(result >= x) ~= (1 - houseEdge) / x, so a bet targeting x returns
+ * (1 - houseEdge) on average. Crash uses the same formula for its bust point.
  */
 import { HOUSE_EDGE } from "../config.ts";
 import { floats } from "../fairness/engine.ts";
-import { floor2 } from "./shared.ts";
+import { floor2Safe } from "./shared.ts";
 import type { BetContext, GameResult } from "./types.ts";
 
-export const MAX_MULTIPLIER = 1_000_000;
+/**
+ * Shared result-multiplier formula for Limbo and Crash. One float u picks
+ * n = floor(u * 10^8) + 1; result = (10^8 / n) * (1 - houseEdge), at least 1,
+ * floored to 2dp. P(result >= x) ~= (1 - houseEdge) / x, so the edge is exact.
+ */
+const LIMBO_SPACE = 100_000_000;
 
-/** Shared result-multiplier formula for Limbo and Crash. */
 export function resultMultiplier(u: number, houseEdge: number): number {
-  if (u >= 1) return MAX_MULTIPLIER;
-  const raw = (1 - houseEdge) / (1 - u);
-  return Math.min(MAX_MULTIPLIER, Math.max(1, floor2(raw)));
+  const n = Math.floor(u * LIMBO_SPACE) + 1;
+  return floor2Safe(Math.max((LIMBO_SPACE / n) * (1 - houseEdge), 1));
 }
+
+/** Largest possible result (n = 1). */
+export const MAX_MULTIPLIER = resultMultiplier(0, HOUSE_EDGE);
 
 export interface LimboBet {
   /** Target multiplier the player is aiming for (>= 1.01). */

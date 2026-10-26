@@ -13,7 +13,7 @@
  */
 import { HOUSE_EDGE } from "../config.ts";
 import { floats } from "../fairness/engine.ts";
-import { shuffleIndices } from "./shared.ts";
+import { floor2Safe, shuffleTopDown } from "./shared.ts";
 import type { BetContext, GameResult } from "./types.ts";
 
 export type ChickenDifficulty = "easy" | "medium" | "hard" | "expert";
@@ -61,9 +61,7 @@ export function chickenMultiplier(
   for (let i = 0; i < steps; i++) {
     inverseSurvival *= (CHICKEN_LANES - i) / (CHICKEN_LANES - i - k);
   }
-  // Floor to 2dp in "hundredths" space, after rounding away float noise there
-  // (x*100 can land on 112859.99999… for an exact 1128.6).
-  return Math.floor(Math.round(inverseSurvival * (1 - houseEdge) * 1e8) / 1e6) / 100;
+  return floor2Safe(inverseSurvival * (1 - houseEdge));
 }
 
 export function chickenMaxMultiplier(difficulty: ChickenDifficulty, houseEdge = HOUSE_EDGE): number {
@@ -74,9 +72,11 @@ export function chickenMaxMultiplier(difficulty: ChickenDifficulty, houseEdge = 
 export function chickenDeathPoint(ctx: BetContext, difficulty: ChickenDifficulty): number {
   const k = CHICKEN_HAZARDS[difficulty];
   if (k === undefined) throw new Error("Unknown chicken difficulty");
-  const fs = floats(ctx.serverSeed, ctx.clientSeed, ctx.nonce, CHICKEN_LANES - 1);
-  const order = shuffleIndices(CHICKEN_LANES, fs);
-  return Math.min(...order.slice(0, k)) + 1;
+  // 20 floats; top-down Fisher-Yates over lanes 1..20; caught on the lowest
+  // of the first k positions.
+  const fs = floats(ctx.serverSeed, ctx.clientSeed, ctx.nonce, CHICKEN_LANES);
+  const lanes = Array.from({ length: CHICKEN_LANES }, (_, i) => i + 1);
+  return Math.min(...shuffleTopDown(lanes, fs).slice(0, k));
 }
 
 export function playChicken(

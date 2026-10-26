@@ -13,6 +13,42 @@ export function floor2(x: number): number {
   return Math.floor(x * 100) / 100;
 }
 
+/**
+ * floor2 that first rounds away float noise in "hundredths" space, so an exact
+ * value like 1.98 (stored as 197.99999… hundredths) isn't floored to 1.97.
+ */
+export function floor2Safe(x: number): number {
+  return Math.floor(Math.round(x * 1e8) / 1e6) / 100;
+}
+
+/**
+ * Pick `count` items one at a time from a pool: the i-th float chooses an index
+ * among the items still remaining. Returns the picks in draw order. Needs
+ * `count` floats. (Used for mine, tile and keno-number placement.)
+ */
+export function pickSequential<T>(pool: readonly T[], count: number, fs: number[]): T[] {
+  const remaining = [...pool];
+  const picks: T[] = [];
+  for (let i = 0; i < count; i++) {
+    const idx = Math.floor(fs[i] * remaining.length);
+    picks.push(remaining.splice(idx, 1)[0]);
+  }
+  return picks;
+}
+
+/**
+ * Fisher-Yates from the top where step i uses float i: swap position i with
+ * floor(fs[i] * (i + 1)), for i = n-1 down to 1. Needs n floats (fs[0] unused).
+ */
+export function shuffleTopDown<T>(items: readonly T[], fs: number[]): T[] {
+  const arr = [...items];
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(fs[i] * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}
+
 /** Payout multiplier for a given win probability and house edge. */
 export function payoutFor(winProbability: number, houseEdge: number): number {
   if (winProbability <= 0) return 0;

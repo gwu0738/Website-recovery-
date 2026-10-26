@@ -10,7 +10,8 @@ export const TOWER_COLS = 4;
 export const TOWER_ROWS = 9;
 export const TOWER_TRAPS = { easy: 1, medium: 2, hard: 3 };
 
-const twFloor2 = (x) => Math.floor(x * 100) / 100;
+// floor to 2dp after rounding away float noise (same as shared.ts floor2Safe)
+const twFloor2 = (x) => Math.floor(Math.round(x * 1e8) / 1e6) / 100;
 
 export function towerMultiplier(difficulty, rows, edge = HOUSE_EDGE) {
   if (rows <= 0) return 1;
@@ -23,26 +24,26 @@ export function towerMaxMultiplier(difficulty) {
   return towerMultiplier(difficulty, TOWER_ROWS);
 }
 
-function shuffle(n, fs) {
-  const arr = Array.from({ length: n }, (_, i) => i);
-  for (let i = n - 1; i > 0; i--) {
-    const f = fs[n - 1 - i] ?? 0;
-    const j = Math.floor(f * (i + 1));
-    [arr[i], arr[j]] = [arr[j], arr[i]];
+// Pick `count` items one at a time from those remaining (same as shared.ts
+// pickSequential): the i-th float chooses an index among what's left.
+function pickSequential(pool, count, fs) {
+  const remaining = [...pool];
+  const picks = [];
+  for (let i = 0; i < count; i++) {
+    picks.push(remaining.splice(Math.floor(fs[i] * remaining.length), 1)[0]);
   }
-  return arr;
+  return picks;
 }
 
-/** Full trap map: trap tile indices per row. Async (browser floats). */
+/** Full trap map: per row, safe tiles placed one at a time; the rest are traps. Async. */
 export async function towerLayout(ctx, difficulty) {
-  const traps = TOWER_TRAPS[difficulty];
-  const perRow = TOWER_COLS - 1;
-  const all = await floats(ctx.serverSeed, ctx.clientSeed, ctx.nonce, TOWER_ROWS * perRow);
+  const safePerRow = TOWER_COLS - TOWER_TRAPS[difficulty];
+  const all = await floats(ctx.serverSeed, ctx.clientSeed, ctx.nonce, TOWER_ROWS * safePerRow);
+  const columns = Array.from({ length: TOWER_COLS }, (_, i) => i);
   const rows = [];
   for (let r = 0; r < TOWER_ROWS; r++) {
-    const slice = all.slice(r * perRow, r * perRow + perRow);
-    const order = shuffle(TOWER_COLS, slice);
-    rows.push(order.slice(0, traps).sort((a, b) => a - b));
+    const safe = new Set(pickSequential(columns, safePerRow, all.slice(r * safePerRow, (r + 1) * safePerRow)));
+    rows.push(columns.filter((c) => !safe.has(c)));
   }
   return rows;
 }

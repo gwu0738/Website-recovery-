@@ -42,22 +42,22 @@ Legend: ✅ done · 🟡 partial · ⬜ not started
 
 ### Game status
 
-| Game | Engine | Interactive UI | Notes |
+| Game | Engine | Interactive UI | Notes (⚠️ = engine to rebuild) |
 |------|:--:|:--:|------|
-| Dice | ✅ | ✅ | slider + animated roll |
-| Limbo | ✅ | 🟡 basic | |
-| Crash | ✅ | 🟡 basic | not in nuts.gg set |
-| Mines | ✅ | ⬜ | 5×5 grid UI needed |
-| Plinko | ✅ | ⬜ | engine supports 8/12/16 rows + risk; UI fixed/none |
-| Roulette | ✅ | ⬜ | wheel UI needed |
+| Dice | ✅ | ✅ | published mechanic (matches); slider + animated roll |
+| Limbo | ✅ | 🟡 basic | aligned to published mechanic (10⁸ space) |
+| Crash | ✅ | 🟡 basic | shares Limbo's formula; not in reference set |
+| Mines | ✅ | ⬜ | aligned: mines placed one at a time from free tiles |
+| Plinko | ✅ | ⬜ | 8–16 rows × 3 risks; published path; our generated tables (98.7–99.0% RTP) |
+| Roulette | ✅ | ⬜ | published mechanic (matches) |
 | Wheel | ✅ | 🟡 basic | not in nuts.gg set |
 | Coinflip | ✅ | 🟡 basic | not in nuts.gg set |
-| Tower | ✅ | ✅ | 4-col model; interactive climb (start/reveal/cashout), demo + backend |
-| HiLo | ✅ | ⬜ | card-flip UI; streak mode is a UI layer |
+| Tower | ✅ | ✅ | aligned: safe tiles placed one at a time; interactive climb, demo + backend |
+| HiLo | ⚠️ | ⬜ | rebuild as streak session over the published card stream |
 | Chicken | ✅ | ✅ | death-point model (20 lanes, 1/3/5/10 hazards); road scene, leap-to-spot, traffic |
-| Darts | ✅ | ⬜ | ⚠️ payout weights are our own — RTP-tune |
-| Snakes | ✅ | ⬜ | ⚠️ our interpretation — RTP-tune |
-| Keno | ✅ | ⬜ | ⚠️ paytable illustrative — RTP-tune |
+| Darts | ⚠️ | ⬜ | rebuild on published disc throw; ring radii ours, sized for exact RTP |
+| Snakes | ⚠️ | ⬜ | rebuild: published 5×2 dice; board ours, edge proven exactly |
+| Keno | ✅ | ⬜ | draw aligned to published; paytables per risk still to design from exact odds |
 
 ---
 

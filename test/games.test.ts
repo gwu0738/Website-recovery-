@@ -6,7 +6,7 @@ import { playDice } from "../src/games/dice.ts";
 import { playLimbo, resultMultiplier } from "../src/games/limbo.ts";
 import { playCrash } from "../src/games/crash.ts";
 import { playMines, minesMultiplier } from "../src/games/mines.ts";
-import { playPlinko } from "../src/games/plinko.ts";
+import { playPlinko, plinkoTable, plinkoRtp } from "../src/games/plinko.ts";
 import { playRoulette, pocketColor } from "../src/games/roulette.ts";
 import { playCoinflip } from "../src/games/coinflip.ts";
 import type { BetContext } from "../src/games/types.ts";
@@ -30,10 +30,39 @@ test("dice rejects impossible targets", () => {
 });
 
 test("limbo result multiplier obeys its distribution", () => {
-  // At u=0, m = (1-edge); min clamp makes it 1.00.
-  assert.equal(resultMultiplier(0, 0.01), 1);
-  // At u=0.5, m = 0.99 / 0.5 = 1.98.
-  assert.equal(resultMultiplier(0.5, 0.01), 1.98);
+  // u = 0 -> n = 1 -> the largest result, 10^8 * 0.99.
+  assert.equal(resultMultiplier(0, 0.01), 99_000_000);
+  // u = 0.5 -> n = 50,000,001 -> 1.9799999... floored -> 1.97.
+  assert.equal(resultMultiplier(0.5, 0.01), 1.97);
+  // u -> 1 -> n = 10^8 -> 0.99, clamped up to the 1.00 minimum.
+  assert.equal(resultMultiplier(0.99999999, 0.01), 1);
+});
+
+test("limbo: P(result >= 2) is about (1 - edge) / 2", () => {
+  const serverSeed = generateServerSeed();
+  const n = 100000;
+  let hits = 0;
+  for (let i = 1; i <= n; i++) {
+    if (playLimbo({ serverSeed, clientSeed: "p", nonce: i }, { target: 2 }).win) hits++;
+  }
+  assert.ok(Math.abs(hits / n - 0.495) < 0.01, `P(>=2) was ${hits / n}`);
+});
+
+test("every plinko table is symmetric, rising outward, and returns 98.5-99%", () => {
+  for (const risk of ["low", "medium", "high"] as const) {
+    for (let rows = 8; rows <= 16; rows++) {
+      const t = plinkoTable(rows, risk);
+      assert.equal(t.length, rows + 1);
+      t.forEach((v, i) => assert.equal(v, t[t.length - 1 - i], `${risk}/${rows} symmetric`));
+      for (let k = 0; k < Math.floor(rows / 2); k++) {
+        assert.ok(t[k] >= t[k + 1], `${risk}/${rows} rises outward`);
+      }
+      const rtp = plinkoRtp(t, rows);
+      assert.ok(rtp <= 0.99 + 1e-12 && rtp >= 0.985, `${risk}/${rows} RTP ${rtp}`);
+    }
+  }
+  assert.throws(() => plinkoTable(7, "low"));
+  assert.throws(() => plinkoTable(17, "high"));
 });
 
 test("crash and limbo agree on the random point", () => {
