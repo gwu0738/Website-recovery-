@@ -11,6 +11,9 @@ can learn, test, and verify every outcome locally before anything touches real S
 
 ## Quick start
 
+The finished site lives on the `main` branch (release `v1.0.0`).
+
+
 Requires **Node.js 22.6+** (runs TypeScript natively — no build step, no installs).
 
 ```bash

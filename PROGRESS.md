@@ -197,16 +197,15 @@ Per-game notes:
 
 ---
 
-## Branches / PRs
+## Branches / releases
 
-- **Main working branch:** `ccr-fb27e026-uj4ydi` (this one) — has everything above.
-- **`ccr-c0b3a0d8-tzwnrs`** (a separate session): forked before Dice UI / SQLite /
-  the 6 new engines, added only `reference/nuts-gg/`. **PR #1** opens that into
-  this branch. Those reference files are now committed here directly, so PR #1 is
-  effectively redundant — close it, and don't merge that branch expecting the
-  newer work (it doesn't have it).
-
----
+- **`main`** — the finished site: everything above. Release tag **`v1.0.0`**.
+- `ccr-fb27e026-uj4ydi` — the working branch this was built on; identical to
+  `main` at the time of the release. Safe to delete once `main` is the
+  repository's default branch (GitHub → Settings → Branches → Default branch).
+- `ccr-c0b3a0d8-tzwnrs` — an old side branch that only added
+  `reference/nuts-gg/` (already in `main`). Its PR #1 is closed; the branch can
+  be deleted.
 
 ## How to run
 
