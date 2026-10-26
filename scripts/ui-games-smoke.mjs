@@ -28,7 +28,7 @@ const kp = generateKeyPairSync("ed25519");
 const pub = base58Encode(new Uint8Array(Buffer.from(kp.publicKey.export({ format: "jwk" }).x, "base64url")));
 
 const server = spawn(process.execPath, [join(ROOT, "server/server.ts")], {
-  env: { ...process.env, PORT: String(API_PORT), VANTA_DATA_DIR: dir, NODE_NO_WARNINGS: "1", SOLANA_CLUSTER: "devnet", FAUCET_LAMPORTS: "1000000000" },
+  env: { ...process.env, PORT: String(API_PORT), VANTA_DATA_DIR: dir, NODE_NO_WARNINGS: "1", SOLANA_CLUSTER: "devnet", FAUCET_LAMPORTS: "1000000000", FAUCET_POW_BITS: "10" },
   stdio: "ignore",
 });
 function serveWeb(apiBase) {
@@ -83,7 +83,8 @@ try {
   const page = await ctx.newPage();
   const errs = [];
   page.on("pageerror", (e) => errs.push(e.message));
-  page.on("console", (m) => { if (m.type() === "error") errs.push(m.text()); });
+  // Network probes while the page looks for a backend (404 / refused) are expected, not page errors.
+  page.on("console", (m) => { if (m.type() === "error" && !/Failed to load resource/.test(m.text())) errs.push(m.text()); });
 
   async function playRound(game) {
     await page.click(`.game-card[data-game="${game}"]`);
@@ -130,13 +131,13 @@ try {
   await page.click("#wallet-btn");
   await page.waitForSelector("#account-row:not(.hidden)", { timeout: 15000 });
   await page.click("#faucet-btn");
-  await page.waitForFunction(() => document.querySelector("#balance-val").textContent === "1.0000");
-  const balSol = () => page.textContent("#balance-val");
+  await page.waitForFunction(() => document.querySelector("#hdr-bal-val").textContent === "1.0000", null, { timeout: 30000 });
+  const balSol = () => page.textContent("#hdr-bal-val");
   for (const game of Object.keys(PLAYS)) {
     const betRes = page.waitForResponse((r) => r.url().endsWith("/api/bet"));
     await playRound(game);
     const out = await (await betRes).json();
-    await page.waitForFunction((b) => document.querySelector("#balance-val").textContent === b, (out.balanceLamports / 1e9).toFixed(4), { timeout: 5000 });
+    await page.waitForFunction((b) => document.querySelector("#hdr-bal-val").textContent === b, (out.balanceLamports / 1e9).toFixed(4), { timeout: 5000 });
     check(out.result.game === game, `${game}: server bet settled, balance now ${await balSol()} (server ${(out.balanceLamports / 1e9).toFixed(4)})`);
   }
   // Mines session on the server: start, reveal, cash out or bust; balance follows.
@@ -145,20 +146,20 @@ try {
   const startRes = page.waitForResponse((r) => r.url().endsWith("/api/mines/start"));
   await page.click("#mn-action");
   const started = await (await startRes).json();
-  await page.waitForFunction((b) => document.querySelector("#balance-val").textContent === b, (started.balanceLamports / 1e9).toFixed(4));
+  await page.waitForFunction((b) => document.querySelector("#hdr-bal-val").textContent === b, (started.balanceLamports / 1e9).toFixed(4));
   check(true, `mines: stake locked (balance ${await balSol()})`);
   const revealRes = page.waitForResponse((r) => r.url().endsWith("/api/mines/reveal"));
   await page.click(".mn-tile[data-t='12']");
   const rev = await (await revealRes).json();
   if (rev.bust) {
-    await page.waitForFunction((b) => document.querySelector("#balance-val").textContent === b, (rev.balanceLamports / 1e9).toFixed(4));
+    await page.waitForFunction((b) => document.querySelector("#hdr-bal-val").textContent === b, (rev.balanceLamports / 1e9).toFixed(4));
     check((await page.$$eval(".mn-tile.bomb", (e) => e.length)) === rev.minePositions.length, "mines: hit a mine, all mines shown, stake gone");
   } else {
     await page.waitForFunction(() => document.querySelector("#mn-action").textContent.startsWith("Cash Out ×"));
     const cashRes = page.waitForResponse((r) => r.url().endsWith("/api/mines/cashout"));
     await page.click("#mn-action");
     const cash = await (await cashRes).json();
-    await page.waitForFunction((b) => document.querySelector("#balance-val").textContent === b, (cash.balanceLamports / 1e9).toFixed(4));
+    await page.waitForFunction((b) => document.querySelector("#hdr-bal-val").textContent === b, (cash.balanceLamports / 1e9).toFixed(4));
     check(cash.payoutLamports > 10_000_000, `mines: gem then cash out ×${cash.multiplier} (+${(cash.payoutLamports / 1e9).toFixed(4)} SOL)`);
   }
   // HiLo session on the server.
@@ -180,7 +181,7 @@ try {
     const cr = page.waitForResponse((r) => r.url().endsWith("/api/hilo/cashout"));
     await page.click("#hl-action");
     const c = await (await cr).json();
-    await page.waitForFunction((b) => document.querySelector("#balance-val").textContent === b, (c.balanceLamports / 1e9).toFixed(4));
+    await page.waitForFunction((b) => document.querySelector("#hdr-bal-val").textContent === b, (c.balanceLamports / 1e9).toFixed(4));
     check(c.multiplier === g.multiplier, `hilo: right call ×${g.multiplier}, cashed out`);
   }
   check(errs.length === 0, `no page errors in backend mode${errs.length ? ": " + errs.join(" | ") : ""}`);

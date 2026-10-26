@@ -98,9 +98,11 @@ It's static — serve the `web/` folder with anything:
 npx serve web        # or: python3 -m http.server -d web 8080
 ```
 
-Then open the printed URL. Wallet connect needs the Phantom extension; the games
-and verifier work without it. Set your socials and Solana cluster in
-`web/js/config.js`.
+Then open the printed URL. If the backend (`npm run server`) is running on the
+same host, the page finds it by itself and you get accounts, balances and the
+faucet; otherwise the games run on the in-browser engine with a balance kept in
+your browser. Wallet connect works with any Solana wallet (Phantom, Solflare,
+Backpack, …). Socials live in `web/js/config.js`.
 
 ## Roadmap — adding Solana
 

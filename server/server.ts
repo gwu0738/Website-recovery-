@@ -25,6 +25,7 @@ import {
 import { createSolanaChain, isHouseConfigured, type Chain } from "./solana.ts";
 import { confirmDeposit, requestWithdrawal, reconcilePendingWithdrawals, WalletError } from "./wallet.ts";
 import { placeBet, claimFaucet, rotateSeed, setClientSeed, BetError } from "./bets.ts";
+import { faucetChallenge, verifyFaucetProof } from "./faucet-guard.ts";
 import { towerStart, towerReveal, towerCashout, towerResumeView, TowerError } from "./tower-session.ts";
 import { chickenStart, chickenStep, chickenCashout, chickenResumeView, ChickenError } from "./chicken-session.ts";
 import { minesStart, minesReveal, minesCashout, minesResumeView, MinesError } from "./mines-session.ts";
@@ -207,7 +208,16 @@ const server = createServer(async (req, res) => {
       }
     }
 
+    if (path === "/api/faucet/challenge" && method === "GET") {
+      return send(res, 200, faucetChallenge(acct.pubkey));
+    }
     if (path === "/api/faucet" && method === "POST") {
+      const body = await readBody(req);
+      try {
+        await verifyFaucetProof(acct.pubkey, body, String(req.headers["x-forwarded-for"] ?? req.socket.remoteAddress ?? ""));
+      } catch (e) {
+        return send(res, 400, { error: (e as Error).message });
+      }
       try {
         return send(res, 200, claimFaucet(acct));
       } catch (e) {

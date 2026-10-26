@@ -41,6 +41,26 @@ Legend: ✅ done · 🟡 partial · ⬜ not started
   chips, Undo/Clear, and a results strip. All chips settle on ONE spin as one
   bet (`{ type: "multi" }` in the engine), so the stake is the sum of chips and
   each chip pays its own odds. Demo + backend.
+- ✅ **Site shell in the nuts.gg layout, our own code** (`web/index.html`,
+  `web/css/styles.css`): header with balance box + DEPOSIT button, colourful
+  game tiles, gradient PLAY buttons, a −/+ MIN ½ 2× MAX bet stepper on every
+  game (`web/js/bet-field.js`, MAX follows the balance), and a Live games / My
+  games feed under the game card (`web/js/feed.js`).
+- ✅ **No demo/dev wording.** The site finds its backend by itself (same
+  origin, then port 8787 on the same host — `web/js/api.js detectBackend()`),
+  so deploying needs no config edit. With no server reachable, the balance is
+  kept in the browser (`web/js/local-bank.js`) and the page says exactly that.
+- ✅ **Any Solana wallet** (`web/js/wallets.js`): Wallet Standard wallets
+  (Phantom, Solflare, Backpack, Coinbase, …) are discovered on the page with no
+  SDK; an injected `window.solana` is the fallback. A picker appears when more
+  than one is installed; the last wallet reconnects silently on reload.
+- ✅ **Faucet anti-bot gate** (`server/faucet-guard.ts`): proof of work by
+  default (the browser hashes ~1 s per claim, no third party, $0), or
+  Cloudflare Turnstile when `TURNSTILE_SECRET` + `TURNSTILE_SITE_KEY` are set.
+- ✅ **Richer scenes:** a real numbered dartboard (20 wedges, wires, coloured
+  rings), a drawn snakes-and-ladders board where the piece slides down the
+  snake's body, a Keno lottery drum with tumbling balls, a HiLo felt table that
+  deals from a deck.
 - ✅ **Every game looks like the game it is** (`web/js/*-game.js`), each playing
   out the engine's real result: Dice tumbles a die that lands showing the roll;
   Coinflip flips a 3D coin; Limbo launches a rocket with the multiplier climbing
@@ -191,7 +211,7 @@ Per-game notes:
 ## How to run
 
 ```bash
-npm test          # 62 tests (engine + games + backend + real-balance rules)
+npm test          # 67 tests (engine + games + backend + real-balance rules + faucet gate)
 node scripts/ui-smoke.mjs         # browser: roulette spin, balance survives reload/restart, resume
 node scripts/ui-games-smoke.mjs   # browser: every game plays in demo + backend mode
 npm run demo      # play one bet of every game + verify, in the terminal

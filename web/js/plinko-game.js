@@ -17,6 +17,8 @@ function bucketColor(m, max) {
   return `hsl(${h} 70% 48%)`;
 }
 
+import { betField, wireBetFields } from "./bet-field.js";
+
 export function createPlinkoGame(container, { onPlay, amountLabel = "Bet" }) {
   let rows = 12;
   let risk = "medium";
@@ -33,8 +35,7 @@ export function createPlinkoGame(container, { onPlay, amountLabel = "Bet" }) {
         </div>
         <label class="field"><span class="k">Rows</span>
           <select id="pk-rows">${ROW_OPTIONS.map((r) => `<option value="${r}"${r === 12 ? " selected" : ""}>${r}</option>`).join("")}</select></label>
-        <label class="field"><span class="k">${amountLabel}</span>
-          <input id="pk-amount" type="number" step="0.001" min="0" value="0.001" /></label>
+        ${betField("pk-amount", amountLabel)}
         <button id="pk-drop" class="btn btn-primary big">Drop ball</button>
         <div class="pk-hist" id="pk-hist"></div>
       </div>
@@ -45,6 +46,7 @@ export function createPlinkoGame(container, { onPlay, amountLabel = "Bet" }) {
     </div>`;
 
   const $ = (s) => container.querySelector(s);
+  wireBetFields(container);
   const svg = $("#pk-svg");
   const W = 600, TOP = 40, BOTTOM = 470;
   let geom = null;

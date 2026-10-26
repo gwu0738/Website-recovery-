@@ -8,7 +8,28 @@
 // =============================================================================
 import { API_BASE } from "./config.js";
 
-export const BACKEND_ENABLED = !!(API_BASE && API_BASE.length > 0);
+// Where the backend is. With API_BASE empty, the site looks for it at startup:
+// same origin (nginx proxying /api/), then port 8787 on the same host.
+let base = API_BASE || "";
+let backend = false;
+export const isBackend = () => backend;
+export const backendBase = () => base;
+
+export async function detectBackend() {
+  if (typeof location === "undefined" || location.protocol === "file:") return false;
+  const candidates = API_BASE ? [API_BASE] : [location.origin, `${location.protocol}//${location.hostname}:8787`];
+  for (const c of candidates) {
+    try {
+      const res = await fetch(c + "/api/health", { signal: AbortSignal.timeout(2500) });
+      if (res.ok && (await res.json()).ok) {
+        base = c;
+        backend = true;
+        return true;
+      }
+    } catch { /* try the next one */ }
+  }
+  return false;
+}
 
 let token = null;
 try {
@@ -31,7 +52,7 @@ async function req(path, { method = "GET", body, auth = false } = {}) {
   const headers = {};
   if (body) headers["content-type"] = "application/json";
   if (auth && token) headers["authorization"] = `Bearer ${token}`;
-  const res = await fetch(API_BASE + path, {
+  const res = await fetch(base + path, {
     method,
     headers,
     body: body ? JSON.stringify(body) : undefined,
@@ -74,7 +95,10 @@ export const api = {
   clearToken: () => setToken(null),
   config: () => req("/api/config"),
   me: () => req("/api/me", { auth: true }),
-  faucet: () => req("/api/faucet", { method: "POST", auth: true }),
+  faucet: (proof) => req("/api/faucet", { method: "POST", auth: true, body: proof ?? {} }),
+  faucetChallenge: () => req("/api/faucet/challenge", { auth: true }),
+  betsRecent: () => req("/api/bets/recent"),
+  betsMine: () => req("/api/bets/mine", { auth: true }),
   /** Unfinished Tower/Chicken games whose stake is still locked. */
   sessionsActive: () => req("/api/sessions/active", { auth: true }),
   /** Revoke this token server-side; the balance stays with the wallet. */

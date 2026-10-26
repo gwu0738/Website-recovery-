@@ -9,6 +9,8 @@ import { KENO_PAYTABLE, KENO_POOL, KENO_MAX_PICKS } from "./games.js";
 const DRAW_MS = 260;
 const reducedMotion = () => !!window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
+import { betField, wireBetFields } from "./bet-field.js";
+
 export function createKenoGame(container, { onPlay, amountLabel = "Bet" }) {
   const picks = new Set();
   let busy = false;
@@ -23,21 +25,28 @@ export function createKenoGame(container, { onPlay, amountLabel = "Bet" }) {
         </div>
         <div class="kn-stats"><div><span class="k">Picked</span><strong id="kn-count">0 / ${KENO_MAX_PICKS}</strong></div>
           <div><span class="k">Hits</span><strong id="kn-hits">—</strong></div></div>
-        <label class="field"><span class="k">${amountLabel}</span>
-          <input id="kn-amount" type="number" step="0.001" min="0" value="0.001" /></label>
+        ${betField("kn-amount", amountLabel)}
         <button id="kn-draw" class="btn btn-primary big" disabled>Draw</button>
         <div class="kn-hist" id="kn-hist"></div>
       </div>
       <div class="kn-stage">
         <div class="kn-board" id="kn-board">${Array.from({ length: KENO_POOL }, (_, i) =>
           `<button type="button" class="kn-cell" data-n="${i + 1}">${i + 1}</button>`).join("")}</div>
-        <div class="kn-balls" id="kn-balls"></div>
+        <div class="kn-machine">
+          <div class="kn-drum" id="kn-drum">
+            <div class="kn-glass"></div>
+            ${Array.from({ length: 14 }, (_, i) => `<span class="kn-dball" style="--i:${i};--d:${(i * 0.37) % 1.4}s;--x:${12 + ((i * 53) % 70)}%;--y:${20 + ((i * 29) % 55)}%">${1 + ((i * 7) % 40)}</span>`).join("")}
+            <div class="kn-chute"></div>
+          </div>
+          <div class="kn-balls" id="kn-balls"></div>
+        </div>
         <div class="kn-paytable" id="kn-paytable"></div>
         <div class="kn-status" id="kn-status">Pick up to 10 numbers.</div>
       </div>
     </div>`;
 
   const $ = (s) => container.querySelector(s);
+  wireBetFields(container);
   const board = $("#kn-board");
 
   function renderPaytable(hits = null) {
@@ -84,6 +93,7 @@ export function createKenoGame(container, { onPlay, amountLabel = "Bet" }) {
 
   async function animateDraw(drawn) {
     let hits = 0;
+    $("#kn-drum").classList.add("spinning");
     for (const n of drawn) {
       const cell = board.querySelector(`.kn-cell[data-n="${n}"]`);
       const hit = picks.has(n);
@@ -96,6 +106,7 @@ export function createKenoGame(container, { onPlay, amountLabel = "Bet" }) {
       $("#kn-hits").textContent = `${hits}`;
       if (!reducedMotion()) await new Promise((r) => setTimeout(r, DRAW_MS));
     }
+    $("#kn-drum").classList.remove("spinning");
     return hits;
   }
 

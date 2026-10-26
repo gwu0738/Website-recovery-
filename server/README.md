@@ -33,7 +33,8 @@ npm run server      # starts on http://localhost:8787
 | `GET /api/auth/challenge?pubkey=` | – | get message to sign |
 | `POST /api/auth/verify` | – | exchange signature for a token |
 | `GET /api/me` | ✓ | account view (balance, commitment, nonce) |
-| `POST /api/faucet` | ✓ | claim free test credit (cooldown enforced) |
+| `GET /api/faucet/challenge` | ✓ | anti-bot challenge (proof of work, or Turnstile when configured) |
+| `POST /api/faucet` | ✓ | `{ nonce }` or `{ captcha }` → claim free credit (cooldown enforced) |
 | `POST /api/client-seed` | ✓ | set your own client seed |
 | `POST /api/rotate-seed` | ✓ | reveal old server seed, commit a new one |
 | `POST /api/bet` | ✓ | `{ game, bet, stake }` → result + new balance |

@@ -23,6 +23,8 @@ function cardHtml(card, faceUp) {
   </div>`;
 }
 
+import { betField, wireBetFields } from "./bet-field.js";
+
 export function createHiLoGame(container, { onStart, onGuess, onCashout, amountLabel = "Bet" }) {
   let session = null;
   let base = null; // { rank, suit }
@@ -37,12 +39,12 @@ export function createHiLoGame(container, { onStart, onGuess, onCashout, amountL
         <button id="hl-lower" class="btn hl-guess" disabled>Lower or same<small id="hl-lo-odds"></small></button>
         <div class="hl-stats"><div><span class="k">Current</span><strong id="hl-mult">1.00×</strong></div>
           <div><span class="k">Right calls</span><strong id="hl-streak">0</strong></div></div>
-        <label class="field"><span class="k">${amountLabel}</span>
-          <input id="hl-amount" type="number" step="0.001" min="0" value="0.001" /></label>
+        ${betField("hl-amount", amountLabel)}
         <button id="hl-action" class="btn btn-primary big">Deal</button>
       </div>
       <div class="hl-stage">
         <div class="hl-table">
+          <div class="hl-deck" aria-hidden="true"><div class="card"><div class="card-back"></div></div><div class="card"><div class="card-back"></div></div><div class="card"><div class="card-back"></div></div></div>
           <div class="hl-slot" id="hl-base">${cardHtml(null, false)}</div>
           <div class="hl-arrow">→</div>
           <div class="hl-slot" id="hl-next">${cardHtml(null, false)}</div>
@@ -53,6 +55,7 @@ export function createHiLoGame(container, { onStart, onGuess, onCashout, amountL
     </div>`;
 
   const $ = (s) => container.querySelector(s);
+  wireBetFields(container);
   const actionBtn = $("#hl-action");
   const hi = $("#hl-higher"), lo = $("#hl-lower");
 
@@ -71,12 +74,33 @@ export function createHiLoGame(container, { onStart, onGuess, onCashout, amountL
     $("#hl-base").innerHTML = cardHtml(card, true);
     $("#hl-next").innerHTML = cardHtml(null, false);
   }
+  async function dealBase(card) {
+    const slot = $("#hl-base");
+    slot.innerHTML = cardHtml(card, false);
+    const el = slot.querySelector(".card");
+    if (!reducedMotion()) {
+      el.classList.add("deal");
+      await new Promise((r) => setTimeout(r, 420));
+      el.classList.remove("deal");
+    }
+    await new Promise((r) => setTimeout(r, 30));
+    base = card;
+    el.classList.add("up");
+    $("#hl-next").innerHTML = cardHtml(null, false);
+  }
 
+  // Deal from the deck: the card slides across the felt into the slot, then flips.
   async function revealNext(card) {
     const slot = $("#hl-next");
     slot.innerHTML = cardHtml(card, false);
+    const el = slot.querySelector(".card");
+    if (!reducedMotion()) {
+      el.classList.add("deal");
+      await new Promise((r) => setTimeout(r, 420));
+      el.classList.remove("deal");
+    }
     await new Promise((r) => setTimeout(r, 30));
-    slot.querySelector(".card").classList.add("up");
+    el.classList.add("up");
     if (!reducedMotion()) await new Promise((r) => setTimeout(r, 650));
   }
 
@@ -139,7 +163,7 @@ export function createHiLoGame(container, { onStart, onGuess, onCashout, amountL
       streak = [];
       multiplier = 1;
       $("#hl-history").innerHTML = "";
-      setBase(s.base);
+      await dealBase(s.base);
       actionBtn.textContent = "Cash Out";
       $("#hl-status").textContent = `Base card ${RANK_LABEL[s.base.rank]}. Higher or lower?`;
     } finally {

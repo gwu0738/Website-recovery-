@@ -17,6 +17,8 @@ const ROCKET_SVG = `<svg viewBox="0 0 40 80" aria-hidden="true">
   <path class="flame" d="M16 62 q4 14 8 0 q-4 8 -8 0z" fill="#ffb02e"/>
 </svg>`;
 
+import { betField, wireBetFields } from "./bet-field.js";
+
 export function createLimboGame(container, { onPlay, amountLabel = "Bet" }) {
   let target = 2;
   let busy = false;
@@ -31,8 +33,7 @@ export function createLimboGame(container, { onPlay, amountLabel = "Bet" }) {
           <div><span class="k">Win chance</span><strong id="lb-chance">49.50%</strong></div>
           <div><span class="k">Payout on win</span><strong id="lb-payout">—</strong></div>
         </div>
-        <label class="field"><span class="k">${amountLabel}</span>
-          <input id="lb-amount" type="number" step="0.001" min="0" value="0.001" /></label>
+        ${betField("lb-amount", amountLabel)}
         <button id="lb-go" class="btn btn-primary big">Launch</button>
       </div>
       <div class="lb-stage" id="lb-stage">
@@ -45,6 +46,7 @@ export function createLimboGame(container, { onPlay, amountLabel = "Bet" }) {
     </div>`;
 
   const $ = (s) => container.querySelector(s);
+  wireBetFields(container);
   const counter = $("#lb-counter");
   const rocket = $("#lb-rocket");
   const line = $("#lb-line");

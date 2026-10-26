@@ -41,6 +41,8 @@ const TRAFFIC_COLORS = ["#4aa3ff", "#35d07f", "#ffb02e", "#ff7ab6", "#9aa3b8", "
 
 const laneX = (step) => (step === 0 ? SIDE / 2 : SIDE + (step - 1) * LANE + LANE / 2);
 
+import { betField, wireBetFields } from "./bet-field.js";
+
 export function createChickenGame(container, { onStart, onStep, onCashout, amountLabel = "Bet" }) {
   let difficulty = "medium";
   let session = null;
@@ -55,8 +57,7 @@ export function createChickenGame(container, { onStart, onStep, onCashout, amoun
         </div>
         <button id="ck-go" class="btn ck-go-btn" disabled>Go</button>
         <button id="ck-action" class="btn btn-primary big">Bet</button>
-        <label class="field"><span class="k">${amountLabel}</span>
-          <input id="ck-amount" type="number" step="0.001" min="0" value="0.001" /></label>
+        ${betField("ck-amount", amountLabel)}
       </div>
       <div class="chicken-board">
         <div class="chicken-max">MAX PAYOUT <strong id="ck-max">x0</strong> · <span id="ck-lanes"></span></div>
@@ -68,6 +69,7 @@ export function createChickenGame(container, { onStart, onStep, onCashout, amoun
     </div>`;
 
   const $ = (s) => container.querySelector(s);
+  wireBetFields(container);
   const viewport = $("#ck-viewport");
   const road = $("#ck-road");
   const actionBtn = $("#ck-action");

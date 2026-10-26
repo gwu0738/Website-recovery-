@@ -15,6 +15,8 @@ import { HOUSE_EDGE } from "./config.js";
 const diceClamp = (x, lo, hi) => Math.max(lo, Math.min(hi, x));
 const diceFloor2 = (x) => Math.floor(x * 100) / 100;
 
+import { betField, wireBetFields } from "./bet-field.js";
+
 export function createDiceGame(container, { onRoll, amountLabel = "Bet" }) {
   let target = 50;
   let direction = "under"; // "under" | "over"
@@ -51,8 +53,7 @@ export function createDiceGame(container, { onRoll, amountLabel = "Bet" }) {
       </div>
 
       <div class="dice-controls">
-        <label class="field"><span class="k">${amountLabel}</span>
-          <input id="dice-amount" type="number" step="0.001" min="0" value="0.001" /></label>
+        ${betField("dice-amount", amountLabel)}
         <label class="field"><span class="k">Target</span>
           <input id="dice-target" type="number" step="0.01" min="0.01" max="99.99" value="50" /></label>
         <div class="field"><span class="k">Direction</span>
@@ -67,6 +68,7 @@ export function createDiceGame(container, { onRoll, amountLabel = "Bet" }) {
     </div>`;
 
   const $ = (s) => container.querySelector(s);
+  wireBetFields(container);
   const zone = $("#dice-zone");
   const thumb = $("#dice-thumb");
   const marker = $("#dice-marker");

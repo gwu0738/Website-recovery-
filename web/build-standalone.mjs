@@ -23,9 +23,13 @@ const JS_ORDER = [
   "js/fairness.js",
   "js/plinko-logic.js",
   "js/games.js",
-  "js/wallet.js",
   "js/api.js",
+  "js/wallets.js",
+  "js/wallet.js",
   "js/wallet-panel.js",
+  "js/bet-field.js",
+  "js/local-bank.js",
+  "js/feed.js",
   "js/dice-game.js",
   "js/tower-logic.js",
   "js/tower-game.js",
@@ -56,6 +60,7 @@ const EXPORT_RE = /^(\s*)export\s+(?:async\s+function|function|class|const|let|v
 function bundleModule(src) {
   const exports = [...src.matchAll(EXPORT_RE)].map((m) => m[2]);
   const body = src
+    .replace(/^\s*export\s*\{[^}]*\}\s*from\s*["'][^"']+["'];?[ \t]*$/gm, "") // re-exports: already shared bindings
     .replace(/^\s*import\s*\{[^}]*\}\s*from\s*["'][^"']+["'];?[ \t]*$/gm, "") // multi-line `import { … } from "…";`
     .replace(/^\s*import\s[^\n]*;?\s*$/gm, "") // single-line `import … ;`
     .replace(/^(\s*)export\s+/gm, "$1"); // drop leading `export `

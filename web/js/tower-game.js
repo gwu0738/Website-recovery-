@@ -8,6 +8,8 @@
 // =============================================================================
 import { TOWER_COLS, TOWER_ROWS, towerMaxMultiplier } from "./tower-logic.js";
 
+import { betField, wireBetFields } from "./bet-field.js";
+
 export function createTowerGame(container, { onStart, onReveal, onCashout, amountLabel = "Bet" }) {
   let difficulty = "medium";
   let session = null; // { sessionId } while a game is live
@@ -23,8 +25,7 @@ export function createTowerGame(container, { onStart, onReveal, onCashout, amoun
           <button class="toggle-btn" data-d="hard">Hard</button>
         </div>
         <button id="tw-action" class="btn btn-primary big">Bet</button>
-        <label class="field"><span class="k">${amountLabel}</span>
-          <input id="tw-amount" type="number" step="0.001" min="0" value="0.001" /></label>
+        ${betField("tw-amount", amountLabel)}
       </div>
       <div class="tower-board">
         <div class="tower-max">MAX PAYOUT <strong id="tw-max">x0</strong></div>
@@ -34,6 +35,7 @@ export function createTowerGame(container, { onStart, onReveal, onCashout, amoun
     </div>`;
 
   const $ = (s) => container.querySelector(s);
+  wireBetFields(container);
   const grid = $("#tw-grid");
   const actionBtn = $("#tw-action");
   const amountEl = $("#tw-amount");

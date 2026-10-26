@@ -1,8 +1,7 @@
 // =============================================================================
 // Phantom wallet + Solana in the browser.
 //
-// - connect/disconnect the player's own wallet (non-custodial)
-// - read a wallet's SOL balance
+// - read a wallet's SOL balance (wallet connection itself lives in wallets.js)
 // - send a deposit: a plain SOL transfer to the house address, signed and sent
 //   by Phantom; the server then verifies it on-chain before crediting anything
 //
@@ -11,6 +10,7 @@
 // server's reported cluster, so the browser always talks to the same network.
 // =============================================================================
 import { getActiveCluster, rpcUrl } from "./config.js";
+export { getProvider, activeAddress } from "./wallets.js";
 
 export const WEB3_BUNDLE_URL =
   "https://cdn.jsdelivr.net/npm/@solana/web3.js@1.95.3/lib/index.iife.min.js";
@@ -44,32 +44,6 @@ function injectWeb3Bundle() {
   });
 }
 
-export function getProvider() {
-  const p = window?.solana;
-  if (p?.isPhantom) return p;
-  return null;
-}
-
-/** The wallet account Phantom is currently on (null when unknown). */
-export function activeAddress() {
-  const pk = getProvider()?.publicKey;
-  return pk ? pk.toString() : null;
-}
-
-export async function connect() {
-  const provider = getProvider();
-  if (!provider) {
-    throw new Error("Phantom not found. Install it from phantom.app");
-  }
-  const resp = await provider.connect();
-  return resp.publicKey.toString();
-}
-
-export async function disconnect() {
-  const provider = getProvider();
-  if (provider) await provider.disconnect();
-}
-
 export async function getBalanceSol(address, rpc = rpcUrl()) {
   const { Connection, PublicKey, LAMPORTS_PER_SOL } = await loadWeb3();
   const conn = new Connection(rpc, "confirmed");
@@ -79,9 +53,9 @@ export async function getBalanceSol(address, rpc = rpcUrl()) {
 
 /**
  * Deposit: transfer `lamports` from the player's wallet to the house address.
- * Phantom signs and sends; we wait for confirmation and return the signature
+ * The wallet signs and sends; we wait for confirmation and return the signature
  * for the server to verify and credit. `onSigned(signature)` fires as soon as
- * Phantom returns the signature, before confirmation.
+ * the wallet returns the signature, before confirmation.
  */
 export async function sendDeposit(provider, fromAddress, houseAddress, lamports, rpc = rpcUrl(), onSigned) {
   const { Connection, PublicKey, SystemProgram, Transaction } = await loadWeb3();

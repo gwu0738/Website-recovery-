@@ -11,6 +11,8 @@ const reducedMotion = () => !!window.matchMedia && window.matchMedia("(prefers-r
 const GEM = `<svg viewBox="0 0 40 40" aria-hidden="true"><path d="M12 8 h16 l8 10 -16 16 -16 -16z" fill="#00e0b8"/><path d="M12 8 l8 10 8 -10 M4 18 h32 M20 18 v16" stroke="#0a3b33" stroke-width="1.5" fill="none"/></svg>`;
 const BOMB = `<svg viewBox="0 0 40 40" aria-hidden="true"><circle cx="18" cy="24" r="12" fill="#11131c" stroke="#ff5c7a" stroke-width="2"/><path d="M24 14 l6 -6 M30 8 l3 -1 M31 11 l2 2" stroke="#ffb02e" stroke-width="2.5" stroke-linecap="round"/><circle cx="14" cy="20" r="3" fill="#2a2e40"/></svg>`;
 
+import { betField, wireBetFields } from "./bet-field.js";
+
 export function createMinesGame(container, { onStart, onReveal, onCashout, amountLabel = "Bet" }) {
   let mines = 3;
   let session = null;
@@ -26,8 +28,7 @@ export function createMinesGame(container, { onStart, onReveal, onCashout, amoun
           <div><span class="k">Current</span><strong id="mn-mult">1.00×</strong></div>
           <div><span class="k">Next gem</span><strong id="mn-next">—</strong></div>
         </div>
-        <label class="field"><span class="k">${amountLabel}</span>
-          <input id="mn-amount" type="number" step="0.001" min="0" value="0.001" /></label>
+        ${betField("mn-amount", amountLabel)}
         <button id="mn-action" class="btn btn-primary big">Bet</button>
         <button id="mn-random" class="btn btn-ghost" type="button" disabled>Random pick</button>
       </div>
@@ -39,6 +40,7 @@ export function createMinesGame(container, { onStart, onReveal, onCashout, amoun
     </div>`;
 
   const $ = (s) => container.querySelector(s);
+  wireBetFields(container);
   const grid = $("#mn-grid");
   const actionBtn = $("#mn-action");
   const randomBtn = $("#mn-random");

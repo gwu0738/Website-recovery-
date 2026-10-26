@@ -1,7 +1,7 @@
 // =============================================================================
 // Wallet panel (BACKEND mode): real-SOL deposits and withdrawals.
 //
-// Deposit: Phantom sends SOL to the house address; the signature goes to the
+// Deposit: the wallet sends SOL to the house address; the signature goes to the
 // server, which verifies it on-chain and credits exactly what arrived.
 // Withdraw: the server checks the rules (balance, bonus wagering, house
 // solvency) and sends SOL from the house wallet to the signed-in wallet.
@@ -11,7 +11,7 @@
 //     before we wait for confirmation; if the tab closes or the server is
 //     briefly unreachable, the next visit retries crediting it;
 //   - a deposit can also be credited by pasting its signature by hand;
-//   - a transfer is refused up front if Phantom has switched to a different
+//   - a transfer is refused up front if the wallet has switched to a different
 //     account than the one signed in (the server only credits transfers from
 //     the signed-in wallet, so that SOL would otherwise sit uncredited).
 // =============================================================================
@@ -181,23 +181,19 @@ export function createWalletPanel(container, { getProvider, getAddress, onBalanc
     if (!(sol > 0)) return status("Enter an amount to deposit.", "bad");
     if (!houseAddress) return status("Deposits aren't configured on this server.", "bad");
     const provider = getProvider();
-    if (!provider) return status("Phantom not found — install it from phantom.app", "bad");
+    if (!provider) return status("Connect your wallet first to deposit.", "bad");
     const me = getAddress();
-    if (!provider.publicKey) {
-      // Session restored from a previous visit: Phantom itself isn't connected yet.
-      try { await provider.connect(); } catch { return status("Connect Phantom to deposit.", "bad"); }
-    }
     const live = activeAddress();
     if (live && me && live !== me) {
       return status(
-        `Phantom is on account ${short(live)}, but you're signed in as ${short(me)}. ` +
-        `Switch Phantom back to that account (or reconnect) before depositing — only transfers from the signed-in wallet are credited.`,
+        `Your wallet is on account ${short(live)}, but you're signed in as ${short(me)}. ` +
+        `Switch back to that account (or reconnect) before depositing — only transfers from the signed-in wallet are credited.`,
         "bad",
       );
     }
     busy = true;
     try {
-      status("Approve the transfer in Phantom…");
+      status("Approve the transfer in your wallet…");
       const lamports = Math.round(sol * LAMPORTS_PER_SOL);
       const sig = await sendDeposit(provider, me, houseAddress, lamports, undefined, (signature) => {
         rememberDeposit(me, signature, lamports); // saved before we wait on the network

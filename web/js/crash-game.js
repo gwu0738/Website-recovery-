@@ -8,6 +8,8 @@ const reducedMotion = () => !!window.matchMedia && window.matchMedia("(prefers-r
 const GROWTH = Math.log(2) / 2.6; // 2× after ~2.6 s, like a classic crash curve
 const MAX_RUN_MS = 9000;
 
+import { betField, wireBetFields } from "./bet-field.js";
+
 export function createCrashGame(container, { onPlay, amountLabel = "Bet" }) {
   let cashOut = 2;
   let busy = false;
@@ -21,8 +23,7 @@ export function createCrashGame(container, { onPlay, amountLabel = "Bet" }) {
         <div class="cr-stats">
           <div><span class="k">Payout on win</span><strong id="cr-payout">—</strong></div>
         </div>
-        <label class="field"><span class="k">${amountLabel}</span>
-          <input id="cr-amount" type="number" step="0.001" min="0" value="0.001" /></label>
+        ${betField("cr-amount", amountLabel)}
         <button id="cr-go" class="btn btn-primary big">Bet</button>
       </div>
       <div class="cr-stage" id="cr-stage">
@@ -43,6 +44,7 @@ export function createCrashGame(container, { onPlay, amountLabel = "Bet" }) {
     </div>`;
 
   const $ = (s) => container.querySelector(s);
+  wireBetFields(container);
   const W = 600, H = 260, PAD = 10;
   const readout = $("#cr-readout");
   const path = $("#cr-path");

@@ -105,8 +105,8 @@ try {
   await page.click("#wallet-open");
   await page.waitForFunction((h) => document.querySelector("#wp-house")?.textContent === h, house.publicKey.toBase58(), { timeout: 15000 });
   check(true, "wallet panel shows the house deposit address");
-  check((await page.textContent("#cluster-badge")).trim() === "localnet", "cluster badge follows the server (localnet)");
-  check(/^Real SOL on localnet/.test((await page.textContent("#mode-note")).trim()), "page states real SOL is in play (not 'demo')");
+  check((await page.textContent("#wp-cluster")).trim() === "localnet", "wallet panel shows the server's network (localnet)");
+  check(/^Playing for real SOL/.test((await page.textContent("#mode-note")).trim()), "page states real SOL is in play");
   await pause(4000);
   check((await page.$$eval(".chat-msg", (e) => e.length)) === 0, "no simulated players in the chat with real money on");
 
@@ -117,7 +117,7 @@ try {
   await page.waitForFunction(() => /Deposited|failed|Error|not/i.test(document.querySelector("#wp-status")?.textContent || ""), null, { timeout: 60000 });
   const depStatus = (await page.textContent("#wp-status")).trim();
   check(/Deposited 0\.3/.test(depStatus), `page says: "${depStatus}"`);
-  check((await page.textContent("#balance-val")).trim() === "0.3000", `site balance ${await page.textContent("#balance-val")} SOL`);
+  check((await page.textContent("#hdr-bal-val")).trim() === "0.3000", `site balance ${await page.textContent("#hdr-bal-val")} SOL`);
   const after = await conn.getBalance(player.publicKey, "confirmed");
   check(before - after >= 0.3 * SOL && before - after < 0.3 * SOL + 100_000, `player wallet −${((before - after) / SOL).toFixed(6)} SOL on-chain (0.3 + fee)`);
 
@@ -130,7 +130,7 @@ try {
   check(/Withdrew 0\.1/.test(wdStatus), `page says: "${wdStatus}"`);
   const pAfter = await conn.getBalance(player.publicKey, "confirmed");
   check(pAfter - pBefore === 0.1 * SOL, `player wallet +${((pAfter - pBefore) / SOL).toFixed(6)} SOL on-chain`);
-  check((await page.textContent("#balance-val")).trim() === "0.2000", `site balance ${await page.textContent("#balance-val")} SOL`);
+  check((await page.textContent("#hdr-bal-val")).trim() === "0.2000", `site balance ${await page.textContent("#hdr-bal-val")} SOL`);
   const items = await page.$$eval("#wp-list li", (els) => els.map((e) => e.textContent.trim()));
   check(items.length === 2, `history: ${JSON.stringify(items)}`);
   check(errs.length === 0, `no page errors${errs.length ? ": " + errs.join(" | ") : ""}`);

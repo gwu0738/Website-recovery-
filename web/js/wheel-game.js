@@ -20,6 +20,8 @@ function wedge(cx, cy, r0, r1, a0, a1) {
   return `M${x0} ${y0} A${r1} ${r1} 0 0 1 ${x1} ${y1} L${x2} ${y2} A${r0} ${r0} 0 0 0 ${x3} ${y3} Z`;
 }
 
+import { betField, wireBetFields } from "./bet-field.js";
+
 export function createWheelGame(container, { onPlay, amountLabel = "Bet" }) {
   let risk = "medium";
   let busy = false;
@@ -35,8 +37,7 @@ export function createWheelGame(container, { onPlay, amountLabel = "Bet" }) {
           <button class="toggle-btn" data-r="high">High</button>
         </div>
         <div class="wh-legend" id="wh-legend"></div>
-        <label class="field"><span class="k">${amountLabel}</span>
-          <input id="wh-amount" type="number" step="0.001" min="0" value="0.001" /></label>
+        ${betField("wh-amount", amountLabel)}
         <button id="wh-spin" class="btn btn-primary big">Spin</button>
       </div>
       <div class="wh-stage">
@@ -51,6 +52,7 @@ export function createWheelGame(container, { onPlay, amountLabel = "Bet" }) {
     </div>`;
 
   const $ = (s) => container.querySelector(s);
+  wireBetFields(container);
   const rotor = $("#wh-rotor");
 
   function build() {

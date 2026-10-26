@@ -9,6 +9,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 process.env.VANTA_DATA_DIR = mkdtempSync(join(tmpdir(), "vanta-test-"));
+process.env.FAUCET_POW_BITS = "0"; // the proof-of-work gate has its own test
 
 const { start } = await import("../server/server.ts");
 const { base58Encode } = await import("../server/lib/base58.ts");

@@ -6,6 +6,8 @@
 const FLIP_MS = 2200;
 const reducedMotion = () => !!window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
+import { betField, wireBetFields } from "./bet-field.js";
+
 export function createCoinflipGame(container, { onPlay, amountLabel = "Bet", multiplier = 1.98 }) {
   let call = "heads";
   let busy = false;
@@ -20,8 +22,7 @@ export function createCoinflipGame(container, { onPlay, amountLabel = "Bet", mul
         </div>
         <div class="cf-stats"><div><span class="k">Multiplier</span><strong>${multiplier.toFixed(2)}×</strong></div>
           <div><span class="k">Win chance</span><strong>50%</strong></div></div>
-        <label class="field"><span class="k">${amountLabel}</span>
-          <input id="cf-amount" type="number" step="0.001" min="0" value="0.001" /></label>
+        ${betField("cf-amount", amountLabel)}
         <button id="cf-flip" class="btn btn-primary big">Flip</button>
       </div>
       <div class="cf-stage">
@@ -39,6 +40,7 @@ export function createCoinflipGame(container, { onPlay, amountLabel = "Bet", mul
     </div>`;
 
   const $ = (s) => container.querySelector(s);
+  wireBetFields(container);
   const coin = $("#coin");
   const statusEl = $("#cf-status");
   const history = [];

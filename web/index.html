@@ -4,16 +4,21 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Vanta</title>
-    <meta name="description" content="Provably fair crypto casino — verify every bet yourself." />
+    <meta name="description" content="Provably fair Solana casino — verify every bet yourself." />
     <link rel="stylesheet" href="css/styles.css" />
   </head>
   <body>
-    <!-- Top bar -->
+    <!-- Top bar: brand · balance + DEPOSIT · socials + wallet -->
     <header class="topbar">
-      <div class="brand">
+      <a class="brand" href="#top">
         <span class="logo-dot"></span>
         <span id="brand-name" class="brand-name">Vanta</span>
-        <span id="cluster-badge" class="cluster-badge">devnet</span>
+      </a>
+      <div class="top-center">
+        <div id="hdr-balance" class="hdr-balance hidden">
+          <div class="hdr-bal"><strong id="hdr-bal-val">0.0000</strong><span class="unit">SOL</span></div>
+          <button id="hdr-deposit" class="btn-deposit hidden" type="button">DEPOSIT</button>
+        </div>
       </div>
       <nav class="top-actions">
         <a class="social hidden" data-social="telegram" target="_blank" rel="noopener" title="Telegram">Telegram</a>
@@ -24,64 +29,47 @@
       </nav>
     </header>
 
-    <!-- Hero -->
-    <section class="hero">
-      <h1 id="hero-title">Provably fair.<br /><span class="accent">Verifiably yours.</span></h1>
-      <p id="brand-tag" class="hero-tag">Provably fair. Verifiably yours.</p>
-      <p class="hero-sub">
-        Every bet is decided by code you can check. House edge is a flat
-        <strong id="edge-label">1.0%</strong>, disclosed up front — no hidden math.
-      </p>
-      <div class="hero-socials">
-        <a class="chip hidden" data-social="telegram" target="_blank" rel="noopener">Join Telegram</a>
-        <a class="chip hidden" data-social="discord" target="_blank" rel="noopener">Join Discord</a>
-        <a class="chip hidden" data-social="twitter" target="_blank" rel="noopener">Follow on X</a>
-      </div>
-    </section>
-
-    <main class="layout">
-      <!-- Left: games + bet panel -->
+    <main class="layout" id="top">
+      <!-- Left: games + the game card -->
       <div class="col-main">
-        <h2 class="section-title">Games</h2>
         <div id="games-grid" class="games-grid"></div>
 
-        <div class="panel bet-panel">
+        <div class="panel bet-panel" id="game-panel">
           <div class="panel-head">
             <h3 id="panel-title">Dice</h3>
             <span class="pf-badge">provably fair</span>
           </div>
 
           <div id="account-row" class="account-row hidden">
-            <div class="bal"><span class="k">balance</span><strong id="balance-val">—</strong><span class="unit">SOL</span></div>
             <button id="faucet-btn" class="btn btn-ghost">Claim free faucet</button>
+            <span id="faucet-status" class="faucet-status"></span>
             <button id="wallet-open" class="btn btn-ghost" type="button" aria-expanded="false" aria-controls="wallet-panel">Wallet</button>
           </div>
 
-          <!-- Real-SOL deposits / withdrawals (backend mode) -->
+          <!-- Real-SOL deposits / withdrawals -->
           <div id="wallet-panel" class="wallet-panel hidden"></div>
 
-          <!-- Unfinished game with a locked stake (backend mode): resume or cash out. -->
+          <!-- Unfinished game with a locked stake: resume or cash out. -->
           <div id="resume-banner" class="resume-banner hidden"></div>
 
-          <!-- Rich game UIs render here (Dice, Tower, Chicken, Roulette). -->
+          <!-- The selected game renders here. -->
           <div id="game-view"></div>
-
-          <div id="bet-controls" class="bet-controls" data-game="dice">
-            <button id="new-seed" class="btn btn-ghost">Rotate seed</button>
-          </div>
 
           <div class="seeds">
             <div><span class="k">server seed hash</span><code id="seed-hash">—</code></div>
             <div><span class="k">client seed</span><code id="seed-client">—</code></div>
             <div><span class="k">nonce</span><code id="seed-nonce">1</code></div>
+            <button id="new-seed" class="btn btn-ghost small" type="button">Rotate seed</button>
           </div>
 
           <div id="result-log" class="result-log"></div>
           <p id="mode-note" class="disclaimer">
-            Demo mode — no real funds move. Bets run on the in-browser fairness
-            engine so you can watch and verify outcomes.
+            Every result comes from a seed committed before you bet — verify any round below. 18+.
           </p>
         </div>
+
+        <!-- Live games / my games -->
+        <div class="panel feed-panel" id="feed-panel"></div>
 
         <!-- Verify widget -->
         <div class="panel verify-panel">
@@ -113,9 +101,20 @@
       </aside>
     </main>
 
+    <!-- Wallet picker -->
+    <div id="wallet-modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="wallet-modal-title">
+      <div class="modal-card">
+        <div class="modal-head"><strong id="wallet-modal-title">Connect a wallet</strong>
+          <button id="wallet-modal-close" class="modal-close" type="button" aria-label="Close">×</button></div>
+        <div id="wallet-list" class="wallet-list"></div>
+        <p class="muted">No wallet yet? Install Phantom, Solflare or Backpack, then reload.</p>
+      </div>
+    </div>
+
     <footer class="footer">
       <div class="footer-top">
-        <span id="footer-brand" class="brand-name">Vanta</span>
+        <div><span id="footer-brand" class="brand-name">Vanta</span>
+          <span id="brand-tag" class="footer-tag">Provably fair. Verifiably yours.</span></div>
         <div class="footer-socials">
           <a class="social hidden" data-social="telegram" target="_blank" rel="noopener">Telegram</a>
           <a class="social hidden" data-social="discord" target="_blank" rel="noopener">Discord</a>
@@ -123,6 +122,7 @@
         </div>
       </div>
       <p class="footer-legal">
+        House edge <strong id="edge-label">1.0%</strong>, disclosed up front.
         18+. Gambling involves risk — never wager more than you can afford to
         lose. Online gambling is restricted or illegal in some jurisdictions;
         it is your responsibility to know your local laws. &copy; <span id="year"></span>

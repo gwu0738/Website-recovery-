@@ -21,11 +21,18 @@ export const HOUSE_EDGE = 0.01;
 
 // -----------------------------------------------------------------------------
 // Backend API base URL.
-//   ""                         -> DEMO mode: bets run in-browser, no accounts.
-//   "https://api.yoursite.com" -> BACKEND mode: real sign-in, balance, faucet.
-// Leave empty for the standalone preview; set it to your server when deployed.
+//   ""                         -> the site finds the server itself: same origin
+//                                 (nginx proxying /api/), then port 8787 on the
+//                                 same host. No server reachable -> balance is
+//                                 kept in the browser and nothing is real.
+//   "https://api.yoursite.com" -> always use this server.
 // -----------------------------------------------------------------------------
 export const API_BASE = "";
+
+// Cloudflare Turnstile site key for the faucet captcha (optional). Leave empty
+// to use the built-in proof-of-work gate instead. Pair with TURNSTILE_SECRET
+// on the server.
+export const TURNSTILE_SITE_KEY = "";
 
 export const LAMPORTS_PER_SOL = 1_000_000_000;
 export const toSol = (l) => (l / LAMPORTS_PER_SOL).toFixed(4);

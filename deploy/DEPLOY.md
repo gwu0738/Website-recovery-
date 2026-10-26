@@ -54,6 +54,9 @@ SOLANA_CLUSTER=devnet
 # SOLANA_RPC_URL=https://mainnet.helius-rpc.com/?api-key=YOUR_KEY
 HOUSE_KEYPAIR_FILE=/opt/vanta/house.keypair.json
 CORS_ORIGIN=https://casino.example.com
+# Faucet anti-bot: proof-of-work bits (default 18 ≈ 1 s in a browser), or Turnstile instead
+# FAUCET_POW_BITS=18
+# TURNSTILE_SECRET=...
 # Money limits (lamports; 1 SOL = 1000000000). Defaults are conservative; see server/config.ts.
 # FAUCET_LAMPORTS=0            # 0 disables the free faucet (on mainnet it pays real SOL)
 # MAX_STAKE_LAMPORTS=10000000  # 0.01 SOL
@@ -78,14 +81,14 @@ curl http://127.0.0.1:8787/api/health   # {"ok":true}
 journalctl -u vanta -f          # live logs
 ```
 
-## 6. Point the site at the API, then serve it
+## 6. Serve the site
 
-```bash
-cd /opt/vanta/app
-# Same origin as the site: nginx proxies /api/ to the backend.
-sudo -u vanta sed -i 's|export const API_BASE = "";|export const API_BASE = "https://casino.example.com";|' web/js/config.js
-# Optional: your mainnet RPC for the browser-side balance read, same provider URL as above.
-```
+No config edit is needed: with nginx proxying `/api/` on the same origin, the
+page finds the backend by itself. (You can still pin it with `API_BASE` in
+`web/js/config.js`.) For a stronger faucet captcha, create a free Cloudflare
+Turnstile widget and set `TURNSTILE_SECRET` in `vanta.env` and
+`TURNSTILE_SITE_KEY` in `web/js/config.js`; without it, the built-in
+proof-of-work gate is used.
 
 ```bash
 cp /opt/vanta/app/deploy/nginx.conf /etc/nginx/sites-available/vanta

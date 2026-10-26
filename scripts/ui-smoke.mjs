@@ -36,7 +36,7 @@ const pub = base58Encode(new Uint8Array(Buffer.from(jwk.x, "base64url")));
 let server = null;
 function startServer() {
   server = spawn(process.execPath, [join(ROOT, "server/server.ts")], {
-    env: { ...process.env, PORT: String(API_PORT), VANTA_DATA_DIR: dir, NODE_NO_WARNINGS: "1", SOLANA_CLUSTER: "devnet" },
+    env: { ...process.env, PORT: String(API_PORT), VANTA_DATA_DIR: dir, NODE_NO_WARNINGS: "1", SOLANA_CLUSTER: "devnet", FAUCET_POW_BITS: "10" },
     stdio: "ignore",
   });
 }
@@ -91,7 +91,8 @@ try {
   const page = await ctx.newPage();
   const errs = [];
   page.on("pageerror", (e) => errs.push(e.message));
-  page.on("console", (m) => { if (m.type() === "error") errs.push(m.text()); });
+  // Network probes while the page looks for a backend (404 / refused) are expected, not page errors.
+  page.on("console", (m) => { if (m.type() === "error" && !/Failed to load resource/.test(m.text())) errs.push(m.text()); });
 
   console.log("A. demo mode: roulette spins and settles in-browser");
   await page.goto(`http://127.0.0.1:${demoHttp.address().port}/`, { waitUntil: "load" });
@@ -99,13 +100,13 @@ try {
   await page.waitForSelector(".rl-table");
   check((await page.$$eval(".rl-cell", (e) => e.length)) === 37 + 3 + 3 + 6, "table has 37 numbers + 3 columns + 3 dozens + 6 even-money spots");
   check((await page.$$eval(".rl-wheel-svg [data-pocket]", (e) => e.length)) === 37, "wheel has 37 pockets");
-  await page.fill("#rl-chip", "1");
+  await page.fill("#rl-chip", "0.1");
   await page.click('.rl-cell[data-bet=\'{"type":"red"}\']');
   await page.click('.rl-cell[data-bet=\'{"type":"straight","number":17}\']');
   await page.click('.rl-cell[data-bet=\'{"type":"straight","number":17}\']');
-  check((await page.textContent("#rl-total")).trim() === "3", "two spots, three chips → total 3");
+  check((await page.textContent("#rl-total")).trim() === "0.3", "two spots, three chips → total 0.3");
   await page.click("#rl-undo");
-  check((await page.textContent("#rl-total")).trim() === "2", "undo removes the last chip");
+  check((await page.textContent("#rl-total")).trim() === "0.2", "undo removes the last chip");
   const rotBefore = await page.$eval("#rl-rotor", (e) => e.style.transform);
   await page.click("#rl-spin");
   await pause(1500);
@@ -138,8 +139,8 @@ try {
   await page.click("#wallet-btn");
   await page.waitForSelector("#account-row:not(.hidden)", { timeout: 15000 });
   await page.click("#faucet-btn");
-  await page.waitForFunction(() => document.querySelector("#balance-val").textContent !== "0.0000" && document.querySelector("#balance-val").textContent !== "—");
-  const bal0 = await page.textContent("#balance-val");
+  await page.waitForFunction(() => document.querySelector("#hdr-bal-val").textContent === "0.0500", null, { timeout: 30000 });
+  const bal0 = await page.textContent("#hdr-bal-val");
   check(bal0 === "0.0500", `faucet credited: balance ${bal0} SOL`);
   await page.click('.game-card[data-game="roulette"]');
   await page.waitForSelector(".rl-table");
@@ -151,9 +152,9 @@ try {
   await page.click("#rl-spin");
   const betRes = await (await betReq).json();
   check(betRes.stakeLamports === 3_000_000, `server received one bet with stake = 3 chips (${betRes.stakeLamports})`);
-  check((await page.textContent("#balance-val")) === bal0, "balance display waits for the ball to land (no spoiler)");
+  check((await page.textContent("#hdr-bal-val")) === bal0, "balance display waits for the ball to land (no spoiler)");
   await page.waitForSelector(".rl-result.show", { timeout: 15000 });
-  const bal1 = await page.textContent("#balance-val");
+  const bal1 = await page.textContent("#hdr-bal-val");
   check(bal1 === (betRes.balanceLamports / 1e9).toFixed(4), `balance after spin ${bal1} = server's ${(betRes.balanceLamports / 1e9).toFixed(4)}`);
   check(Number(await page.textContent(".rl-result-num")) === betRes.result.outcome.pocket, "wheel shows the server's pocket");
   await page.locator(".bet-panel").screenshot({ path: join(SHOTS, "roulette-backend.png") });
@@ -161,7 +162,7 @@ try {
   console.log("C. the balance survives a reload, a server restart, and sign-out/sign-in");
   await page.reload({ waitUntil: "load" });
   await page.waitForSelector("#account-row:not(.hidden)", { timeout: 15000 });
-  await page.waitForFunction((b) => document.querySelector("#balance-val").textContent === b, bal1);
+  await page.waitForFunction((b) => document.querySelector("#hdr-bal-val").textContent === b, bal1);
   check(true, `after reload still signed in with ${bal1} SOL`);
   server.kill();
   await pause(300);
@@ -169,13 +170,13 @@ try {
   await waitHealthy();
   await page.reload({ waitUntil: "load" });
   await page.waitForSelector("#account-row:not(.hidden)", { timeout: 15000 });
-  await page.waitForFunction((b) => document.querySelector("#balance-val").textContent === b, bal1);
+  await page.waitForFunction((b) => document.querySelector("#hdr-bal-val").textContent === b, bal1);
   check(true, `after a server restart still signed in with ${bal1} SOL (sessions persisted)`);
   await page.click("#wallet-btn"); // disconnect
   await page.waitForSelector("#account-row.hidden", { state: "attached" });
   await page.click("#wallet-btn"); // reconnect + sign in again
   await page.waitForSelector("#account-row:not(.hidden)", { timeout: 15000 });
-  await page.waitForFunction((b) => document.querySelector("#balance-val").textContent === b, bal1);
+  await page.waitForFunction((b) => document.querySelector("#hdr-bal-val").textContent === b, bal1);
   check(true, `sign out → sign in: same ${bal1} SOL`);
 
   console.log("D. an unfinished Tower game (locked stake) survives a reload");
@@ -184,7 +185,7 @@ try {
   await page.fill("#tw-amount", "0.005");
   await page.click("#tw-action");
   await page.waitForSelector(".tower-row.active");
-  const balLocked = await page.textContent("#balance-val");
+  const balLocked = await page.textContent("#hdr-bal-val");
   check(Number(balLocked) === Math.round((Number(bal1) - 0.005) * 1e4) / 1e4, `stake locked: ${balLocked} SOL`);
   // Climb one row with a tile the layout says is safe (read via the API like a verifier would).
   const auth = await page.evaluate(() => localStorage.getItem("vanta_token"));
@@ -213,7 +214,7 @@ try {
     const cash = page.waitForResponse((r) => r.url().endsWith("/api/tower/cashout"));
     await page.click("#resume-cashout");
     const c = await (await cash).json();
-    await page.waitForFunction((b) => document.querySelector("#balance-val").textContent === b, (c.balanceLamports / 1e9).toFixed(4));
+    await page.waitForFunction((b) => document.querySelector("#hdr-bal-val").textContent === b, (c.balanceLamports / 1e9).toFixed(4));
     check(c.payoutLamports > 5_000_000, `cashed out from the banner: +${(c.payoutLamports / 1e9).toFixed(4)} SOL`);
     await page.waitForSelector("#resume-banner.hidden", { state: "attached" });
     check(true, "banner gone once the game is settled");

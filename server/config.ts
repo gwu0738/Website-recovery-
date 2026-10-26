@@ -11,6 +11,8 @@
  *   MIN_WITHDRAW_LAMPORTS
  *   HOUSE_RESERVE_LAMPORTS  kept in the house wallet, never paid out
  *   CORS_ORIGIN      your site's origin (default "*"); see deploy/DEPLOY.md
+ *   FAUCET_POW_BITS  proof-of-work difficulty for faucet claims (default 18; 0 = off)
+ *   TURNSTILE_SECRET use Cloudflare Turnstile for the faucet instead (see server/faucet-guard.ts)
  */
 import { HOUSE_EDGE } from "../src/config.ts";
 
