@@ -14,12 +14,12 @@ import { cpSync, mkdtempSync, readFileSync, writeFileSync, existsSync, mkdirSync
 import { createServer } from "node:http";
 import { tmpdir } from "node:os";
 import { join, dirname, extname } from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 
 const require = createRequire(import.meta.url);
 const { chromium } = require("playwright");
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
-const { base58Encode } = await import(join(ROOT, "server/lib/base58.ts"));
+const { base58Encode } = await import(pathToFileURL(join(ROOT, "server/lib/base58.ts")).href);
 
 const API_PORT = 8877;
 let failures = 0;
