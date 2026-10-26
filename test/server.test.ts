@@ -34,7 +34,13 @@ before(async () => {
 
 after(() => {
   httpServer.close();
-  rmSync(process.env.VANTA_DATA_DIR!, { recursive: true, force: true });
+  // Best-effort: on Windows the open SQLite handle can hold the temp dir, so a
+  // failed cleanup must not fail the test. The OS reclaims the temp dir anyway.
+  try {
+    rmSync(process.env.VANTA_DATA_DIR!, { recursive: true, force: true, maxRetries: 3 });
+  } catch {
+    /* ignore — OS temp dir, cleaned up later */
+  }
 });
 
 const j = async (res: Response) => ({ status: res.status, body: await res.json() });

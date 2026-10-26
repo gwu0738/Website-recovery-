@@ -16,10 +16,10 @@ import { createPrivateKey, sign } from "node:crypto";
 import { mkdtempSync, writeFileSync, chmodSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, dirname } from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
-const { base58Encode } = await import(join(ROOT, "server/lib/base58.ts"));
+const { base58Encode } = await import(pathToFileURL(join(ROOT, "server/lib/base58.ts")).href);
 
 const CLUSTER = process.env.SOLANA_CLUSTER ?? "localnet";
 const RPC = process.env.SOLANA_RPC_URL ?? "http://127.0.0.1:8899";
