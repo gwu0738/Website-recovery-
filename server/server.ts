@@ -13,6 +13,7 @@ import { SERVER, BET, FAUCET, toSol } from "./config.ts";
 import { createChallenge, verifySignature, pubkeyForToken } from "./auth.ts";
 import { getOrCreateAccount, getAccount, publicView } from "./store.ts";
 import { placeBet, claimFaucet, rotateSeed, setClientSeed, BetError } from "./bets.ts";
+import { towerStart, towerReveal, towerCashout, TowerError } from "./tower-session.ts";
 import { GAMES } from "../src/games/index.ts";
 
 const GAME_SET = new Set<string>(GAMES);
@@ -129,6 +130,35 @@ const server = createServer(async (req, res) => {
         return send(res, 200, out);
       } catch (e) {
         if (e instanceof BetError) return send(res, 400, { error: e.message });
+        throw e;
+      }
+    }
+
+    // ---- Tower (stateful, reveal-by-reveal) ----
+    if (path === "/api/tower/start" && method === "POST") {
+      const { difficulty, stake } = await readBody(req);
+      try {
+        return send(res, 200, towerStart(acct, difficulty, Number(stake)));
+      } catch (e) {
+        if (e instanceof TowerError) return send(res, 400, { error: e.message });
+        throw e;
+      }
+    }
+    if (path === "/api/tower/reveal" && method === "POST") {
+      const { sessionId, pick } = await readBody(req);
+      try {
+        return send(res, 200, towerReveal(acct, sessionId, Number(pick)));
+      } catch (e) {
+        if (e instanceof TowerError) return send(res, 400, { error: e.message });
+        throw e;
+      }
+    }
+    if (path === "/api/tower/cashout" && method === "POST") {
+      const { sessionId } = await readBody(req);
+      try {
+        return send(res, 200, towerCashout(acct, sessionId));
+      } catch (e) {
+        if (e instanceof TowerError) return send(res, 400, { error: e.message });
         throw e;
       }
     }

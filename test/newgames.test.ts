@@ -18,8 +18,10 @@ const ctx = (nonce: number): BetContext => ({
 const floor2 = (x: number) => Math.floor(x * 100) / 100;
 
 test("tower multiplier rises per row and matches the survival formula", () => {
-  // hard = 2 tiles, 1 safe -> survival 0.5/row -> 1 row = (1/0.5)*0.99 = 1.98
-  assert.equal(towerMultiplier("hard", 1), 1.98);
+  // hard = 4 tiles, 1 safe -> survival 1/4 per row -> 1 row = (1/0.25)*0.99 = 3.96
+  assert.equal(towerMultiplier("hard", 1), 3.96);
+  // medium = 2 safe/4 -> survival 1/2 -> 1 row = (1/0.5)*0.99 = 1.98
+  assert.equal(towerMultiplier("medium", 1), 1.98);
   assert.ok(towerMultiplier("hard", 2) > towerMultiplier("hard", 1));
 });
 
