@@ -17,17 +17,16 @@ there is no build step). Check with `node --version`.
 ```bash
 npm install          # one-time: installs the Solana library
 npm test             # 67 tests; all should pass
-npm run server       # terminal 1: the backend on http://localhost:8787
-npx serve web        # terminal 2: the site — open the URL it prints
+npm run server       # then open http://localhost:8787
 ```
 
-The page finds the backend on port 8787 by itself. Click **Connect Wallet**
+That one process is the whole site: the page and the backend on one address.
+Click **Connect Wallet**
 (Phantom, Solflare, Backpack or any Solana wallet), claim the free faucet, and
 play. Balances are per wallet and persist in `server/data/accounts.db`.
 
-Without the backend running, the site still works: games run on the in-browser
-engine with a balance kept in your browser, and the page says so. The single
-file `web/dist/standalone.html` does the same when opened directly.
+No install at all: open `web/dist/standalone.html` directly. The games run on
+the in-browser engine with a balance kept in your browser, and the page says so.
 
 To try real deposits and withdrawals, create a house wallet and start the
 server with it (devnet first — free test SOL):

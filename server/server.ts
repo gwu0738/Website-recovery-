@@ -8,7 +8,9 @@
  * Phase 2 will add real deposits/withdrawals against a house hot wallet.
  */
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
-import { pathToFileURL } from "node:url";
+import { createReadStream, statSync } from "node:fs";
+import { dirname, extname, join, normalize, resolve } from "node:path";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import { SERVER, BET, FAUCET, WITHDRAW, CLUSTER, toSol } from "./config.ts";
 import { createChallenge, verifySignature, pubkeyForToken, revokeToken } from "./auth.ts";
 import {
@@ -59,6 +61,26 @@ function send(res: ServerResponse, status: number, body: unknown) {
   res.end(json);
 }
 
+// The site itself (web/) is served from the same process, so `npm run server`
+// is the whole thing at http://localhost:8787 — no second server, same origin.
+const WEB_DIR = resolve(dirname(fileURLToPath(import.meta.url)), "..", "web");
+const MIME: Record<string, string> = {
+  ".html": "text/html; charset=utf-8", ".css": "text/css", ".js": "text/javascript",
+  ".mjs": "text/javascript", ".json": "application/json", ".svg": "image/svg+xml",
+  ".png": "image/png", ".jpg": "image/jpeg", ".ico": "image/x-icon", ".woff2": "font/woff2",
+};
+function serveStatic(pathname: string, res: ServerResponse): boolean {
+  const rel = normalize(decodeURIComponent(pathname === "/" ? "/index.html" : pathname)).replace(/^(\.\.[/\\])+/, "");
+  const file = join(WEB_DIR, rel);
+  if (!file.startsWith(WEB_DIR)) return false; // no path traversal
+  let st;
+  try { st = statSync(file); } catch { return false; }
+  if (!st.isFile()) return false;
+  res.writeHead(200, { "content-type": MIME[extname(file)] ?? "application/octet-stream", "cache-control": "no-cache" });
+  createReadStream(file).pipe(res);
+  return true;
+}
+
 function readBody(req: IncomingMessage): Promise<any> {
   return new Promise((resolve, reject) => {
     let data = "";
@@ -90,6 +112,9 @@ const server = createServer(async (req, res) => {
     const method = req.method ?? "GET";
 
     if (method === "OPTIONS") return send(res, 204, {});
+
+    // ---- the site ----
+    if (method === "GET" && !path.startsWith("/api/") && serveStatic(path, res)) return;
 
     // ---- public ----
     if (path === "/api/health") return send(res, 200, { ok: true });
@@ -389,7 +414,8 @@ export function start(port = SERVER.port) {
       .catch((e) => console.error("withdrawal reconciliation failed:", (e as Error).message));
   }
   return server.listen(port, () => {
-    console.log(`Vanta backend on http://localhost:${port}`);
+    console.log(`Vanta is running — open http://localhost:${port} in your browser`);
+    console.log(`(API under /api, site served from ${WEB_DIR})`);
     console.log(`Faucet: ${toSol(FAUCET.amountLamports)} per claim, ${FAUCET.cooldownMs / 60000} min cooldown`);
   });
 }

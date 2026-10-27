@@ -1,9 +1,8 @@
 # Hosting Vanta on a VPS
 
 One Ubuntu/Debian VPS (1 vCPU, 1 GB RAM is plenty), a domain pointed at it, and
-about 30 minutes. The backend runs as a systemd service on port 8787; nginx
-serves the `web/` folder and proxies `/api/` to it, so the site and the API share
-one origin over HTTPS.
+about 30 minutes. The backend runs as a systemd service on port 8787 and serves
+the site itself; nginx sits in front only to add HTTPS.
 
 Replace `casino.example.com` with your domain everywhere below.
 
@@ -81,14 +80,13 @@ curl http://127.0.0.1:8787/api/health   # {"ok":true}
 journalctl -u vanta -f          # live logs
 ```
 
-## 6. Serve the site
+## 6. HTTPS in front
 
-No config edit is needed: with nginx proxying `/api/` on the same origin, the
-page finds the backend by itself. (You can still pin it with `API_BASE` in
-`web/js/config.js`.) For a stronger faucet captcha, create a free Cloudflare
-Turnstile widget and set `TURNSTILE_SECRET` in `vanta.env` and
-`TURNSTILE_SITE_KEY` in `web/js/config.js`; without it, the built-in
-proof-of-work gate is used.
+The service already serves the site at http://127.0.0.1:8787. nginx + certbot
+put it behind your domain with HTTPS; no config edit in the site is needed. For
+a stronger faucet captcha, create a free Cloudflare Turnstile widget and set
+`TURNSTILE_SECRET` in `vanta.env` and `TURNSTILE_SITE_KEY` in
+`web/js/config.js`; without it, the built-in proof-of-work gate is used.
 
 ```bash
 cp /opt/vanta/app/deploy/nginx.conf /etc/nginx/sites-available/vanta
